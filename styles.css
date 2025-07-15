@@ -149,7 +149,7 @@ h3 {
 .welcome-text {
     font-size: 1.2rem;
     line-height: 1.8;
-    margin-bottom: 40px;
+    margin-bottom: 20px;
     max-width: 700px;
     margin-left: auto;
     margin-right: auto;
@@ -703,12 +703,9 @@ input:focus, select:focus {
 
 /* Server Selection */
 .server-selection {
-    display: flex;
-    gap: 10px;
-    justify-content: center;
-    margin: 20px 0;
-    flex-wrap: wrap;
+    display: none; /* Hide the server selection UI */
 }
+
 
 .server-option {
     padding: 10px 20px;
