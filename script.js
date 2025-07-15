@@ -47,7 +47,7 @@ const state = {
     },
     timer: 0,
     timerInterval: null,
-    serverType: "local", // "remote" or "local"
+    serverType: "remote", // Always use remote server
     socket: null
 };
 
@@ -129,42 +129,6 @@ function showNotification(text) {
     }, 3000);
 }
 
-function saveLocalState() {
-    if (state.serverType !== 'local') return;
-    if (!state.lobbyCode) return;
-    
-    state.version++;
-    const savedState = {
-        participants: state.participants,
-        roster: state.roster,
-        draft: state.draft,
-        version: state.version
-    };
-    
-    localStorage.setItem(`limbus-draft-${state.lobbyCode}`, JSON.stringify(savedState));
-    console.log("Saved state to localStorage:", savedState);
-}
-
-function loadLocalState() {
-    if (state.serverType !== 'local') return;
-    
-    const savedState = localStorage.getItem(`limbus-draft-${state.lobbyCode}`);
-    if (savedState) {
-        const parsed = JSON.parse(savedState);
-        console.log("Loaded state from localStorage:", parsed);
-        
-        // Only update if the version is newer
-        if (parsed.version > state.version) {
-            state.participants = parsed.participants;
-            state.roster = parsed.roster;
-            state.draft = parsed.draft;
-            state.version = parsed.version;
-            return true;
-        }
-    }
-    return false;
-}
-
 function parseCSV(csv) {
     const lines = csv.split('\n');
     const headers = lines[0].split(',').map(h => h.trim());
@@ -229,14 +193,6 @@ let reconnectAttempts = 0;
 const maxReconnectAttempts = 5;
 
 function connectWebSocket() {
-    if (state.serverType === "local") {
-        elements.connectionStatus.innerHTML = '<i class="fas fa-laptop"></i> <span>Local Testing Mode</span>';
-        elements.connectionStatus.classList.remove('disconnected', 'connected');
-        elements.connectionStatus.classList.add('offline');
-        showNotification("Using local testing mode - no server connection needed");
-        return;
-    }
-    
     // Using a WebSocket server hosted on Glitch for demonstration
     const wsServerUrl = "wss://limbus-draft-server.glitch.me";
     
@@ -282,20 +238,14 @@ function connectWebSocket() {
         
         state.socket.addEventListener('error', (error) => {
             console.error('WebSocket error:', error);
-            elements.connectionStatus.innerHTML = '<i class="fas fa-plug"></i> <span>Connection Error</span>';
-            elements.connectionStatus.classList.remove('connected');
+            elements.connectionStatus.innerHTML = '<i class="fas fa-plug"></i> <span>Connection Failed</span>';
             elements.connectionStatus.classList.add('disconnected');
             
-            // Offer to switch to local mode
-            showNotification("Server connection failed. Switching to local testing mode.");
-            state.serverType = "local";
-            document.querySelector('.server-option[data-server="local"]').classList.add('selected');
-            document.querySelector('.server-option[data-server="remote"]').classList.remove('selected');
-            connectWebSocket();
+            
         });
     } catch (error) {
         console.error("WebSocket initialization error:", error);
-        showNotification("WebSocket not supported. Using local testing mode.");
+        showNotification("WebSocket not supported. Please use a modern browser.");
         state.serverType = "local";
         document.querySelector('.server-option[data-server="local"]').classList.add('selected');
         document.querySelector('.server-option[data-server="remote"]').classList.remove('selected');
@@ -348,62 +298,6 @@ function handleServerMessage(message) {
             showNotification(`Error: ${message.message}`);
             break;
     }
-}
-
-function handleLocalMessage(message) {
-    switch (message.type) {
-        case 'createLobby':
-            // Simulate lobby creation
-            setTimeout(() => {
-                handleLobbyCreated({
-                    code: generateLobbyCode()
-                });
-            }, 500);
-            break;
-        case 'joinLobby':
-            // Simulate joining lobby
-            setTimeout(() => {
-                handleLobbyJoined({
-                    lobbyCode: message.lobbyCode,
-                    role: message.role,
-                    participants: {
-                        p1: { name: "Player 1", status: "connected", ready: false },
-                        p2: { name: "Player 2", status: "connected", ready: false },
-                        ref: { name: "Referee", status: "connected" }
-                    }
-                });
-            }, 500);
-            break;
-        case 'updateRoster':
-            // Simulate roster update
-            setTimeout(() => {
-                handleRosterUpdate({
-                    player: message.player,
-                    roster: message.roster
-                });
-            }, 200);
-            break;
-        case 'updateReady':
-            setTimeout(() => {
-                handleReadyUpdate({
-                    player: message.player,
-                    ready: message.ready
-                });
-            }, 200);
-            break;
-        case 'draftAction':
-            // Simulate draft actions
-            setTimeout(() => {
-                handleDraftAction({
-                    action: message.action,
-                    draft: state.draft
-                });
-            }, 300);
-            break;
-        case 'leaveLobby':
-            // Do nothing in local mode
-            break;
-    } 
 }
 
 // ======================
@@ -1040,11 +934,7 @@ function handleLobbyJoined(message) {
     } else if (state.userRole === 'ref') {
         state.participants.ref.name = "Referee";
     }
-    
-    // Load existing state if in local mode
-    if (state.serverType === 'local') {
-        loadLocalState();
-    }
+
     
     updateParticipantsList();
     
@@ -1137,16 +1027,6 @@ function handleDraftAction(message) {
 // EVENT HANDLERS
 // ======================
 function setupEventListeners() {
-    // Server selection
-    elements.serverOptions.forEach(option => {
-        option.addEventListener('click', () => {
-            elements.serverOptions.forEach(opt => opt.classList.remove('selected'));
-            option.classList.add('selected');
-            state.serverType = option.dataset.server;
-            showNotification(`Switched to ${state.serverType === 'remote' ? 'Online Multiplayer' : 'Local Testing'} mode`);
-            connectWebSocket();
-        });
-    });
     
     // Create new lobby
     elements.createLobbyBtn.addEventListener('click', () => {
@@ -1226,9 +1106,6 @@ function setupEventListeners() {
             userId: state.userId
         });
         
-        if (state.serverType === 'local') {
-            localStorage.removeItem(`limbus-draft-${state.lobbyCode}`);
-        }
     });
     
     // Filter change listeners
@@ -1310,50 +1187,6 @@ function setupEventListeners() {
     elements.nextPhase.addEventListener('click', () => nextPhase());
     elements.completeDraft.addEventListener('click', () => completeDraft());
     
-    // Storage event listener for multi-tab sync
-    window.addEventListener('storage', (event) => {
-        if (!event.key || !event.key.startsWith('limbus-draft-')) return;
-        if (!state.lobbyCode) return;
-        
-        if (event.key === `limbus-draft-${state.lobbyCode}`) {
-            const newState = JSON.parse(event.newValue);
-            console.log("Storage event received:", newState);
-            
-            if (newState && newState.version > state.version) {
-                // Update state
-                state.participants = newState.participants;
-                state.roster = newState.roster;
-                state.draft = newState.draft;
-                state.version = newState.version;
-                
-                // Update UI
-                updateParticipantsList();
-                renderIDList(elements.p1Roster, 'p1');
-                renderIDList(elements.p2Roster, 'p2');
-                updateRosterCounter('p1');
-                updateRosterCounter('p2');
-                updateDraftUI();
-                updateDraftInstructions();
-                
-                // Update draft started class
-                if (state.draft.phase !== "roster") {
-                    document.body.classList.add('draft-started');
-                    elements.p1SearchBar.style.display = 'block';
-                    elements.p2SearchBar.style.display = 'block';
-                } else {
-                    document.body.classList.remove('draft-started');
-                    elements.p1SearchBar.style.display = 'none';
-                    elements.p2SearchBar.style.display = 'none';
-                }
-                
-                // Update ready buttons and status
-                updateReadyUI('p1', state.participants.p1.ready);
-                updateReadyUI('p2', state.participants.p2.ready);
-                checkDraftReadiness();
-            }
-        }
-    });
-}
 
 // ======================
 // INITIALIZATION
