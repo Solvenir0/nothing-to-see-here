@@ -2,12 +2,28 @@
 const PORT = process.env.PORT || 8080;
 const WebSocket = require('ws');
 const crypto = require('crypto');
+const express = require('express');
+const path = require('path');
+const app = express();
+
 
 const wss = new WebSocket.Server({ port: PORT });
 console.log(`WebSocket server running on port ${PORT}`);
 const lobbies = new Map();
 const clients = new Map();
+app.use(express.static(path.join(__dirname, 'public')));
 
+// Handle all other routes
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+const server = app.listen(PORT, () => {
+  console.log(`HTTP server running on port ${PORT}`);
+});
+
+// Attach WebSocket server to HTTP server
+const wss = new WebSocket.Server({ server });
 function generateLobbyCode() {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     let code = '';
