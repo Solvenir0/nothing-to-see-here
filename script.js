@@ -47,7 +47,6 @@ const state = {
     },
     timer: 0,
     timerInterval: null,
-    serverType: "remote", // Always use remote server
     socket: null
 };
 
@@ -194,14 +193,13 @@ const maxReconnectAttempts = 5;
 
 function connectWebSocket() {
     // Using a WebSocket server hosted on Glitch for demonstration
-    const wsServerUrl = "wss://limbus-draft-server.glitch.me";
+    const wsServerUrl = "ws://localhost:8080";
     
     try {
         if (state.socket) {
             state.socket.close();
         }
         
-        state.socket = new WebSocket(wsServerUrl);
         
         state.socket.addEventListener('open', () => {
             elements.connectionStatus.innerHTML = '<i class="fas fa-plug"></i> <span>Connected to server</span>';
@@ -254,10 +252,6 @@ function connectWebSocket() {
 }
 
 function sendMessage(message) {
-    if (state.serverType === "local") {
-        // Simulate server responses in local mode
-        handleLocalMessage(message);
-        return;
     }
     
     if (state.socket && state.socket.readyState === WebSocket.OPEN) {
