@@ -903,6 +903,7 @@ function handleLobbyCreated(message) {
     
     showNotification("Lobby created! Share the code with players.");
     saveLocalState();
+    window.location.hash = state.lobbyCode; // Add URL hash
 }
 
 function handleLobbyJoined(message) {
@@ -944,6 +945,7 @@ function handleLobbyJoined(message) {
     
     showNotification(`Joined lobby as ${message.role === 'ref' ? 'Referee' : 'Player ' + message.role.slice(1)}`);
     saveLocalState();
+    window.location.hash = state.lobbyCode; // Add URL hash
 }
 
 function handleStateUpdate(message) {
@@ -1105,6 +1107,7 @@ function setupEventListeners() {
             lobbyCode: state.lobbyCode,
             userId: state.userId
         });
+        window.location.hash = ''; // Clear URL hash
         
     });
     
@@ -1352,6 +1355,16 @@ function init() {
     renderIDList(elements.p2Roster, 'p2');
     updateRosterCounter('p1');
     updateRosterCounter('p2');
+
+     // Add this to handle page refresh in lobby
+    if (window.location.hash) {
+        const lobbyCode = window.location.hash.substring(1);
+        if (lobbyCode.length === 6) {
+            elements.lobbyCodeInput.value = lobbyCode;
+            elements.lobbyAccessForm.style.display = 'block';
+            elements.joinLobbyBtn.style.display = 'none';
+        }
+    }
 }
 
 // Initialize the application when DOM is loaded
