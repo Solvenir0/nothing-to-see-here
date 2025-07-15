@@ -10,7 +10,9 @@ const app = express();
 console.log(`WebSocket server running on port ${PORT}`);
 const lobbies = new Map();
 const clients = new Map();
-app.use(express.static(path.join(__dirname, 'public')));
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 // Handle all other routes
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
