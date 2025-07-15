@@ -1,9 +1,10 @@
 services:
   - type: web
     name: limbus-draft
-    runtime: node
-    nodeVersion: 18.16.0  # ADD THIS
-    buildCommand: npm install
-    startCommand: npm start
     env: node
-    autoDeploy: true
+    buildCommand: "npm install"
+    startCommand: "npm start"
+    plan: free
+    envVars:
+      - key: NODE_VERSION
+        value: 18.16.0
