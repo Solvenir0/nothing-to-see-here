@@ -193,9 +193,13 @@ const maxReconnectAttempts = 5;
 
 function connectWebSocket() {
     // Using a WebSocket server hosted on Glitch for demonstration
-    const wsServerUrl = "ws://localhost:8080";
+    const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+    const wsServerUrl = isLocal 
+        ? "ws://localhost:8080" 
+        : `wss://${window.location.host}`;
     
     try {
+        state.socket = new WebSocket(wsServerUrl);
         if (state.socket) {
             state.socket.close();
         }
