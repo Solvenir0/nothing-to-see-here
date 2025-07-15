@@ -1,0 +1,8 @@
+services:
+  - type: web
+    name: limbus-draft
+    runtime: node
+    buildCommand: npm install
+    startCommand: npm start
+    env: node
+    autoDeploy: true
