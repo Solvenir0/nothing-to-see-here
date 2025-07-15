@@ -2,6 +2,7 @@ services:
   - type: web
     name: limbus-draft
     runtime: node
+    nodeVersion: 18.16.0  # ADD THIS
     buildCommand: npm install
     startCommand: npm start
     env: node
