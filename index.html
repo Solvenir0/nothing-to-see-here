@@ -1626,7 +1626,9 @@
 
             if (['ban', 'pick', 'midBan', 'pick2'].includes(phase)) {
                 const opponent = currentPlayer === 'p1' ? 'p2' : 'p1';
-                const availableIdList = action.includes('ban') ? state.draft.available[opponent] : state.draft.available[currentPlayer];
+                const isBanAction = action.includes('ban');
+
+                const availableIdList = isBanAction ? state.draft.available[opponent] : state.draft.available[currentPlayer];
                 let availableObjects = availableIdList.map(id => state.masterIDList.find(item => item && item.id === id)).filter(Boolean);
                 
                 availableObjects = filterIDs(availableObjects, state.draftFilters);
@@ -1634,8 +1636,10 @@
                 const selectionContainer = currentPlayer === 'p1' ? elements.p1DraftSelection : elements.p2DraftSelection;
                 const clickHandler = (state.userRole === currentPlayer || state.userRole === 'ref') ? (id) => selectDraftID(currentPlayer, id) : null;
                 
-                // Use the current player's picks as the selectionSet for highlighting
-                const selectionSet = state.draft.picks[currentPlayer];
+                // If it's a ban action, highlight IDs the current player has in their own roster.
+                // If it's a pick action, highlight IDs the current player has already picked.
+                const selectionSet = isBanAction ? state.roster[currentPlayer] : state.draft.picks[currentPlayer];
+                
                 renderIDList(selectionContainer, availableObjects, selectionSet, clickHandler);
             }
             
