@@ -22,9 +22,9 @@
             --bg: #1a1a1d; /* Softer dark background */
             --panel: #1E1E1E;
             --border: #333;
-            --rarity-0: #a0a0a0;
-            --rarity-00: #4b8b3b;
-            --rarity-000: #4169e1;
+            --rarity-0: #cccccc;
+            --rarity-00: #B22222; /* Firebrick Red */
+            --rarity-000: #FFD700; /* Gold */
             --connected: #4b8b3b;
             --disconnected: #a00;
             --warning: #ff8c00;
@@ -449,72 +449,39 @@
             font-size: 0.9rem;
         }
         
+        /* MODIFIED: Make ban/pick lists look like main roster list */
         .ban-list, .pick-list {
             margin: 10px 0;
             padding: 10px;
             background: rgba(0, 0, 0, 0.3);
             border-radius: 8px;
             display: grid;
-            grid-template-columns: repeat(2, 1fr); /* MODIFIED: Changed from 4 to 2 */
-            gap: 8px;
-            min-height: 344px; /* MODIFIED: Adjusted for 4 rows */
-            max-height: 344px; /* MODIFIED: Adjusted for 4 rows */
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 10px;
+            min-height: 100px;
+            max-height: 250px; 
             overflow-y: auto;
             align-content: start;
         }
 
-        .ban-list .id-item,
-        .pick-list .id-item {
-            padding: 4px;
-            gap: 4px;
-            flex-direction: column;
-            text-align: center;
-            justify-content: flex-start;
-            height: auto;
-        }
-
-        .ban-list .id-icon,
-        .pick-list .id-icon {
-            width: 40px;
-            height: 40px;
-            margin-bottom: 4px;
-        }
-
-        .ban-list .id-name,
-        .pick-list .id-name {
-            font-size: 0.75rem;
-            line-height: 1.1;
-            min-height: 2.2em; /* Allow for 2 lines of text */
-            width: 100%;
-            word-break: break-word;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .roster-list {
-            margin: 15px 0;
-            padding: 10px;
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 5px;
-            min-height: 100px;
-            max-height: 200px;
-            overflow-y: auto;
-        }
-        
         .id-item {
             padding: 8px;
-            margin: 0; /* Removed margin for grid layout */
+            margin: 0;
             background: rgba(139, 0, 0, 0.3);
             border-radius: 4px;
             display: flex;
             align-items: center;
             gap: 10px;
             cursor: pointer;
-            transition: all 0.3s;
-            border-left: 3px solid transparent;
+            transition: all 0.3s, border-color 0.3s;
+            border-left: 4px solid transparent; /* MODIFIED: Add base for rarity */
         }
         
+        /* MODIFIED: Add rarity indicator styles */
+        .id-item.rarity-0 { border-left-color: var(--rarity-0); }
+        .id-item.rarity-00 { border-left-color: var(--rarity-00); }
+        .id-item.rarity-000 { border-left-color: var(--rarity-000); }
+
         .id-item:hover {
             background: rgba(139, 0, 0, 0.5);
             transform: translateX(5px);
@@ -522,7 +489,7 @@
         
         .id-item.selected {
             background: var(--primary);
-            border-left: 3px solid var(--accent);
+            border-color: var(--accent); /* This will override the left border color on selection */
         }
         
         .id-icon {
@@ -751,10 +718,6 @@
             .role-options { flex-direction: column; }
             .phase-container { flex-direction: column; }
             .connection-status { top: 5px; right: 5px; font-size: 0.8rem; padding: 5px 10px; }
-            
-            .ban-list, .pick-list {
-                grid-template-columns: repeat(2, 1fr); /* MODIFIED: Changed from 3 to 2 for consistency */
-            }
         }
     </style>
 </head>
@@ -1272,7 +1235,7 @@
                 if (!idData) return;
                 const idElement = document.createElement('div');
                 const isSelected = state.roster[player]?.includes(idData.id);
-                idElement.className = `id-item ${isSelected ? 'selected' : ''}`;
+                idElement.className = `id-item ${isSelected ? 'selected' : ''} rarity-${idData.rarity}`; // MODIFIED: Add rarity class
                 idElement.dataset.id = idData.id;
                 idElement.innerHTML = `
                     <div class="id-icon" style="background-image: url('/uploads/${idData.imageFile}')"></div>
@@ -1345,10 +1308,16 @@
         }
 
         function updateDraftUI() {
+            // MODIFIED: renderList now creates full items with rarity
             const renderList = (idList) => {
                 if (!idList || idList.length === 0) return '';
                 const idObjects = idList.map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
-                return idObjects.map(idData => `<div class="id-item"><div class="id-icon" style="background-image: url('/uploads/${idData.imageFile}')"></div><div class="id-name">${idData.name}</div></div>`).join('');
+                return idObjects.map(idData => 
+                    `<div class="id-item rarity-${idData.rarity}">
+                        <div class="id-icon" style="background-image: url('/uploads/${idData.imageFile}')"></div>
+                        <div class="id-name">${idData.name}</div>
+                    </div>`
+                ).join('');
             };
             
             elements.p1IdBans.innerHTML = renderList(state.draft.idBans.p1);
@@ -1403,10 +1372,16 @@
         }
 
         function renderCompletedView() {
+            // MODIFIED: renderList now creates full items with rarity
             const renderList = (idList) => {
                 if (!idList || idList.length === 0) return '<div class="empty-roster">None</div>';
                 const idObjects = idList.map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
-                return idObjects.map(idData => `<div class="id-item"><div class="id-icon" style="background-image: url('/uploads/${idData.imageFile}')"></div><div class="id-name">${idData.name}</div></div>`).join('');
+                return idObjects.map(idData => 
+                    `<div class="id-item rarity-${idData.rarity}">
+                        <div class="id-icon" style="background-image: url('/uploads/${idData.imageFile}')"></div>
+                        <div class="id-name">${idData.name}</div>
+                    </div>`
+                ).join('');
             };
             elements.finalP1Name.textContent = `${state.participants.p1.name}'s Roster`;
             elements.finalP2Name.textContent = `${state.participants.p2.name}'s Roster`;
