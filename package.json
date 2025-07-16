@@ -1,7 +1,7 @@
 {
-  "name": "my-website",
-  "version": "1.0.0",
-  "description": "",
+  "name": "limbus-draft-app",
+  "version": "1.1.0",
+  "description": "A multiplayer draft tool for Limbus Company.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
@@ -9,11 +9,11 @@
   "author": "",
   "license": "ISC",
   "engines": {
-    "node": "22.x"
+    "node": "18.x || 20.x"
   },
   "dependencies": {
-    "@google-cloud/firestore": "^7.11.2",
-    "express": "^4.19.2",
-    "ws": "^8.17.1"
+    "@google-cloud/firestore": "^7.0.0",
+    "express": "^4.18.2",
+    "ws": "^8.13.0"
   }
 }
