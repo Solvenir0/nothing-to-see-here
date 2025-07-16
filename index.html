@@ -449,18 +449,49 @@
             font-size: 0.9rem;
         }
         
+        /* MODIFIED: Changed grid layout and max-height */
         .ban-list, .pick-list {
             margin: 10px 0;
             padding: 10px;
             background: rgba(0, 0, 0, 0.3);
             border-radius: 8px;
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(4, 1fr);
             gap: 8px;
             min-height: 80px;
-            max-height: 180px; /* Shows 2 rows of items */
+            max-height: 160px; 
             overflow-y: auto;
-            align-content: start; /* Aligns items to the top */
+            align-content: start;
+        }
+
+        /* ADDED: New rules for smaller items in ban/pick lists */
+        .ban-list .id-item,
+        .pick-list .id-item {
+            padding: 4px;
+            gap: 4px;
+            flex-direction: column;
+            text-align: center;
+            justify-content: flex-start;
+            height: auto;
+        }
+
+        .ban-list .id-icon,
+        .pick-list .id-icon {
+            width: 40px;
+            height: 40px;
+            margin-bottom: 4px;
+        }
+
+        .ban-list .id-name,
+        .pick-list .id-name {
+            font-size: 0.75rem;
+            line-height: 1.1;
+            min-height: 2.2em; /* Allow for 2 lines of text */
+            width: 100%;
+            word-break: break-word;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         
         .roster-list {
@@ -722,6 +753,11 @@
             .role-options { flex-direction: column; }
             .phase-container { flex-direction: column; }
             .connection-status { top: 5px; right: 5px; font-size: 0.8rem; padding: 5px 10px; }
+            
+            /* MODIFIED: Adjust ban/pick list for mobile */
+            .ban-list, .pick-list {
+                grid-template-columns: repeat(3, 1fr);
+            }
         }
     </style>
 </head>
@@ -1090,10 +1126,11 @@
             setTimeout(() => { elements.notification.classList.remove('show'); }, 3000);
         }
 
-        // NEW: Helper function to create a URL-friendly slug from a name
+        // MODIFIED: Helper function to create a URL-friendly slug from a name
         function createSlug(name) {
             if (!name) return '';
             return name.toLowerCase()
+                .replace(/ō/g, 'o') // Handle special character for Ryōshū
                 .replace(/::/g, '') // Remove special characters like ::
                 .replace(/[.'"]/g, '') // Remove punctuation
                 .replace(/\s+/g, '-') // Replace spaces with hyphens
@@ -1191,6 +1228,7 @@
         // UI RENDERING
         // ======================
         function sortByName(list) {
+            // This function is kept in case alphabetical sorting is desired elsewhere
             return list.sort((a, b) => a.name.localeCompare(b.name));
         }
 
@@ -1213,18 +1251,19 @@
             });
         }
 
+        // MODIFIED: Removed alphabetical sorting to respect CSV order
         function renderIDList(container, idObjectList, player, clickHandler) {
             container.innerHTML = '';
             if (!Array.isArray(idObjectList)) return;
 
-            const sortedIdList = sortByName(idObjectList);
+            // const sortedIdList = sortByName(idObjectList); // REMOVED: No longer sorting alphabetically
             
-            if (sortedIdList.length === 0) {
+            if (idObjectList.length === 0) {
                 container.innerHTML = '<div class="empty-roster" style="padding: 10px; text-align: center;">No IDs match filters</div>';
                 return;
             }
             
-            sortedIdList.forEach(idData => {
+            idObjectList.forEach(idData => {
                 if (!idData) return;
                 const idElement = document.createElement('div');
                 const isSelected = state.roster[player]?.includes(idData.id);
@@ -1301,11 +1340,13 @@
             checkDraftReadiness();
         }
 
+        // MODIFIED: Removed alphabetical sorting
         function updateDraftUI() {
             const renderList = (idList) => {
                 if (!idList || idList.length === 0) return '';
                 const idObjects = idList.map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
-                return sortByName(idObjects).map(idData => `<div class="id-item"><div class="id-icon" style="background-image: url('/uploads/${idData.imageFile}')"></div><div class="id-name">${idData.name}</div></div>`).join('');
+                // return sortByName(idObjects).map(idData => `<div class="id-item"><div class="id-icon" style="background-image: url('/uploads/${idData.imageFile}')"></div><div class="id-name">${idData.name}</div></div>`).join('');
+                return idObjects.map(idData => `<div class="id-item"><div class="id-icon" style="background-image: url('/uploads/${idData.imageFile}')"></div><div class="id-name">${idData.name}</div></div>`).join('');
             };
             
             elements.p1IdBans.innerHTML = renderList(state.draft.idBans.p1);
@@ -1359,11 +1400,13 @@
             elements.completeDraft.disabled = state.userRole !== 'ref' || phase === 'complete';
         }
 
+        // MODIFIED: Removed alphabetical sorting
         function renderCompletedView() {
             const renderList = (idList) => {
                 if (!idList || idList.length === 0) return '<div class="empty-roster">None</div>';
                 const idObjects = idList.map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
-                return sortByName(idObjects).map(idData => `<div class="id-item"><div class="id-icon" style="background-image: url('/uploads/${idData.imageFile}')"></div><div class="id-name">${idData.name}</div></div>`).join('');
+                // return sortByName(idObjects).map(idData => `<div class="id-item"><div class="id-icon" style="background-image: url('/uploads/${idData.imageFile}')"></div><div class="id-name">${idData.name}</div></div>`).join('');
+                return idObjects.map(idData => `<div class="id-item"><div class="id-icon" style="background-image: url('/uploads/${idData.imageFile}')"></div><div class="id-name">${idData.name}</div></div>`).join('');
             };
             elements.finalP1Name.textContent = `${state.participants.p1.name}'s Roster`;
             elements.finalP2Name.textContent = `${state.participants.p2.name}'s Roster`;
