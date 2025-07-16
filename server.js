@@ -217,12 +217,19 @@ const csvData = `Name,Keywords,SinAffinities,Rarity
 const masterIDList = parseCSV(csvData);
 const allIds = masterIDList.map(item => item.id); // This will be an array of slugs
 
-function generateLobbyCode() {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    let code = '';
-    for (let i = 0; i < 6; i++) {
-        code += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
+async function generateUniqueLobbyCode() {
+    let code;
+    let docExists = true;
+    do {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        code = '';
+        for (let i = 0; i < 6; i++) {
+            code += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        const lobbyRef = firestore.collection('lobbies').doc(code);
+        const doc = await lobbyRef.get();
+        docExists = doc.exists;
+    } while (docExists);
     return code;
 }
 
@@ -327,7 +334,7 @@ wss.on('connection', (ws) => {
 
         switch (incomingData.type) {
             case 'createLobby': {
-                const newLobbyCode = generateLobbyCode();
+                const newLobbyCode = await generateUniqueLobbyCode();
                 const newLobbyState = createNewLobbyState();
                 
                 ws.lobbyCode = newLobbyCode;
@@ -348,7 +355,15 @@ wss.on('connection', (ws) => {
             case 'joinLobby': {
                 if (!lobbyRef) return;
                 const doc = await lobbyRef.get();
-                if (!doc.exists) return ws.send(JSON.stringify({ type: 'error', message: 'Lobby not found.' }));
+                if (!doc.exists) {
+                    return ws.send(JSON.stringify({ type: 'error', message: 'Lobby not found.' }));
+                }
+
+                const lobbyData = doc.data();
+                // MODIFIED: Check if the role is already taken
+                if (lobbyData.participants[role] && lobbyData.participants[role].status === 'connected') {
+                    return ws.send(JSON.stringify({ type: 'error', message: `Role ${role.toUpperCase()} is already taken.` }));
+                }
                 
                 ws.lobbyCode = lobbyCode.toUpperCase();
                 ws.userRole = role;
