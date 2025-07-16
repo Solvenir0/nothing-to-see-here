@@ -325,7 +325,7 @@ wss.on('connection', (ws) => {
         try { incomingData = JSON.parse(message); } 
         catch (e) { console.error('Invalid JSON:', message); return; }
 
-        const { lobbyCode, role, player, id, action, payload, name, egoId } = incomingData;
+        const { lobbyCode, role, player, id, action, payload, name, egoId, roster } = incomingData;
         const lobbyRef = lobbyCode ? firestore.collection('lobbies').doc(lobbyCode.toUpperCase()) : null;
 
         switch (incomingData.type) {
@@ -366,15 +366,29 @@ wss.on('connection', (ws) => {
                 if (!doc.exists) return;
                 let lobbyData = doc.data();
                 if (lobbyData.participants[player].ready) return;
-                const roster = lobbyData.roster[player];
-                const index = roster.indexOf(id);
-                if (index === -1) { if (roster.length < ROSTER_SIZE) roster.push(id); } 
-                else { roster.splice(index, 1); }
-                await lobbyRef.update({ [`roster.${player}`]: roster });
+                const currentRoster = lobbyData.roster[player];
+                const index = currentRoster.indexOf(id);
+                if (index === -1) { if (currentRoster.length < ROSTER_SIZE) currentRoster.push(id); } 
+                else { currentRoster.splice(index, 1); }
+                await lobbyRef.update({ [`roster.${player}`]: currentRoster });
                 broadcastState(lobbyCode.toUpperCase());
                 break;
             }
             
+            case 'rosterSet': {
+                if (!lobbyRef) return;
+                const doc = await lobbyRef.get();
+                if (!doc.exists) return;
+                let lobbyData = doc.data();
+                if (lobbyData.participants[player].ready) return;
+                // Basic validation
+                if (Array.isArray(roster) && roster.length === ROSTER_SIZE) {
+                    await lobbyRef.update({ [`roster.${player}`]: roster });
+                    broadcastState(lobbyCode.toUpperCase());
+                }
+                break;
+            }
+
             case 'rosterRandomize': {
                 if (!lobbyRef) return;
                 const doc = await lobbyRef.get();
@@ -461,9 +475,9 @@ wss.on('connection', (ws) => {
                 if (ws.userRole !== actingPlayer && ws.userRole !== 'ref') return;
 
                 const currentAction = lobbyData.draft.action;
-                if (currentAction === 'ban') {
+                if (currentAction.includes('ban')) {
                     lobbyData.draft.idBans[actingPlayer].push(selectedId);
-                } else if (currentAction === 'pick') {
+                } else if (currentAction.includes('pick')) {
                     lobbyData.draft.picks[actingPlayer].push(selectedId);
                 }
                 
