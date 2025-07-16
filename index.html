@@ -813,8 +813,10 @@
             gap: 20px;
             flex-wrap: wrap;
         }
-        .builder-main-panel { flex: 3; min-width: 400px; }
+        /* Changed flex to 1 for 50/50 split */
+        .builder-main-panel { flex: 1; min-width: 400px; }
         .builder-side-panel { flex: 1; min-width: 300px; background: var(--secondary); padding: 20px; border-radius: 10px; align-self: flex-start;}
+        
         .builder-id-pool {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -970,9 +972,8 @@
                 <div id="roster-phase" class="phase-section">
                     <h2>Roster Selection Phase</h2>
                     <p>Each player must select 42 IDs. When both are ready, the Referee can start the EGO Ban phase.</p>
-                    <div class="filter-bar">
+                    <div class="filter-bar" id="global-filter-bar-roster">
                         <!-- Filters are now globally defined and rendered by JS -->
-                        <div id="global-filter-bar-roster"></div>
                     </div>
                     <div class="player-area">
                         <div class="player-panel" id="p1-panel">
@@ -1046,13 +1047,15 @@
                         <h3><i class="fas fa-ban"></i> Banned EGOs</h3>
                         <div class="banned-egos-list" id="draft-banned-egos-list"></div>
                     </div>
+                    <div class="filter-bar" id="global-filter-bar-draft">
+                        <!-- Filters for draft phase rendered here by JS -->
+                    </div>
                     <div class="player-area">
                          <div class="player-panel" id="p1-draft-panel">
                             <div class="player-header">
                                 <div class="player-name" id="p1-draft-name">Player 1</div>
                                 <div class="player-status status-waiting" id="p1-draft-status">Waiting</div>
                             </div>
-                            <div class="search-bar" id="p1-search-bar"><input type="text" id="p1-search-input" placeholder="Search IDs..."></div>
                             <div class="roster-selection" id="p1-draft-selection"></div>
                             <h4>Your Bans:</h4><div class="ban-list" id="p1-id-bans"></div>
                             <h4>Picked IDs:</h4><div class="pick-list" id="p1-picks"></div>
@@ -1062,7 +1065,6 @@
                                 <div class="player-name" id="p2-draft-name">Player 2</div>
                                 <div class="player-status status-waiting" id="p2-draft-status">Waiting</div>
                             </div>
-                            <div class="search-bar" id="p2-search-bar"><input type="text" id="p2-search-input" placeholder="Search IDs..."></div>
                             <div class="roster-selection" id="p2-draft-selection"></div>
                             <h4>Your Bans:</h4><div class="ban-list" id="p2-id-bans"></div>
                             <h4>Picked IDs:</h4><div class="pick-list" id="p2-picks"></div>
@@ -1178,8 +1180,8 @@
                 picks: { p1: [], p2: [] }
             },
             filters: { sinner: "", sinAffinity: "", keyword: "", rosterSearch: "" },
+            draftFilters: { sinner: "", sinAffinity: "", keyword: "", rosterSearch: "" },
             egoSearch: "",
-            draftSearch: { p1: "", p2: "" },
             timer: 0,
             timerInterval: null,
             serverType: "remote",
@@ -1488,17 +1490,18 @@
         }
         
         function filterAndRenderRosterSelection() {
-            const filteredList = filterIDs(state.masterIDList);
+            const filteredList = filterIDs(state.masterIDList, state.filters);
             renderIDList(elements.p1Roster, filteredList, state.roster.p1, (id) => toggleIDSelection('p1', id));
             renderIDList(elements.p2Roster, filteredList, state.roster.p2, (id) => toggleIDSelection('p2', id));
         }
 
-        function filterIDs(sourceList) {
-            const searchTerm = state.filters.rosterSearch.toLowerCase();
+        function filterIDs(sourceList, filterObject) {
+            const searchTerm = filterObject.rosterSearch.toLowerCase();
             return sourceList.filter(fullData => {
-                if (state.filters.sinner && fullData.sinner !== state.filters.sinner) return false;
-                if (state.filters.sinAffinity && !fullData.sinAffinities.includes(state.filters.sinAffinity)) return false;
-                if (state.filters.keyword && !fullData.keywords.includes(state.filters.keyword)) return false;
+                if (!fullData) return false;
+                if (filterObject.sinner && fullData.sinner !== filterObject.sinner) return false;
+                if (filterObject.sinAffinity && !fullData.sinAffinities.includes(filterObject.sinAffinity)) return false;
+                if (filterObject.keyword && !fullData.keywords.includes(filterObject.keyword)) return false;
                 if (searchTerm && !fullData.name.toLowerCase().includes(searchTerm)) return false;
                 return true;
             });
@@ -1623,10 +1626,7 @@
                 const availableIdList = action.includes('ban') ? state.draft.available[opponent] : state.draft.available[currentPlayer];
                 let availableObjects = availableIdList.map(id => state.masterIDList.find(item => item && item.id === id)).filter(Boolean);
                 
-                const searchTerm = state.draftSearch[currentPlayer];
-                if (searchTerm) {
-                    availableObjects = availableObjects.filter(idObj => idObj.name.toLowerCase().includes(searchTerm));
-                }
+                availableObjects = filterIDs(availableObjects, state.draftFilters);
                 
                 const selectionContainer = currentPlayer === 'p1' ? elements.p1DraftSelection : elements.p2DraftSelection;
                 const clickHandler = (state.userRole === currentPlayer || state.userRole === 'ref') ? (id) => selectDraftID(currentPlayer, id) : null;
@@ -1664,7 +1664,7 @@
         }
         
         function renderRosterBuilder() {
-            const filteredList = filterIDs(state.masterIDList);
+            const filteredList = filterIDs(state.masterIDList, state.filters);
             renderIDList(elements.builderIdPool, filteredList, state.builderRoster, toggleBuilderIdSelection);
             
             const selectedObjects = state.builderRoster.map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
@@ -1750,6 +1750,41 @@
         // ======================
         // INITIALIZATION
         // ======================
+        function setupFilterBar(barId, filterStateObject) {
+            const bar = document.getElementById(barId);
+            if (!bar) return;
+
+            const update = () => {
+                if (state.currentView === 'lobbyView') {
+                    if (state.draft.phase === 'roster') filterAndRenderRosterSelection();
+                    else updateDraftInstructions();
+                } else if (state.currentView === 'rosterBuilderPage') {
+                    renderRosterBuilder();
+                }
+            };
+
+            bar.addEventListener('input', (e) => {
+                if (e.target.classList.contains('roster-search-input')) {
+                    filterStateObject.rosterSearch = e.target.value;
+                    update();
+                }
+            });
+            bar.addEventListener('change', (e) => {
+                const filterType = e.target.dataset.filter;
+                if (filterType) {
+                    filterStateObject[filterType] = e.target.value;
+                    update();
+                }
+            });
+            bar.addEventListener('click', (e) => {
+                if (e.target.closest('.reset-filters-btn')) {
+                    Object.keys(filterStateObject).forEach(key => filterStateObject[key] = "");
+                    bar.querySelectorAll('input, select').forEach(el => el.value = "");
+                    update();
+                }
+            });
+        }
+
         function setupEventListeners() {
             // Main Page
             elements.createLobbyBtn.addEventListener('click', () => sendMessage({ type: 'createLobby', name: elements.playerNameInput.value.trim() }));
@@ -1832,29 +1867,6 @@
                 }
             });
 
-            // Filters
-            document.querySelectorAll('.filter-bar').forEach(bar => {
-                bar.addEventListener('input', (e) => {
-                    if(e.target.id.includes('roster-search')) state.filters.rosterSearch = e.target.value;
-                    if(state.currentView === 'lobbyView') filterAndRenderRosterSelection();
-                    if(state.currentView === 'rosterBuilderPage') renderRosterBuilder();
-                });
-                bar.addEventListener('change', (e) => {
-                    const filterType = e.target.dataset.filter;
-                    if(filterType) state.filters[filterType] = e.target.value;
-                    if(state.currentView === 'lobbyView') filterAndRenderRosterSelection();
-                    if(state.currentView === 'rosterBuilderPage') renderRosterBuilder();
-                });
-                bar.addEventListener('click', (e) => {
-                    if(e.target.closest('.reset-filters-btn')) {
-                        state.filters = { sinner: "", sinAffinity: "", keyword: "", rosterSearch: "" };
-                        bar.querySelectorAll('input, select').forEach(el => el.value = "");
-                        if(state.currentView === 'lobbyView') filterAndRenderRosterSelection();
-                        if(state.currentView === 'rosterBuilderPage') renderRosterBuilder();
-                    }
-                });
-            });
-
             // EGO Search
             elements.egoSearchInput.addEventListener('input', (e) => {
                 state.egoSearch = e.target.value;
@@ -1866,19 +1878,16 @@
             elements.confirmEgoBans.addEventListener('click', () => sendMessage({ type: 'draftControl', lobbyCode: state.lobbyCode, action: 'confirmEgoBans' }));
             elements.nextPhase.addEventListener('click', () => sendMessage({ type: 'draftControl', lobbyCode: state.lobbyCode, action: 'nextPhase' }));
             elements.completeDraft.addEventListener('click', () => sendMessage({ type: 'draftControl', lobbyCode: state.lobbyCode, action: 'complete' }));
-            
-            elements.p1SearchInput.addEventListener('input', (e) => { state.draftSearch.p1 = e.target.value.toLowerCase(); updateDraftInstructions(); });
-            elements.p2SearchInput.addEventListener('input', (e) => { state.draftSearch.p2 = e.target.value.toLowerCase(); updateDraftInstructions(); });
         }
 
         function createFilterBarHTML() {
             return `
                 <div class="filter-group">
-                    <label class="filter-label" for="roster-search-input">Search by Name:</label>
+                    <label class="filter-label">Search by Name:</label>
                     <input type="text" class="roster-search-input" placeholder="e.g. LCB Sinner...">
                 </div>
                 <div class="filter-group">
-                    <label class="filter-label" for="sinner-filter">Filter by Sinner:</label>
+                    <label class="filter-label">Filter by Sinner:</label>
                     <select class="sinner-filter" data-filter="sinner">
                         <option value="">All Sinners</option>
                         <option value="Yi Sang">Yi Sang</option><option value="Faust">Faust</option><option value="Don Quixote">Don Quixote</option>
@@ -1888,7 +1897,7 @@
                     </select>
                 </div>
                 <div class="filter-group">
-                    <label class="filter-label" for="sinAffinity-filter">Filter by Sin Affinity:</label>
+                    <label class="filter-label">Filter by Sin Affinity:</label>
                     <select class="sinAffinity-filter" data-filter="sinAffinity">
                         <option value="">All Affinities</option>
                         <option value="Gloom">Gloom</option><option value="Lust">Lust</option><option value="Sloth">Sloth</option>
@@ -1896,7 +1905,7 @@
                     </select>
                 </div>
                 <div class="filter-group">
-                    <label class="filter-label" for="keyword-filter">Filter by Keyword:</label>
+                    <label class="filter-label">Filter by Keyword:</label>
                     <select class="keyword-filter" data-filter="keyword">
                         <option value="">All Keywords</option>
                         <option value="Sinking">Sinking</option><option value="Rupture">Rupture</option><option value="Discard">Discard</option>
@@ -1984,7 +1993,6 @@
                 p1DraftPanel: document.getElementById('p1-draft-panel'), p2DraftPanel: document.getElementById('p2-draft-panel'),
                 p1DraftName: document.getElementById('p1-draft-name'), p2DraftName: document.getElementById('p2-draft-name'),
                 p1DraftStatus: document.getElementById('p1-draft-status'), p2DraftStatus: document.getElementById('p2-draft-status'),
-                p1SearchInput: document.getElementById('p1-search-input'), p2SearchInput: document.getElementById('p2-search-input'),
                 p1DraftSelection: document.getElementById('p1-draft-selection'), p2DraftSelection: document.getElementById('p2-draft-selection'),
                 p1IdBans: document.getElementById('p1-id-bans'), p2IdBans: document.getElementById('p2-id-bans'),
                 p1Picks: document.getElementById('p1-picks'), p2Picks: document.getElementById('p2-picks'),
@@ -2242,11 +2250,16 @@ Solemn Lament Gregor - HE - Gloom - Blue
 Christmas Nightmare Gregor - HE - Sloth - Yellow
 Garden of Thorns Gregor - WAW - Lust - Orange`;
             
-            // Inject filter bars
+            cacheDOMElements();
+
+            // Inject filter bars and set up listeners
             document.getElementById('global-filter-bar-roster').innerHTML = createFilterBarHTML();
             document.getElementById('global-filter-bar-builder').innerHTML = createFilterBarHTML();
+            document.getElementById('global-filter-bar-draft').innerHTML = createFilterBarHTML();
+            setupFilterBar('global-filter-bar-roster', state.filters);
+            setupFilterBar('global-filter-bar-builder', state.filters);
+            setupFilterBar('global-filter-bar-draft', state.draftFilters);
 
-            cacheDOMElements();
             state.masterIDList = parseIDCSV(idCsvData);
             state.masterEGOList = parseEGOData(egoData);
             setupEventListeners();
