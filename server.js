@@ -20,11 +20,10 @@ app.get('/_ah/health', (req, res) => res.status(200).send('OK'));
 
 const wss = new WebSocket.Server({ server });
 
-// --- CONSTANTS ---
+// --- CONSTANTS & DATA ---
 const ROSTER_SIZE = 42;
 const EGO_BAN_COUNT = 5;
 
-// --- UTILITY FUNCTIONS ---
 function createSlug(name) {
     if (!name) return '';
     return name.toLowerCase()
@@ -33,6 +32,34 @@ function createSlug(name) {
         .replace(/ & /g, ' ').replace(/[.'"]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/[^\w-]+/g, '');
 }
 
+function parseIDCSV(csv) {
+    const lines = csv.split('\n').filter(line => line.trim() !== '');
+    if (lines.length < 2) return [];
+    const regex = /(".*?"|[^",]+)(?=\s*,|\s*$)/g;
+    const headers = lines[0].split(',').map(h => h.trim());
+    const result = [];
+    for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+        const values = line.match(regex) || [];
+        if (values.length !== headers.length) continue;
+        const obj = {};
+        headers.forEach((header, idx) => {
+            let value = values[idx].trim();
+            if (value.startsWith('"') && value.endsWith('"')) value = value.slice(1, -1);
+            obj[header] = value;
+        });
+        result.push({ id: createSlug(obj.Name), name: obj.Name });
+    }
+    return result;
+}
+
+const idCsvData = fs.readFileSync(path.join(__dirname, 'id_data.csv'), 'utf8'); // Assuming you save the CSV data into a file
+const masterIDList = parseIDCSV(idCsvData);
+const allIds = masterIDList.map(item => item.id);
+
+
+// --- UTILITY FUNCTIONS ---
 async function generateUniqueLobbyCode() {
     let code;
     let docExists;
@@ -53,14 +80,14 @@ function createNewLobbyState() {
         },
         roster: { p1: [], p2: [] },
         draft: {
-            phase: "roster", // roster -> egoBan -> ban -> pick -> ...
+            phase: "roster",
             step: 0,
             currentPlayer: "",
             action: "",
             actionCount: 0,
             available: { p1: [], p2: [] },
             idBans: { p1: [], p2: [] },
-            egoBans: { p1: [], p2: [] }, // New state for EGO bans
+            egoBans: { p1: [], p2: [] },
             picks: { p1: [], p2: [] }
         }
     };
@@ -72,9 +99,8 @@ function nextPhase(lobbyData) {
     switch (draft.phase) {
         case "egoBan":
             if (draft.currentPlayer === 'p1' && draft.egoBans.p1.length === EGO_BAN_COUNT) {
-                draft.currentPlayer = 'p2'; // Move to P2's turn
+                draft.currentPlayer = 'p2';
             } else if (draft.currentPlayer === 'p2' && draft.egoBans.p2.length === EGO_BAN_COUNT) {
-                // EGO bans complete, start ID bans
                 draft.phase = "ban";
                 draft.step = 0;
                 draft.currentPlayer = "p1";
@@ -203,6 +229,21 @@ wss.on('connection', (ws) => {
                 broadcastState(lobbyCode.toUpperCase());
                 break;
             }
+            
+            case 'rosterRandomize': {
+                if (!lobbyRef) return;
+                const doc = await lobbyRef.get();
+                if (!doc.exists) return;
+                let lobbyData = doc.data();
+                if (lobbyData.participants[player].ready) return;
+
+                const shuffled = [...allIds].sort(() => 0.5 - Math.random());
+                const newRoster = shuffled.slice(0, ROSTER_SIZE);
+                
+                await lobbyRef.update({ [`roster.${player}`]: newRoster });
+                broadcastState(lobbyCode.toUpperCase());
+                break;
+            }
 
             case 'updateReady': {
                 if (!lobbyRef) return;
@@ -254,7 +295,6 @@ wss.on('connection', (ws) => {
                     lobbyData = nextPhase(lobbyData);
                 }
                 
-                // Initialize available rosters when moving to ID bans
                 if (lobbyData.draft.phase === 'ban' && lobbyData.draft.available.p1.length === 0) {
                      lobbyData.draft.available.p1 = [...lobbyData.roster.p1];
                      lobbyData.draft.available.p2 = [...lobbyData.roster.p2];
@@ -282,7 +322,6 @@ wss.on('connection', (ws) => {
                     lobbyData.draft.picks[actingPlayer].push(selectedId);
                 }
                 
-                // Remove from available pools
                 let p1Index = lobbyData.draft.available.p1.indexOf(selectedId);
                 if(p1Index > -1) lobbyData.draft.available.p1.splice(p1Index, 1);
                 let p2Index = lobbyData.draft.available.p2.indexOf(selectedId);
@@ -316,6 +355,25 @@ wss.on('connection', (ws) => {
         }
     });
 });
+
+// Create a dummy id_data.csv file for the server to read
+const idCsvContent = `Name,Keywords,SinAffinities,Rarity
+"LCB Sinner Yi Sang","Sinking","Gloom,Envy,Sloth","0"
+"Seven Association South Section 6 Yi Sang","Rupture","Gloom,Gluttony,Sloth","00"
+"Molar Office Fixer Yi Sang","Discard,Tremor","Lust,Sloth,Wrath","00"
+"The Pequod First Mate Yi Sang","Bleed,Poise","Pride,Envy,Gluttony","00"
+"Dieci Association South Section 4 Yi Sang","Aggro,Discard,Sinking","Gluttony,Lust,Sloth","00"
+"LCE E.G.O::Lantern Yi Sang","Aggro,Rupture","Sloth,Envy,Gluttony","00"
+"Blade Lineage Salsu Yi Sang","Poise","Pride,Envy,Sloth","000"
+"Effloresced E.G.O::Spicebush Yi Sang","Sinking,Tremor","Gluttony,Sloth,Pride","000"
+"W Corp. L3 Cleanup Agent Yi Sang","Charge,Rupture","Sloth,Gluttony,Gloom","000"
+"The Ring Pointillist Student Yi Sang","Bleed,Random","Gloom,Lust,Sloth","000"
+"Lobotomy E.G.O::Solemn Lament Yi Sang","Ammo,Sinking","Pride,Gloom,Sloth","000"
+"Liu Association South Section 3 Yi Sang","Burn","Sloth,Wrath,Envy","000"
+"N Corp. E.G.O::Fell Bullet Yi Sang","Bleed,Poise","Wrath,Lust,Pride","000"
+`;
+fs.writeFileSync(path.join(__dirname, 'id_data.csv'), idCsvContent);
+
 
 const PORT = process.env.PORT || 8080;
 server.listen(PORT, () => console.log(`Server is listening on port ${PORT}`));
