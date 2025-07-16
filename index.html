@@ -1636,9 +1636,14 @@
                 const selectionContainer = currentPlayer === 'p1' ? elements.p1DraftSelection : elements.p2DraftSelection;
                 const clickHandler = (state.userRole === currentPlayer || state.userRole === 'ref') ? (id) => selectDraftID(currentPlayer, id) : null;
                 
-                // If it's a ban action, highlight IDs the current player has in their own roster.
-                // If it's a pick action, do not highlight anything in the selection pool.
-                const selectionSet = isBanAction ? state.roster[currentPlayer] : null;
+                let selectionSet;
+                if (isBanAction) {
+                    // During BAN phase, highlight IDs that are also in your roster (shared IDs).
+                    selectionSet = state.roster[currentPlayer];
+                } else {
+                    // During PICK phase, highlight all available IDs since they are from your own roster.
+                    selectionSet = availableIdList;
+                }
                 
                 renderIDList(selectionContainer, availableObjects, selectionSet, clickHandler);
             }
