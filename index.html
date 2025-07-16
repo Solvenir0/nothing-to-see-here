@@ -48,7 +48,7 @@
         }
         
         .container {
-            max-width: 1400px;
+            max-width: 1600px;
             margin: 0 auto;
         }
         .hidden {
@@ -136,6 +136,14 @@
         .btn-primary:hover {
             background: #ffc400;
         }
+
+        .btn-secondary {
+            background: #444;
+            color: #fff;
+        }
+        .btn-secondary:hover {
+            background: #555;
+        }
         
         .btn-large {
             padding: 18px 35px;
@@ -144,7 +152,7 @@
         
         #main-page {
             text-align: center;
-            max-width: 800px;
+            max-width: 1200px;
             margin: 0 auto;
             position: relative;
         }
@@ -318,7 +326,7 @@
             box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
         }
         
-        #lobby-view {
+        #lobby-view, #roster-builder-page {
             display: none;
         }
         
@@ -685,8 +693,24 @@
         .filter-label { display: block; margin-bottom: 5px; font-size: 0.9rem; color: #ccc; }
 
         /* EGO BANNING STYLES */
-        #ego-ban-phase {
-            width: 100%;
+        #ego-ban-phase { width: 100%; }
+
+        .ego-ban-layout {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+        }
+        #ego-ban-phase.p1-banning #ego-selection-window { order: 1; }
+        #ego-ban-phase.p1-banning #opponent-roster-display { order: 2; }
+        #ego-ban-phase.p2-banning #ego-selection-window { order: 2; }
+        #ego-ban-phase.p2-banning #opponent-roster-display { order: 1; }
+
+        #ego-selection-window, #opponent-roster-display {
+            flex: 1;
+            background: var(--panel);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
         }
 
         .ego-ban-container {
@@ -698,6 +722,10 @@
             padding: 15px;
             background: rgba(0,0,0,0.2);
             border-radius: 8px;
+        }
+        
+        #opponent-roster-display .roster-selection {
+            max-height: 65vh;
         }
 
         .ego-item {
@@ -723,12 +751,8 @@
             color: #999;
         }
         
-        .ego-item.banned-p1 {
-            border: 2px dashed var(--primary);
-        }
-        .ego-item.banned-p2 {
-            border: 2px dashed var(--drafting);
-        }
+        .ego-item.banned-p1 { border: 2px dashed var(--primary); }
+        .ego-item.banned-p2 { border: 2px dashed var(--drafting); }
 
         .ego-header {
             display: flex;
@@ -781,11 +805,55 @@
             border-radius: 3px;
             color: #fff;
         }
-         .banned-ego-item .name {
-            text-decoration: line-through;
+         .banned-ego-item .name { text-decoration: line-through; }
+
+        /* Roster Builder Styles */
+        #roster-builder-page .card {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .builder-main-panel { flex: 3; min-width: 400px; }
+        .builder-side-panel { flex: 1; min-width: 300px; background: var(--secondary); padding: 20px; border-radius: 10px; align-self: flex-start;}
+        .builder-id-pool {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 10px;
+            max-height: 70vh;
+            overflow-y: auto;
+            padding: 10px;
+        }
+        .builder-selected-roster {
+            max-height: 50vh;
+            overflow-y: auto;
+        }
+        #builder-roster-code {
+            word-wrap: break-word;
+            background: #111;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            min-height: 50px;
+            margin-top: 10px;
+        }
+        .roster-code-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .roster-code-actions input { flex-grow: 1; }
+        .roster-code-actions .btn { padding: 14px; }
+        
+        .roster-load-form {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-top: 10px;
         }
 
-
+        @media (max-width: 1200px) {
+            #roster-builder-page .card, .ego-ban-layout { flex-direction: column; }
+        }
         @media (max-width: 768px) {
             .container { max-width: 100%; }
             .action-container { flex-direction: column; align-items: center; }
@@ -819,8 +887,7 @@
             </div>
             
             <div class="welcome-text">
-                <p>Welcome to the official Limbus Company drafting system. Here you can create or join lobbies to organize competitive matches with other players.</p>
-                <p>Select an option below to get started. You can create a new lobby as the referee, or join an existing lobby as Player 1, Player 2, or Referee.</p>
+                <p>Welcome to the official Limbus Company drafting system. Here you can create or join lobbies to organize competitive matches with other players, or use the Roster Builder to prepare your teams in advance.</p>
             </div>
             
             <div class="form-group" style="max-width: 400px; margin: 30px auto; text-align: left;">
@@ -829,6 +896,13 @@
             </div>
             
             <div class="action-container">
+                <div class="action-card">
+                    <div class="action-icon"><i class="fas fa-users-cog"></i></div>
+                    <h3 class="action-title">Roster Builder</h3>
+                    <p class="action-description">Create a 42-ID roster and generate a shareable code for quick loading during a match.</p>
+                    <button class="btn btn-secondary btn-large" id="go-to-builder"><i class="fas fa-wrench"></i> Open Builder</button>
+                </div>
+
                 <div class="action-card">
                     <div class="action-icon"><i class="fas fa-plus-circle"></i></div>
                     <h3 class="action-title">Create New Lobby</h3>
@@ -863,7 +937,7 @@
         </div>
         
         <div id="lobby-view">
-            <button class="btn back-button" id="back-to-main"><i class="fas fa-arrow-left"></i> Main Menu</button>
+            <button class="btn back-button" id="back-to-main-lobby"><i class="fas fa-arrow-left"></i> Main Menu</button>
             
             <header>
                 <h1><i class="fas fa-dragon"></i> Limbus Company Draft System</h1>
@@ -897,45 +971,8 @@
                     <h2>Roster Selection Phase</h2>
                     <p>Each player must select 42 IDs. When both are ready, the Referee can start the EGO Ban phase.</p>
                     <div class="filter-bar">
-                        <div class="filter-group">
-                            <label class="filter-label" for="roster-search-input">Search by Name:</label>
-                            <input type="text" id="roster-search-input" placeholder="e.g. LCB Sinner...">
-                        </div>
-                        <div class="filter-group">
-                            <label class="filter-label" for="sinner-filter">Filter by Sinner:</label>
-                            <select id="sinner-filter">
-                                <option value="">All Sinners</option>
-                                <option value="Yi Sang">Yi Sang</option>
-                                <option value="Faust">Faust</option>
-                                <option value="Don Quixote">Don Quixote</option>
-                                <option value="Ryōshū">Ryōshū</option>
-                                <option value="Meursault">Meursault</option>
-                                <option value="Hong Lu">Hong Lu</option>
-                                <option value="Heathcliff">Heathcliff</option>
-                                <option value="Ishmael">Ishmael</option>
-                                <option value="Rodion">Rodion</option>
-                                <option value="Sinclair">Sinclair</option>
-                                <option value="Outis">Outis</option>
-                                <option value="Gregor">Gregor</option>
-                            </select>
-                        </div>
-                        <div class="filter-group">
-                            <label class="filter-label" for="sinAffinity-filter">Filter by Sin Affinity:</label>
-                            <select id="sinAffinity-filter">
-                                <option value="">All Affinities</option>
-                                <option value="Gloom">Gloom</option><option value="Lust">Lust</option><option value="Sloth">Sloth</option><option value="Wrath">Wrath</option><option value="Gluttony">Gluttony</option><option value="Envy">Envy</option><option value="Pride">Pride</option>
-                            </select>
-                        </div>
-                        <div class="filter-group">
-                            <label class="filter-label" for="keyword-filter">Filter by Keyword:</label>
-                            <select id="keyword-filter">
-                                <option value="">All Keywords</option>
-                                <option value="Sinking">Sinking</option><option value="Rupture">Rupture</option><option value="Discard">Discard</option><option value="Tremor">Tremor</option><option value="Bleed">Bleed</option><option value="Poise">Poise</option><option value="Aggro">Aggro</option><option value="Charge">Charge</option><option value="Burn">Burn</option><option value="Ammo">Ammo</option>
-                            </select>
-                        </div>
-                        <div class="filter-buttons">
-                            <button class="btn" id="reset-filters"><i class="fas fa-sync"></i> Reset</button>
-                        </div>
+                        <!-- Filters are now globally defined and rendered by JS -->
+                        <div id="global-filter-bar-roster"></div>
                     </div>
                     <div class="player-area">
                         <div class="player-panel" id="p1-panel">
@@ -944,6 +981,10 @@
                                 <div class="player-status status-waiting" id="p1-status">Selecting</div>
                             </div>
                             <div class="counter"><i class="fas fa-users"></i> Selected: <strong id="p1-counter">0</strong> / 42 IDs</div>
+                            <div class="roster-load-form">
+                                <input type="text" id="p1-roster-code-input" placeholder="Paste Roster Code...">
+                                <button class="btn btn-secondary" id="p1-roster-load"><i class="fas fa-upload"></i> Load</button>
+                            </div>
                             <div class="roster-selection" id="p1-roster"></div>
                             <div class="controls">
                                 <button class="btn" id="p1-random"><i class="fas fa-random"></i> Randomize</button>
@@ -957,6 +998,10 @@
                                 <div class="player-status status-waiting" id="p2-status">Selecting</div>
                             </div>
                             <div class="counter"><i class="fas fa-users"></i> Selected: <strong id="p2-counter">0</strong> / 42 IDs</div>
+                            <div class="roster-load-form">
+                                <input type="text" id="p2-roster-code-input" placeholder="Paste Roster Code...">
+                                <button class="btn btn-secondary" id="p2-roster-load"><i class="fas fa-upload"></i> Load</button>
+                            </div>
                             <div class="roster-selection" id="p2-roster"></div>
                             <div class="controls">
                                 <button class="btn" id="p2-random"><i class="fas fa-random"></i> Randomize</button>
@@ -973,14 +1018,21 @@
                 <!-- EGO Ban Phase -->
                 <div id="ego-ban-phase" class="phase-section hidden">
                     <h2>EGO Ban Phase</h2>
-                    <div class="filter-bar">
-                        <div class="filter-group" style="flex-grow: 2;">
-                            <label class="filter-label" for="ego-search-input">Search EGOs:</label>
-                            <input type="text" id="ego-search-input" placeholder="Search by name or sinner...">
+                    <div class="ego-ban-layout">
+                        <div id="ego-selection-window">
+                            <h3>Available EGOs</h3>
+                            <div class="filter-bar">
+                                <div class="filter-group" style="flex-grow: 2;">
+                                    <label class="filter-label" for="ego-search-input">Search EGOs:</label>
+                                    <input type="text" id="ego-search-input" placeholder="Search by name or sinner...">
+                                </div>
+                            </div>
+                            <div class="ego-ban-container" id="ego-ban-container"></div>
                         </div>
-                    </div>
-                    <div class="ego-ban-container" id="ego-ban-container">
-                        <!-- EGOs will be rendered here -->
+                        <div id="opponent-roster-display">
+                            <h3 id="opponent-roster-title">Opponent's Roster</h3>
+                            <div class="roster-selection" id="opponent-roster-list"></div>
+                        </div>
                     </div>
                     <div class="controls" style="margin-top: 20px;">
                         <button class="btn btn-primary" id="confirm-ego-bans" disabled><i class="fas fa-check-double"></i> Confirm Bans</button>
@@ -1019,6 +1071,44 @@
                     <div class="ref-actions" style="text-align: center; margin-top: 20px;">
                         <button class="btn hidden" id="next-phase" disabled><i class="fas fa-step-forward"></i> Next Phase</button>
                         <button class="btn btn-primary" id="complete-draft" disabled><i class="fas fa-flag-checkered"></i> Complete Draft</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Roster Builder Page -->
+        <div id="roster-builder-page">
+            <button class="btn back-button" id="back-to-main-builder"><i class="fas fa-arrow-left"></i> Main Menu</button>
+            <header>
+                <h1><i class="fas fa-users-cog"></i> Roster Builder</h1>
+                <p>Create a roster and generate a shareable code.</p>
+            </header>
+            <div class="card">
+                <div class="builder-main-panel">
+                    <h3>Available Identities</h3>
+                     <div class="filter-bar" id="global-filter-bar-builder"></div>
+                     <div class="builder-id-pool" id="builder-id-pool">
+                         <!-- IDs will be rendered here -->
+                     </div>
+                </div>
+                <div class="builder-side-panel">
+                    <h3>Your Roster (<span id="builder-counter">0</span>/42)</h3>
+                    <div class="builder-selected-roster" id="builder-selected-roster"></div>
+                    <div class="controls" style="margin-top: 10px;">
+                        <button class="btn" id="builder-random"><i class="fas fa-random"></i> Random</button>
+                        <button class="btn" id="builder-clear"><i class="fas fa-trash"></i> Clear</button>
+                    </div>
+                    <h3 style="margin-top: 20px;">Roster Code</h3>
+                    <p>Use this code to quickly load your roster here or in a match lobby.</p>
+                    <div id="builder-roster-code-display" style="background: #111; padding: 10px; border-radius: 5px; font-family: monospace; min-height: 50px; margin-top: 10px; word-wrap: break-word;">
+                        Select 42 IDs to generate a code.
+                    </div>
+                    <button class="btn btn-primary" id="builder-copy-code" style="width: 100%; margin-top: 10px;" disabled><i class="fas fa-copy"></i> Copy Code</button>
+                    
+                    <h3 style="margin-top: 20px;">Load from Code</h3>
+                    <div class="roster-code-actions">
+                        <input type="text" id="builder-load-code-input" placeholder="Paste code here...">
+                        <button class="btn" id="builder-load-code"><i class="fas fa-upload"></i></button>
                     </div>
                 </div>
             </div>
@@ -1073,6 +1163,7 @@
                 ref: { name: "Referee", status: "disconnected" }
             },
             roster: { p1: [], p2: [] },
+            builderRoster: [],
             masterIDList: [],
             masterEGOList: [],
             draft: {
@@ -1086,9 +1177,8 @@
                 egoBans: { p1: [], p2: [] },
                 picks: { p1: [], p2: [] }
             },
-            filters: { sinner: "", sinAffinity: "", keyword: "" },
-            rosterSearch: "", 
-            egoSearch: "", // New state for EGO search
+            filters: { sinner: "", sinAffinity: "", keyword: "", rosterSearch: "" },
+            egoSearch: "",
             draftSearch: { p1: "", p2: "" },
             timer: 0,
             timerInterval: null,
@@ -1162,12 +1252,8 @@
             const lines = data.trim().split('\n');
             const egoList = [];
             const bgColorMap = { 
-                'Yellow': 'var(--sin-sloth-bg)',
-                'Blue': 'var(--sin-gloom-bg)',
-                'Red': 'var(--sin-wrath-bg)',
-                'Indigo': 'var(--sin-pride-bg)',
-                'Purple': 'var(--sin-envy-bg)',
-                'Orange': 'var(--sin-lust-bg)',
+                'Yellow': 'var(--sin-sloth-bg)', 'Blue': 'var(--sin-gloom-bg)', 'Red': 'var(--sin-wrath-bg)',
+                'Indigo': 'var(--sin-pride-bg)', 'Purple': 'var(--sin-envy-bg)', 'Orange': 'var(--sin-lust-bg)',
                 'Green': 'var(--sin-gluttony-bg)'
             };
             
@@ -1195,17 +1281,55 @@
                 
                 egoList.push({
                     id: createSlug(`${name} ${sinner}`),
-                    name: `${name} (${sinner})`,
-                    sinner: sinner,
-                    rarity: rarity,
-                    sin: sin,
-                    color: color,
+                    name: `${name} (${sinner})`, sinner, rarity, sin, color,
                     cssColor: bgColorMap[color] || 'rgba(128, 128, 128, 0.7)'
                 });
             });
             return egoList;
         }
 
+        // ======================
+        // ROSTER CODE SYSTEM
+        // ======================
+        function generateRosterCode() {
+            if (state.builderRoster.length !== ROSTER_SIZE) return null;
+            try {
+                const indices = state.builderRoster.map(slug => {
+                    const index = state.masterIDList.findIndex(id => id.id === slug);
+                    return index > -1 ? index : 255; // Use 255 as an error/not found marker
+                });
+                const uint8Array = new Uint8Array(indices);
+                const binaryString = String.fromCharCode.apply(null, uint8Array);
+                return btoa(binaryString);
+            } catch (e) {
+                console.error("Error generating roster code:", e);
+                return null;
+            }
+        }
+
+        function loadRosterFromCode(code) {
+            try {
+                const binaryString = atob(code);
+                if (binaryString.length !== ROSTER_SIZE) {
+                    showNotification("Invalid roster code: incorrect length.", true);
+                    return null;
+                }
+                const uint8Array = new Uint8Array(binaryString.split('').map(c => c.charCodeAt(0)));
+                const rosterSlugs = Array.from(uint8Array).map(index => {
+                    return (index < state.masterIDList.length) ? state.masterIDList[index].id : null;
+                }).filter(Boolean);
+
+                if (rosterSlugs.length !== ROSTER_SIZE) {
+                    showNotification("Invalid roster code: contains invalid ID data.", true);
+                    return null;
+                }
+                return rosterSlugs;
+            } catch (e) {
+                console.error("Error decoding roster code:", e);
+                showNotification("Invalid roster code format.", true);
+                return null;
+            }
+        }
 
         // ======================
         // SOCKET COMMUNICATION
@@ -1273,11 +1397,8 @@
             egoElement.style.backgroundColor = egoData.cssColor;
 
             egoElement.innerHTML = `
-                <div class="ego-header">
-                    <span class="ego-rarity">${egoData.rarity}</span>
-                </div>
-                <div class="ego-name">${egoData.name}</div>
-            `;
+                <div class="ego-header"><span class="ego-rarity">${egoData.rarity}</span></div>
+                <div class="ego-name">${egoData.name}</div>`;
             
             if (clickHandler && !isBanned) {
                 egoElement.addEventListener('click', () => clickHandler(egoData.id));
@@ -1285,11 +1406,10 @@
             return egoElement;
         }
 
-
-        function renderIDList(container, idObjectList, player, clickHandler) {
+        function renderIDList(container, idObjectList, selectionSet, clickHandler) {
             container.innerHTML = '';
             if (!Array.isArray(idObjectList) || idObjectList.length === 0) {
-                if(container.id !== 'p1-id-bans' && container.id !== 'p2-id-bans' && container.id !== 'p1-picks' && container.id !== 'p2-picks') {
+                if(!container.classList.contains('ban-list') && !container.classList.contains('pick-list')) {
                    container.innerHTML = '<div class="empty-roster" style="padding: 10px; text-align: center;">No items to display</div>';
                 }
                 return;
@@ -1298,32 +1418,37 @@
             const fragment = document.createDocumentFragment();
             idObjectList.forEach(idData => {
                 if (!idData) return;
-                const isSelected = state.roster[player]?.includes(idData.id);
-                const element = createIdElement(idData, { 
-                    isSelected, 
-                    clickHandler: clickHandler ? () => clickHandler(player, idData.id) : null
-                });
+                const isSelected = selectionSet ? selectionSet.includes(idData.id) : false;
+                const element = createIdElement(idData, { isSelected, clickHandler: clickHandler ? () => clickHandler(idData.id) : null });
                 fragment.appendChild(element);
             });
             container.appendChild(fragment);
+        }
+        
+        function switchView(view) {
+            state.currentView = view;
+            ['mainPage', 'lobbyView', 'completedView', 'rosterBuilderPage'].forEach(page => {
+                elements[page].style.display = 'none';
+            });
+            if(elements[view]) elements[view].style.display = 'block';
         }
 
         function updateAllUIsFromState() {
             const { phase } = state.draft;
 
             // View switching
-            elements.mainPage.style.display = 'none';
-            elements.lobbyView.style.display = phase === 'complete' ? 'none' : 'block';
-            elements.completedView.style.display = phase === 'complete' ? 'block' : 'none';
+            if (phase === 'complete') {
+                switchView('completedView');
+                renderCompletedView();
+                return;
+            }
+            if (state.lobbyCode) switchView('lobbyView');
+            else if (state.currentView !== 'rosterBuilderPage') switchView('mainPage');
+
 
             elements.rosterPhase.classList.toggle('hidden', phase !== 'roster');
             elements.egoBanPhase.classList.toggle('hidden', phase !== 'egoBan');
             elements.idDraftPhase.classList.toggle('hidden', !['ban', 'pick', 'midBan', 'pick2'].includes(phase));
-
-            if (phase === 'complete') {
-                renderCompletedView();
-                return;
-            }
 
             // Participants list
             elements.participantsList.innerHTML = '';
@@ -1364,12 +1489,12 @@
         
         function filterAndRenderRosterSelection() {
             const filteredList = filterIDs(state.masterIDList);
-            renderIDList(elements.p1Roster, filteredList, 'p1', toggleIDSelection);
-            renderIDList(elements.p2Roster, filteredList, 'p2', toggleIDSelection);
+            renderIDList(elements.p1Roster, filteredList, state.roster.p1, (id) => toggleIDSelection('p1', id));
+            renderIDList(elements.p2Roster, filteredList, state.roster.p2, (id) => toggleIDSelection('p2', id));
         }
 
         function filterIDs(sourceList) {
-            const searchTerm = state.rosterSearch.toLowerCase();
+            const searchTerm = state.filters.rosterSearch.toLowerCase();
             return sourceList.filter(fullData => {
                 if (state.filters.sinner && fullData.sinner !== state.filters.sinner) return false;
                 if (state.filters.sinAffinity && !fullData.sinAffinities.includes(state.filters.sinAffinity)) return false;
@@ -1380,10 +1505,16 @@
         }
         
         function renderEgoBanPhase() {
+            const { currentPlayer } = state.draft;
+            const opponent = currentPlayer === 'p1' ? 'p2' : 'p1';
+
+            elements.egoBanPhase.className = `phase-section ${currentPlayer}-banning`;
+
+            // Render EGOs
             const container = elements.egoBanContainer;
             container.innerHTML = '';
             const fragment = document.createDocumentFragment();
-            const clickHandler = (state.userRole === state.draft.currentPlayer || state.userRole === 'ref') ? selectEgoToBan : null;
+            const clickHandler = (state.userRole === currentPlayer || state.userRole === 'ref') ? selectEgoToBan : null;
             
             const searchTerm = state.egoSearch.toLowerCase();
             const filteredEgos = state.masterEGOList.filter(ego => 
@@ -1395,7 +1526,13 @@
             });
             container.appendChild(fragment);
 
-            const canConfirm = (state.userRole === 'ref' || state.userRole === state.draft.currentPlayer) && state.draft.egoBans[state.draft.currentPlayer].length === EGO_BAN_COUNT;
+            // Render Opponent Roster
+            elements.opponentRosterTitle.textContent = `${state.participants[opponent].name}'s Roster`;
+            const opponentRosterObjects = state.roster[opponent].map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
+            renderIDList(elements.opponentRosterList, opponentRosterObjects, null, null);
+
+
+            const canConfirm = (state.userRole === 'ref' || state.userRole === currentPlayer) && state.draft.egoBans[currentPlayer].length === EGO_BAN_COUNT;
             elements.confirmEgoBans.disabled = !canConfirm;
         }
 
@@ -1421,7 +1558,7 @@
         function updateDraftUI() {
             const renderIdSublist = (container, idList) => {
                 const idObjects = idList.map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
-                renderIDList(container, idObjects);
+                renderIDList(container, idObjects, null, null);
             };
             
             renderIdSublist(elements.p1IdBans, state.draft.idBans.p1);
@@ -1482,8 +1619,8 @@
             }
 
             if (['ban', 'pick', 'midBan', 'pick2'].includes(phase)) {
-                 const opponent = currentPlayer === 'p1' ? 'p2' : 'p1';
-                const availableIdList = action === 'ban' ? state.draft.available[opponent] : state.draft.available[currentPlayer];
+                const opponent = currentPlayer === 'p1' ? 'p2' : 'p1';
+                const availableIdList = action.includes('ban') ? state.draft.available[opponent] : state.draft.available[currentPlayer];
                 let availableObjects = availableIdList.map(id => state.masterIDList.find(item => item && item.id === id)).filter(Boolean);
                 
                 const searchTerm = state.draftSearch[currentPlayer];
@@ -1492,8 +1629,8 @@
                 }
                 
                 const selectionContainer = currentPlayer === 'p1' ? elements.p1DraftSelection : elements.p2DraftSelection;
-                const clickHandler = (state.userRole === currentPlayer || state.userRole === 'ref') ? selectDraftID : null;
-                renderIDList(selectionContainer, availableObjects, currentPlayer, clickHandler);
+                const clickHandler = (state.userRole === currentPlayer || state.userRole === 'ref') ? (id) => selectDraftID(currentPlayer, id) : null;
+                renderIDList(selectionContainer, availableObjects, [], clickHandler);
             }
             
             elements.currentPhase.textContent = phaseText;
@@ -1505,7 +1642,7 @@
         function renderCompletedView() {
             const renderFinalList = (container, idList) => {
                 const idObjects = idList.map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
-                renderIDList(container, idObjects);
+                renderIDList(container, idObjects, null, null);
             };
             elements.finalP1Name.textContent = `${state.participants.p1.name}'s Roster`;
             elements.finalP2Name.textContent = `${state.participants.p2.name}'s Roster`;
@@ -1526,6 +1663,25 @@
             }
         }
         
+        function renderRosterBuilder() {
+            const filteredList = filterIDs(state.masterIDList);
+            renderIDList(elements.builderIdPool, filteredList, state.builderRoster, toggleBuilderIdSelection);
+            
+            const selectedObjects = state.builderRoster.map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
+            renderIDList(elements.builderSelectedRoster, selectedObjects, state.builderRoster, toggleBuilderIdSelection);
+
+            elements.builderCounter.textContent = state.builderRoster.length;
+            
+            if(state.builderRoster.length === ROSTER_SIZE) {
+                const code = generateRosterCode();
+                elements.builderRosterCodeDisplay.textContent = code || "Error generating code.";
+                elements.builderCopyCode.disabled = !code;
+            } else {
+                elements.builderRosterCodeDisplay.textContent = `Select ${ROSTER_SIZE - state.builderRoster.length} more IDs to generate a code.`;
+                elements.builderCopyCode.disabled = true;
+            }
+        }
+
         // ======================
         // CLIENT ACTIONS & EVENT HANDLERS
         // ======================
@@ -1537,12 +1693,34 @@
             sendMessage({ type: 'rosterSelect', lobbyCode: state.lobbyCode, player, id });
         }
 
+        function setPlayerRoster(player, roster) {
+            if (state.participants[player].ready) {
+                showNotification("Cannot change roster while ready.");
+                return;
+            }
+            sendMessage({ type: 'rosterSet', lobbyCode: state.lobbyCode, player, roster });
+        }
+
         function selectEgoToBan(egoId) {
              sendMessage({ type: 'egoBan', lobbyCode: state.lobbyCode, egoId });
         }
         
         function selectDraftID(player, id) {
             sendMessage({ type: 'draftSelect', lobbyCode: state.lobbyCode, payload: { player, id } });
+        }
+
+        function toggleBuilderIdSelection(id) {
+            const index = state.builderRoster.indexOf(id);
+            if (index > -1) {
+                state.builderRoster.splice(index, 1);
+            } else {
+                if (state.builderRoster.length < ROSTER_SIZE) {
+                    state.builderRoster.push(id);
+                } else {
+                    showNotification(`You can only select ${ROSTER_SIZE} IDs.`);
+                }
+            }
+            renderRosterBuilder();
         }
 
         // ======================
@@ -1573,10 +1751,15 @@
         // INITIALIZATION
         // ======================
         function setupEventListeners() {
+            // Main Page
             elements.createLobbyBtn.addEventListener('click', () => sendMessage({ type: 'createLobby', name: elements.playerNameInput.value.trim() }));
             elements.joinLobbyBtn.addEventListener('click', () => {
                 elements.lobbyAccessForm.style.display = 'block';
                 elements.joinLobbyBtn.style.display = 'none';
+            });
+            elements.goToBuilder.addEventListener('click', () => {
+                switchView('rosterBuilderPage');
+                renderRosterBuilder();
             });
             elements.roleOptions.forEach(option => {
                 option.addEventListener('click', () => {
@@ -1591,9 +1774,15 @@
                 sendMessage({ type: 'joinLobby', lobbyCode, role: selectedRole, name: elements.playerNameInput.value.trim() });
             });
             
-            elements.backToMainBtn.addEventListener('click', () => window.location.reload());
+            // Back buttons
+            elements.backToMainLobby.addEventListener('click', () => window.location.reload());
+            elements.backToMainBuilder.addEventListener('click', () => {
+                state.lobbyCode = ''; // Ensure we don't accidentally return to a lobby
+                switchView('mainPage');
+            });
             elements.restartDraft.addEventListener('click', () => window.location.reload());
             
+            // Lobby Roster Controls
             ['p1', 'p2'].forEach(player => {
                 elements[`${player}Random`].addEventListener('click', () => (state.userRole === player || state.userRole === 'ref') && sendMessage({ type: 'rosterRandomize', lobbyCode: state.lobbyCode, player }));
                 elements[`${player}Clear`].addEventListener('click', () => (state.userRole === player || state.userRole === 'ref') && sendMessage({ type: 'rosterClear', lobbyCode: state.lobbyCode, player }));
@@ -1603,24 +1792,67 @@
                         sendMessage({ type: 'updateReady', lobbyCode: state.lobbyCode, player });
                     }
                 });
-            });
-            
-            elements.rosterSearchInput.addEventListener('input', (e) => { state.rosterSearch = e.target.value; filterAndRenderRosterSelection(); });
-            [elements.sinnerFilter, elements.sinAffinityFilter, elements.keywordFilter].forEach(filterEl => {
-                filterEl.addEventListener('change', (e) => {
-                    const filterType = e.target.id.split('-')[0];
-                    state.filters[filterType] = e.target.value;
-                    filterAndRenderRosterSelection();
+                elements[`${player}RosterLoad`].addEventListener('click', () => {
+                    if (state.userRole === player || state.userRole === 'ref') {
+                        const code = elements[`${player}RosterCodeInput`].value.trim();
+                        const roster = loadRosterFromCode(code);
+                        if (roster) {
+                            setPlayerRoster(player, roster);
+                            showNotification("Roster loaded successfully!");
+                        }
+                    }
                 });
             });
-            elements.resetFilters.addEventListener('click', () => {
-                state.filters = { sinner: "", sinAffinity: "", keyword: "" };
-                state.rosterSearch = "";
-                elements.sinnerFilter.value = "";
-                elements.sinAffinityFilter.value = "";
-                elements.keywordFilter.value = "";
-                elements.rosterSearchInput.value = "";
-                filterAndRenderRosterSelection();
+            
+            // Roster Builder Controls
+            elements.builderRandom.addEventListener('click', () => {
+                const shuffled = [...state.masterIDList].sort(() => 0.5 - Math.random());
+                state.builderRoster = shuffled.slice(0, ROSTER_SIZE).map(id => id.id);
+                renderRosterBuilder();
+            });
+            elements.builderClear.addEventListener('click', () => {
+                state.builderRoster = [];
+                renderRosterBuilder();
+            });
+            elements.builderCopyCode.addEventListener('click', () => {
+                const code = elements.builderRosterCodeDisplay.textContent;
+                navigator.clipboard.writeText(code).then(() => {
+                    showNotification("Roster code copied to clipboard!");
+                }, () => {
+                    showNotification("Failed to copy code.", true);
+                });
+            });
+            elements.builderLoadCode.addEventListener('click', () => {
+                const code = elements.builderLoadCodeInput.value.trim();
+                const roster = loadRosterFromCode(code);
+                if (roster) {
+                    state.builderRoster = roster;
+                    renderRosterBuilder();
+                    showNotification("Roster loaded successfully!");
+                }
+            });
+
+            // Filters
+            document.querySelectorAll('.filter-bar').forEach(bar => {
+                bar.addEventListener('input', (e) => {
+                    if(e.target.id.includes('roster-search')) state.filters.rosterSearch = e.target.value;
+                    if(state.currentView === 'lobbyView') filterAndRenderRosterSelection();
+                    if(state.currentView === 'rosterBuilderPage') renderRosterBuilder();
+                });
+                bar.addEventListener('change', (e) => {
+                    const filterType = e.target.dataset.filter;
+                    if(filterType) state.filters[filterType] = e.target.value;
+                    if(state.currentView === 'lobbyView') filterAndRenderRosterSelection();
+                    if(state.currentView === 'rosterBuilderPage') renderRosterBuilder();
+                });
+                bar.addEventListener('click', (e) => {
+                    if(e.target.closest('.reset-filters-btn')) {
+                        state.filters = { sinner: "", sinAffinity: "", keyword: "", rosterSearch: "" };
+                        bar.querySelectorAll('input, select').forEach(el => el.value = "");
+                        if(state.currentView === 'lobbyView') filterAndRenderRosterSelection();
+                        if(state.currentView === 'rosterBuilderPage') renderRosterBuilder();
+                    }
+                });
             });
 
             // EGO Search
@@ -1639,18 +1871,70 @@
             elements.p2SearchInput.addEventListener('input', (e) => { state.draftSearch.p2 = e.target.value.toLowerCase(); updateDraftInstructions(); });
         }
 
+        function createFilterBarHTML() {
+            return `
+                <div class="filter-group">
+                    <label class="filter-label" for="roster-search-input">Search by Name:</label>
+                    <input type="text" class="roster-search-input" placeholder="e.g. LCB Sinner...">
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label" for="sinner-filter">Filter by Sinner:</label>
+                    <select class="sinner-filter" data-filter="sinner">
+                        <option value="">All Sinners</option>
+                        <option value="Yi Sang">Yi Sang</option><option value="Faust">Faust</option><option value="Don Quixote">Don Quixote</option>
+                        <option value="Ryōshū">Ryōshū</option><option value="Meursault">Meursault</option><option value="Hong Lu">Hong Lu</option>
+                        <option value="Heathcliff">Heathcliff</option><option value="Ishmael">Ishmael</option><option value="Rodion">Rodion</option>
+                        <option value="Sinclair">Sinclair</option><option value="Outis">Outis</option><option value="Gregor">Gregor</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label" for="sinAffinity-filter">Filter by Sin Affinity:</label>
+                    <select class="sinAffinity-filter" data-filter="sinAffinity">
+                        <option value="">All Affinities</option>
+                        <option value="Gloom">Gloom</option><option value="Lust">Lust</option><option value="Sloth">Sloth</option>
+                        <option value="Wrath">Wrath</option><option value="Gluttony">Gluttony</option><option value="Envy">Envy</option><option value="Pride">Pride</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label" for="keyword-filter">Filter by Keyword:</label>
+                    <select class="keyword-filter" data-filter="keyword">
+                        <option value="">All Keywords</option>
+                        <option value="Sinking">Sinking</option><option value="Rupture">Rupture</option><option value="Discard">Discard</option>
+                        <option value="Tremor">Tremor</option><option value="Bleed">Bleed</option><option value="Poise">Poise</option>
+                        <option value="Aggro">Aggro</option><option value="Charge">Charge</option><option value="Burn">Burn</option><option value="Ammo">Ammo</option>
+                    </select>
+                </div>
+                <div class="filter-buttons">
+                    <button class="btn reset-filters-btn"><i class="fas fa-sync"></i> Reset</button>
+                </div>
+            `;
+        }
+
         function cacheDOMElements() {
              elements = {
+                // Pages
                 mainPage: document.getElementById('main-page'),
+                lobbyView: document.getElementById('lobby-view'),
+                rosterBuilderPage: document.getElementById('roster-builder-page'),
+                completedView: document.getElementById('completed-view'),
+
+                // Main Page
                 lobbyAccessForm: document.getElementById('lobby-access-form'),
                 createLobbyBtn: document.getElementById('create-lobby'),
                 joinLobbyBtn: document.getElementById('join-lobby'),
+                goToBuilder: document.getElementById('go-to-builder'),
                 enterLobbyBtn: document.getElementById('enter-lobby'),
                 lobbyCodeInput: document.getElementById('lobby-code'),
                 roleOptions: document.querySelectorAll('.role-option'),
                 playerNameInput: document.getElementById('player-name'),
-                lobbyView: document.getElementById('lobby-view'),
-                backToMainBtn: document.getElementById('back-to-main'),
+
+                // Shared
+                backToMainLobby: document.getElementById('back-to-main-lobby'),
+                backToMainBuilder: document.getElementById('back-to-main-builder'),
+                connectionStatus: document.getElementById('connection-status'),
+                notification: document.getElementById('notification'),
+                
+                // Lobby
                 lobbyCodeDisplay: document.getElementById('lobby-code-display'),
                 participantsList: document.getElementById('participants-list'),
                 phaseTimer: document.getElementById('phase-timer'),
@@ -1658,64 +1942,59 @@
                 currentPhase: document.getElementById('current-phase'),
                 draftActionDescription: document.getElementById('draft-action-description'),
                 
+                // Roster Phase (Lobby)
                 rosterPhase: document.getElementById('roster-phase'),
-                rosterSearchInput: document.getElementById('roster-search-input'),
-                sinnerFilter: document.getElementById('sinner-filter'),
-                sinAffinityFilter: document.getElementById('sinAffinity-filter'),
-                keywordFilter: document.getElementById('keyword-filter'),
-                resetFilters: document.getElementById('reset-filters'),
-                p1Panel: document.getElementById('p1-panel'),
-                p2Panel: document.getElementById('p2-panel'),
-                p1Roster: document.getElementById('p1-roster'),
-                p2Roster: document.getElementById('p2-roster'),
-                p1Counter: document.getElementById('p1-counter'),
-                p2Counter: document.getElementById('p2-counter'),
+                p1Panel: document.getElementById('p1-panel'), p2Panel: document.getElementById('p2-panel'),
+                p1Roster: document.getElementById('p1-roster'), p2Roster: document.getElementById('p2-roster'),
+                p1Counter: document.getElementById('p1-counter'), p2Counter: document.getElementById('p2-counter'),
                 p1Random: document.getElementById('p1-random'), p2Random: document.getElementById('p2-random'),
                 p1Clear: document.getElementById('p1-clear'), p2Clear: document.getElementById('p2-clear'),
                 p1Ready: document.getElementById('p1-ready'), p2Ready: document.getElementById('p2-ready'),
                 p1Status: document.getElementById('p1-status'), p2Status: document.getElementById('p2-status'),
-                p1NameDisplay: document.getElementById('p1-name-display'),
-                p2NameDisplay: document.getElementById('p2-name-display'),
+                p1NameDisplay: document.getElementById('p1-name-display'), p2NameDisplay: document.getElementById('p2-name-display'),
+                p1RosterCodeInput: document.getElementById('p1-roster-code-input'), p2RosterCodeInput: document.getElementById('p2-roster-code-input'),
+                p1RosterLoad: document.getElementById('p1-roster-load'), p2RosterLoad: document.getElementById('p2-roster-load'),
                 startEgoBan: document.getElementById('start-ego-ban'),
 
+                // Roster Builder
+                builderIdPool: document.getElementById('builder-id-pool'),
+                builderSelectedRoster: document.getElementById('builder-selected-roster'),
+                builderCounter: document.getElementById('builder-counter'),
+                builderRandom: document.getElementById('builder-random'),
+                builderClear: document.getElementById('builder-clear'),
+                builderRosterCodeDisplay: document.getElementById('builder-roster-code-display'),
+                builderCopyCode: document.getElementById('builder-copy-code'),
+                builderLoadCodeInput: document.getElementById('builder-load-code-input'),
+                builderLoadCode: document.getElementById('builder-load-code'),
+
+                // EGO Ban Phase
                 egoBanPhase: document.getElementById('ego-ban-phase'),
                 egoSearchInput: document.getElementById('ego-search-input'),
                 egoBanContainer: document.getElementById('ego-ban-container'),
                 confirmEgoBans: document.getElementById('confirm-ego-bans'),
+                opponentRosterDisplay: document.getElementById('opponent-roster-display'),
+                opponentRosterTitle: document.getElementById('opponent-roster-title'),
+                opponentRosterList: document.getElementById('opponent-roster-list'),
 
+                // ID Draft Phase
                 idDraftPhase: document.getElementById('id-draft-phase'),
-                draftBannedEgos: document.getElementById('draft-banned-egos'),
                 draftBannedEgosList: document.getElementById('draft-banned-egos-list'),
                 nextPhase: document.getElementById('next-phase'),
                 completeDraft: document.getElementById('complete-draft'),
-                p1DraftPanel: document.getElementById('p1-draft-panel'),
-                p2DraftPanel: document.getElementById('p2-draft-panel'),
-                p1DraftName: document.getElementById('p1-draft-name'),
-                p2DraftName: document.getElementById('p2-draft-name'),
-                p1DraftStatus: document.getElementById('p1-draft-status'),
-                p2DraftStatus: document.getElementById('p2-draft-status'),
-                p1SearchInput: document.getElementById('p1-search-input'),
-                p2SearchInput: document.getElementById('p2-search-input'),
-                p1DraftSelection: document.getElementById('p1-draft-selection'),
-                p2DraftSelection: document.getElementById('p2-draft-selection'),
-                p1IdBans: document.getElementById('p1-id-bans'),
-                p2IdBans: document.getElementById('p2-id-bans'),
-                p1Picks: document.getElementById('p1-picks'),
-                p2Picks: document.getElementById('p2-picks'),
+                p1DraftPanel: document.getElementById('p1-draft-panel'), p2DraftPanel: document.getElementById('p2-draft-panel'),
+                p1DraftName: document.getElementById('p1-draft-name'), p2DraftName: document.getElementById('p2-draft-name'),
+                p1DraftStatus: document.getElementById('p1-draft-status'), p2DraftStatus: document.getElementById('p2-draft-status'),
+                p1SearchInput: document.getElementById('p1-search-input'), p2SearchInput: document.getElementById('p2-search-input'),
+                p1DraftSelection: document.getElementById('p1-draft-selection'), p2DraftSelection: document.getElementById('p2-draft-selection'),
+                p1IdBans: document.getElementById('p1-id-bans'), p2IdBans: document.getElementById('p2-id-bans'),
+                p1Picks: document.getElementById('p1-picks'), p2Picks: document.getElementById('p2-picks'),
 
-                completedView: document.getElementById('completed-view'),
-                finalBannedEgos: document.getElementById('final-banned-egos'),
+                // Completed View
                 finalBannedEgosList: document.getElementById('final-banned-egos-list'),
                 restartDraft: document.getElementById('restart-draft'), 
-                finalP1Name: document.getElementById('final-p1-name'),
-                finalP2Name: document.getElementById('final-p2-name'),
-                finalP1Picks: document.getElementById('final-p1-picks'),
-                finalP1Bans: document.getElementById('final-p1-bans'),   
-                finalP2Picks: document.getElementById('final-p2-picks'),
-                finalP2Bans: document.getElementById('final-p2-bans'),
-
-                connectionStatus: document.getElementById('connection-status'),
-                notification: document.getElementById('notification'),
+                finalP1Name: document.getElementById('final-p1-name'), finalP2Name: document.getElementById('final-p2-name'),
+                finalP1Picks: document.getElementById('final-p1-picks'), finalP1Bans: document.getElementById('final-p1-bans'),   
+                finalP2Picks: document.getElementById('final-p2-picks'), finalP2Bans: document.getElementById('final-p2-bans'),
             };
         }
 
@@ -1963,12 +2242,16 @@ Solemn Lament Gregor - HE - Gloom - Blue
 Christmas Nightmare Gregor - HE - Sloth - Yellow
 Garden of Thorns Gregor - WAW - Lust - Orange`;
             
+            // Inject filter bars
+            document.getElementById('global-filter-bar-roster').innerHTML = createFilterBarHTML();
+            document.getElementById('global-filter-bar-builder').innerHTML = createFilterBarHTML();
+
             cacheDOMElements();
             state.masterIDList = parseIDCSV(idCsvData);
             state.masterEGOList = parseEGOData(egoData);
             setupEventListeners();
             connectWebSocket();
-            filterAndRenderRosterSelection();
+            switchView('mainPage');
         });
     </script>
 </body>
