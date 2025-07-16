@@ -19,12 +19,23 @@
             --secondary: #4A0000;
             --accent: #FFD700;
             --text: #F0F0F0;
-            --bg: #1a1a1d; /* Softer dark background */
+            --bg: #1a1a1d;
             --panel: #1E1E1E;
             --border: #333;
             --rarity-0: #cccccc;
-            --rarity-00: #B22222; /* Firebrick Red */
-            --rarity-000: #FFD700; /* Gold */
+            --rarity-00: #B22222;
+            --rarity-000: #FFD700;
+            --rarity-ZAYIN: #90ee90;
+            --rarity-TETH: #87ceeb;
+            --rarity-HE: #ff6347;
+            --rarity-WAW: #dda0dd;
+            --sin-wrath: #ff4500;
+            --sin-lust: #ff69b4;
+            --sin-sloth: #ffd700;
+            --sin-gluttony: #32cd32;
+            --sin-gloom: #1e90ff;
+            --sin-pride: #4b0082;
+            --sin-envy: #800080;
             --connected: #4b8b3b;
             --disconnected: #a00;
             --warning: #ff8c00;
@@ -41,7 +52,7 @@
         }
         
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
         }
         .hidden {
@@ -287,7 +298,7 @@
         .timer {
             font-size: 2rem;
             font-weight: bold;
-            color: var(--accent); /* Changed to accent color */
+            color: var(--accent);
             padding: 10px;
             background: rgba(0,0,0,0.3);
             border-radius: 8px;
@@ -568,20 +579,9 @@
             border: 1px solid rgba(0, 200, 0, 0.3);
         }
         
-        .status-ready {
-            background: var(--ready) !important;
-            color: #fff !important;
-        }
-        
-        .status-drafting {
-            background: var(--drafting) !important;
-            color: #fff !important;
-        }
-        
-        .status-waiting {
-            background: #a0a0a0 !important;
-            color: #fff !important;
-        }
+        .status-ready { background: var(--ready) !important; color: #fff !important; }
+        .status-drafting { background: var(--drafting) !important; color: #fff !important; }
+        .status-waiting { background: #a0a0a0 !important; color: #fff !important; }
         
         #draft-status-panel {
             background: rgba(255, 215, 0, 0.1);
@@ -592,16 +592,8 @@
             text-align: center;
         }
         
-        #current-phase {
-            font-size: 1.5rem;
-            margin-bottom: 10px;
-        }
-        
-        #draft-action-description {
-            font-size: 1.1rem;
-            color: var(--text);
-            min-height: 24px;
-        }
+        #current-phase { font-size: 1.5rem; margin-bottom: 10px; }
+        #draft-action-description { font-size: 1.1rem; color: var(--text); min-height: 24px; }
 
         .connection-status {
             position: fixed;
@@ -641,10 +633,7 @@
             transform: translateX(-50%) translateY(10px);
         }
         
-        #completed-view {
-            text-align: center;
-            display: none; /* Initially hidden */
-        }
+        #completed-view { text-align: center; display: none; }
 
         .final-rosters-container {
             display: flex;
@@ -666,10 +655,7 @@
             border-top: 4px solid var(--primary);
         }
 
-        .final-player-panel h2 {
-            font-size: 1.8rem;
-        }
-        
+        .final-player-panel h2 { font-size: 1.8rem; }
         .final-player-panel h3 {
             font-size: 1.2rem;
             margin-top: 20px;
@@ -685,19 +671,9 @@
             margin-top: 15px;
         }
 
-        .final-bans .id-item {
-            background: rgba(100, 0, 0, 0.4);
-            opacity: 0.8;
-        }
-
-        .final-bans .id-name {
-            text-decoration: line-through;
-            color: #f0f0f0;
-        }
-        
-        #restart-draft {
-            margin: 20px auto;
-        }
+        .final-bans .id-item { background: rgba(100, 0, 0, 0.4); opacity: 0.8; }
+        .final-bans .id-name { text-decoration: line-through; color: #f0f0f0; }
+        #restart-draft { margin: 20px auto; }
         
         .filter-bar {
             display: flex;
@@ -709,29 +685,118 @@
             border-radius: 8px;
             margin-bottom: 20px;
         }
-        .filter-group {
-            flex: 1;
-            min-width: 150px;
-        }
-        .filter-label {
-            display: block;
-            margin-bottom: 5px;
-            font-size: 0.9rem;
-            color: #ccc;
+        .filter-group { flex: 1; min-width: 150px; }
+        .filter-label { display: block; margin-bottom: 5px; font-size: 0.9rem; color: #ccc; }
+
+        /* EGO BANNING STYLES */
+        #ego-ban-phase {
+            width: 100%;
         }
 
+        .ego-ban-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+            max-height: 60vh;
+            overflow-y: auto;
+            padding: 15px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+        }
+
+        .ego-item {
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            color: #000; /* Set text color to black for better contrast on colored backgrounds */
+        }
+
+        .ego-item:hover {
+            transform: scale(1.05);
+            border-color: var(--accent);
+        }
+
+        .ego-item.banned {
+            opacity: 0.4;
+            cursor: not-allowed;
+            background-color: #333 !important;
+            color: #999;
+        }
+        
+        .ego-item.banned-p1 {
+            border: 2px dashed var(--primary);
+        }
+        .ego-item.banned-p2 {
+            border: 2px dashed var(--drafting);
+        }
+
+        .ego-header {
+            display: flex;
+            justify-content: space-between;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .ego-rarity {
+            padding: 2px 6px;
+            border-radius: 4px;
+            background-color: rgba(255,255,255,0.3);
+        }
+
+        .ego-name {
+            font-size: 1.1rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+            flex-grow: 1;
+        }
+        .ego-sinner {
+            font-size: 0.9rem;
+            font-style: italic;
+        }
+
+        .banned-egos-display {
+            background: var(--panel);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border: 1px solid var(--border);
+        }
+
+        .banned-egos-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+        }
+        
+        .banned-ego-item {
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.9rem;
+            text-align: center;
+            color: #000;
+        }
+        .banned-ego-item .rarity {
+            font-weight: bold;
+            margin-right: 5px;
+            background: rgba(255,255,255,0.3);
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+         .banned-ego-item .name {
+            text-decoration: line-through;
+        }
+
+
         @media (max-width: 768px) {
-            .action-container {
-                flex-direction: column;
-                align-items: center;
-            }
-            .action-card, .final-player-panel {
-                min-width: 100%;
-            }
-            .lobby-info {
-                flex-direction: column;
-                gap: 20px;
-            }
+            .container { max-width: 100%; }
+            .action-container { flex-direction: column; align-items: center; }
+            .action-card, .final-player-panel { min-width: 100%; }
+            .lobby-info { flex-direction: column; gap: 20px; }
             h1 { font-size: 2.5rem; }
             .code-display { font-size: 1.5rem; letter-spacing: 4px; }
             .role-options { flex-direction: column; }
@@ -761,7 +826,7 @@
             
             <div class="welcome-text">
                 <p>Welcome to the official Limbus Company drafting system. Here you can create or join lobbies to organize competitive matches with other players.</p>
-                <p>Select an option below to get started. You can create a new lobby as a referee, or join an existing lobby as Player 1, Player 2, or Referee.</p>
+                <p>Select an option below to get started. You can create a new lobby as the referee, or join an existing lobby as Player 1, Player 2, or Referee.</p>
             </div>
             
             <div class="form-group" style="max-width: 400px; margin: 30px auto; text-align: left;">
@@ -771,64 +836,40 @@
             
             <div class="action-container">
                 <div class="action-card">
-                    <div class="action-icon">
-                        <i class="fas fa-plus-circle"></i>
-                    </div>
+                    <div class="action-icon"><i class="fas fa-plus-circle"></i></div>
                     <h3 class="action-title">Create New Lobby</h3>
                     <p class="action-description">Start a new drafting session as the referee. You'll get a unique lobby code to share with players.</p>
-                    <button class="btn btn-primary btn-large" id="create-lobby">
-                        <i class="fas fa-plus"></i> Create Lobby
-                    </button>
+                    <button class="btn btn-primary btn-large" id="create-lobby"><i class="fas fa-plus"></i> Create Lobby</button>
                 </div>
                 
                 <div class="action-card">
-                    <div class="action-icon">
-                        <i class="fas fa-sign-in-alt"></i>
-                    </div>
+                    <div class="action-icon"><i class="fas fa-sign-in-alt"></i></div>
                     <h3 class="action-title">Join Existing Lobby</h3>
                     <p class="action-description">Join a lobby using a code provided by the referee. Select your role before entering.</p>
-                    <button class="btn btn-large" id="join-lobby">
-                        <i class="fas fa-door-open"></i> Join Lobby
-                    </button>
+                    <button class="btn btn-large" id="join-lobby"><i class="fas fa-door-open"></i> Join Lobby</button>
                 </div>
             </div>
             
             <div class="lobby-access" id="lobby-access-form" style="display: none;">
                 <h2>Enter Lobby Details</h2>
-                
                 <div class="form-group">
                     <label for="lobby-code">Lobby Code:</label>
                     <input type="text" id="lobby-code" placeholder="Enter 6-character code" maxlength="6">
                 </div>
-                
                 <div class="form-group">
                     <label>Select Your Role:</label>
                     <div class="role-options">
-                        <div class="role-option" data-role="p1">
-                            <i class="fas fa-user"></i>
-                            <div>Player 1</div>
-                        </div>
-                        <div class="role-option" data-role="p2">
-                            <i class="fas fa-user"></i>
-                            <div>Player 2</div>
-                        </div>
-                        <div class="role-option" data-role="ref">
-                            <i class="fas fa-star"></i>
-                            <div>Referee</div>
-                        </div>
+                        <div class="role-option" data-role="p1"><i class="fas fa-user"></i><div>Player 1</div></div>
+                        <div class="role-option" data-role="p2"><i class="fas fa-user"></i><div>Player 2</div></div>
+                        <div class="role-option" data-role="ref"><i class="fas fa-star"></i><div>Referee</div></div>
                     </div>
                 </div>
-                
-                <button class="btn btn-primary btn-large" id="enter-lobby">
-                    <i class="fas fa-play"></i> Enter Lobby
-                </button>
+                <button class="btn btn-primary btn-large" id="enter-lobby"><i class="fas fa-play"></i> Enter Lobby</button>
             </div>
         </div>
         
         <div id="lobby-view">
-            <button class="btn back-button" id="back-to-main">
-                <i class="fas fa-arrow-left"></i> Main Menu
-            </button>
+            <button class="btn back-button" id="back-to-main"><i class="fas fa-arrow-left"></i> Main Menu</button>
             
             <header>
                 <h1><i class="fas fa-dragon"></i> Limbus Company Draft System</h1>
@@ -839,7 +880,7 @@
                 <div class="lobby-info">
                     <div>
                         <h3>LOBBY CODE</h3>
-                        <div class="code-display" id="lobby-code-display">XK7F9P</div>
+                        <div class="code-display" id="lobby-code-display"></div>
                         <p>Share this code with other participants</p>
                     </div>
                     <div>
@@ -848,195 +889,158 @@
                     </div>
                     <div>
                         <h3>PARTICIPANTS</h3>
-                        <div class="participants" id="participants-list">
-                            </div>
+                        <div class="participants" id="participants-list"></div>
                     </div>
                 </div>
                 
-                <div class="phase-container">
-                    <div class="phase-section">
-                        <div class="section-title">
-                            <div class="icon">1</div>
-                            <h2>Roster Selection Phase</h2>
-                        </div>
-                        
-                        <div class="instructions">
-                            <p>Each player must select 42 IDs from the available pool to create their roster. 
-                            During drafting, players will ban from their opponent's roster and pick from their own.</p>
-                        </div>
-                        
-                        <div class="filter-bar">
-                            <div class="filter-group">
-                                <label class="filter-label" for="roster-search-input">Search by Name:</label>
-                                <input type="text" id="roster-search-input" placeholder="e.g. LCB Sinner...">
-                            </div>
-                            <div class="filter-group">
-                                <label class="filter-label" for="sinner-filter">Filter by Sinner:</label>
-                                <select id="sinner-filter">
-                                    <option value="">All Sinners</option>
-                                    <option value="Yi Sang">Yi Sang</option>
-                                    <option value="Faust">Faust</option>
-                                    <option value="Don Quixote">Don Quixote</option>
-                                    <option value="Ryōshū">Ryōshū</option>
-                                    <option value="Meursault">Meursault</option>
-                                    <option value="Hong Lu">Hong Lu</option>
-                                    <option value="Heathcliff">Heathcliff</option>
-                                    <option value="Ishmael">Ishmael</option>
-                                    <option value="Rodion">Rodion</option>
-                                    <option value="Sinclair">Sinclair</option>
-                                    <option value="Outis">Outis</option>
-                                    <option value="Gregor">Gregor</option>
-                                </select>
-                            </div>
-                            
-                            <div class="filter-group">
-                                <label class="filter-label" for="sinAffinity-filter">Filter by Sin Affinity:</label>
-                                <select id="sinAffinity-filter">
-                                    <option value="">All Affinities</option>
-                                    <option value="Gloom">Gloom</option>
-                                    <option value="Lust">Lust</option>
-                                    <option value="Sloth">Sloth</option>
-                                    <option value="Wrath">Wrath</option>
-                                    <option value="Gluttony">Gluttony</option>
-                                    <option value="Envy">Envy</option>
-                                    <option value="Pride">Pride</option>
-                                </select>
-                            </div>
-                            
-                            <div class="filter-group">
-                                <label class="filter-label" for="keyword-filter">Filter by Keyword:</label>
-                                <select id="keyword-filter">
-                                    <option value="">All Keywords</option>
-                                    <option value="Sinking">Sinking</option>
-                                    <option value="Rupture">Rupture</option>
-                                    <option value="Discard">Discard</option>
-                                    <option value="Tremor">Tremor</option>
-                                    <option value="Bleed">Bleed</option>
-                                    <option value="Poise">Poise</option>
-                                    <option value="Aggro">Aggro</option>
-                                    <option value="Charge">Charge</option>
-                                    <option value="Burn">Burn</option>
-                                    <option value="Ammo">Ammo</option>
-                                </select>
-                            </div>
-                            
-                            <div class="filter-buttons">
-                                <button class="btn" id="reset-filters"><i class="fas fa-sync"></i> Reset</button>
-                            </div>
-                        </div>
-                        
-                        <div class="player-area">
-                            <div class="player-panel" id="p1-panel">
-                                <div class="player-header">
-                                    <div class="player-name" id="p1-name-display">Player 1</div>
-                                    <div class="player-status status-waiting" id="p1-status">Selecting</div>
-                                </div>
-                                <div class="counter"><i class="fas fa-users"></i> Selected: <strong id="p1-counter">0</strong> / 42 IDs</div>
-                                <div class="roster-selection" id="p1-roster">
-                                    </div>
-                                <div class="controls">
-                                    <button class="btn" id="p1-random"><i class="fas fa-random"></i> Randomize</button>
-                                    <button class="btn" id="p1-clear"><i class="fas fa-trash"></i> Clear</button>
-                                    <button class="btn" id="p1-ready"><i class="fas fa-check"></i> Ready</button>
-                                </div>
-                            </div>
-                            
-                            <div class="player-panel" id="p2-panel">
-                                <div class="player-header">
-                                    <div class="player-name" id="p2-name-display">Player 2</div>
-                                    <div class="player-status status-waiting" id="p2-status">Selecting</div>
-                                </div>
-                                <div class="counter"><i class="fas fa-users"></i> Selected: <strong id="p2-counter">0</strong> / 42 IDs</div>
-                                <div class="roster-selection" id="p2-roster">
-                                    </div>
-                                <div class="controls">
-                                    <button class="btn" id="p2-random"><i class="fas fa-random"></i> Randomize</button>
-                                    <button class="btn" id="p2-clear"><i class="fas fa-trash"></i> Clear</button>
-                                    <button class="btn" id="p2-ready"><i class="fas fa-check"></i> Ready</button>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="roster-complete">
-                            <i class="fas fa-check-circle"></i> Both rosters will be locked when complete
-                        </div>
+                <div id="draft-status-panel">
+                    <h3 id="current-phase">Waiting for draft to start...</h3>
+                    <p id="draft-action-description"></p>
+                </div>
 
-                        <div class="ref-actions">
-                            <button class="btn" id="start-draft" disabled><i class="fas fa-play"></i> Start Draft</button>
+                <!-- Roster Selection Phase -->
+                <div id="roster-phase" class="phase-section">
+                    <h2>Roster Selection Phase</h2>
+                    <p>Each player must select 42 IDs. When both are ready, the Referee can start the EGO Ban phase.</p>
+                    <div class="filter-bar">
+                        <div class="filter-group">
+                            <label class="filter-label" for="roster-search-input">Search by Name:</label>
+                            <input type="text" id="roster-search-input" placeholder="e.g. LCB Sinner...">
+                        </div>
+                        <div class="filter-group">
+                            <label class="filter-label" for="sinner-filter">Filter by Sinner:</label>
+                            <select id="sinner-filter">
+                                <option value="">All Sinners</option>
+                                <option value="Yi Sang">Yi Sang</option>
+                                <option value="Faust">Faust</option>
+                                <option value="Don Quixote">Don Quixote</option>
+                                <option value="Ryōshū">Ryōshū</option>
+                                <option value="Meursault">Meursault</option>
+                                <option value="Hong Lu">Hong Lu</option>
+                                <option value="Heathcliff">Heathcliff</option>
+                                <option value="Ishmael">Ishmael</option>
+                                <option value="Rodion">Rodion</option>
+                                <option value="Sinclair">Sinclair</option>
+                                <option value="Outis">Outis</option>
+                                <option value="Gregor">Gregor</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label class="filter-label" for="sinAffinity-filter">Filter by Sin Affinity:</label>
+                            <select id="sinAffinity-filter">
+                                <option value="">All Affinities</option>
+                                <option value="Gloom">Gloom</option><option value="Lust">Lust</option><option value="Sloth">Sloth</option><option value="Wrath">Wrath</option><option value="Gluttony">Gluttony</option><option value="Envy">Envy</option><option value="Pride">Pride</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label class="filter-label" for="keyword-filter">Filter by Keyword:</label>
+                            <select id="keyword-filter">
+                                <option value="">All Keywords</option>
+                                <option value="Sinking">Sinking</option><option value="Rupture">Rupture</option><option value="Discard">Discard</option><option value="Tremor">Tremor</option><option value="Bleed">Bleed</option><option value="Poise">Poise</option><option value="Aggro">Aggro</option><option value="Charge">Charge</option><option value="Burn">Burn</option><option value="Ammo">Ammo</option>
+                            </select>
+                        </div>
+                        <div class="filter-buttons">
+                            <button class="btn" id="reset-filters"><i class="fas fa-sync"></i> Reset</button>
                         </div>
                     </div>
-                    
-                    <div class="player-section hidden">
-                        <div class="section-title">
-                            <!-- REMOVED stray '2' from here -->
-                            <h2>Drafting Phase</h2>
-                        </div>
-                        
-                        <div id="draft-status-panel">
-                            <h3 id="current-phase">Waiting for draft to start...</h3>
-                            <p id="draft-action-description"></p>
-                        </div>
-                        
-                        <div class="player-area">
-                            <div class="player-panel" id="p1-draft-panel">
-                                <div class="player-header">
-                                    <div class="player-name" id="p1-draft-name">Player 1</div>
-                                    <div class="player-status status-waiting" id="p1-draft-status">Waiting</div>
-                                </div>
-                                <div class="search-bar" id="p1-search-bar">
-                                    <input type="text" id="p1-search-input" placeholder="Search IDs...">
-                                </div>
-                                <div class="roster-selection" id="p1-draft-selection"></div>
-
-                                <h4>Your Bans:</h4>
-                                <div class="ban-list" id="p1-id-bans"></div>
-                                
-                                <h4>Picked IDs:</h4>
-                                <div class="pick-list" id="p1-picks"></div>
+                    <div class="player-area">
+                        <div class="player-panel" id="p1-panel">
+                            <div class="player-header">
+                                <div class="player-name" id="p1-name-display">Player 1</div>
+                                <div class="player-status status-waiting" id="p1-status">Selecting</div>
                             </div>
-                            
-                            <div class="player-panel" id="p2-draft-panel">
-                                <div class="player-header">
-                                    <div class="player-name" id="p2-draft-name">Player 2</div>
-                                    <div class="player-status status-waiting" id="p2-draft-status">Waiting</div>
-                                </div>
-                                <div class="search-bar" id="p2-search-bar">
-                                    <input type="text" id="p2-search-input" placeholder="Search IDs...">
-                                </div>
-                                <div class="roster-selection" id="p2-draft-selection"></div>
-
-                                <h4>Your Bans:</h4>
-                                <div class="ban-list" id="p2-id-bans"></div>
-                                
-                                <h4>Picked IDs:</h4>
-                                <div class="pick-list" id="p2-picks"></div>
+                            <div class="counter"><i class="fas fa-users"></i> Selected: <strong id="p1-counter">0</strong> / 42 IDs</div>
+                            <div class="roster-selection" id="p1-roster"></div>
+                            <div class="controls">
+                                <button class="btn" id="p1-random"><i class="fas fa-random"></i> Randomize</button>
+                                <button class="btn" id="p1-clear"><i class="fas fa-trash"></i> Clear</button>
+                                <button class="btn" id="p1-ready"><i class="fas fa-check"></i> Ready</button>
                             </div>
                         </div>
-                        
-                        <div class="ref-actions">
-                            <button class="btn hidden" id="next-phase" disabled><i class="fas fa-step-forward"></i> Next Phase</button>
-                            <button class="btn btn-primary" id="complete-draft" disabled><i class="fas fa-flag-checkered"></i> Complete Draft</button>
+                        <div class="player-panel" id="p2-panel">
+                            <div class="player-header">
+                                <div class="player-name" id="p2-name-display">Player 2</div>
+                                <div class="player-status status-waiting" id="p2-status">Selecting</div>
+                            </div>
+                            <div class="counter"><i class="fas fa-users"></i> Selected: <strong id="p2-counter">0</strong> / 42 IDs</div>
+                            <div class="roster-selection" id="p2-roster"></div>
+                            <div class="controls">
+                                <button class="btn" id="p2-random"><i class="fas fa-random"></i> Randomize</button>
+                                <button class="btn" id="p2-clear"><i class="fas fa-trash"></i> Clear</button>
+                                <button class="btn" id="p2-ready"><i class="fas fa-check"></i> Ready</button>
+                            </div>
                         </div>
+                    </div>
+                    <div class="ref-actions" style="text-align: center; margin-top: 20px;">
+                        <button class="btn btn-primary btn-large" id="start-ego-ban" disabled><i class="fas fa-ban"></i> Start EGO Bans</button>
+                    </div>
+                </div>
+
+                <!-- EGO Ban Phase -->
+                <div id="ego-ban-phase" class="phase-section hidden">
+                    <h2>EGO Ban Phase</h2>
+                    <div class="ego-ban-container" id="ego-ban-container">
+                        <!-- EGOs will be rendered here -->
+                    </div>
+                    <div class="controls" style="margin-top: 20px;">
+                        <button class="btn btn-primary" id="confirm-ego-bans" disabled><i class="fas fa-check-double"></i> Confirm Bans</button>
+                    </div>
+                </div>
+
+                <!-- ID Draft Phase -->
+                <div id="id-draft-phase" class="player-section hidden">
+                    <h2>ID Draft Phase</h2>
+                    <div class="banned-egos-display" id="draft-banned-egos">
+                        <h3><i class="fas fa-ban"></i> Banned EGOs</h3>
+                        <div class="banned-egos-list" id="draft-banned-egos-list"></div>
+                    </div>
+                    <div class="player-area">
+                         <div class="player-panel" id="p1-draft-panel">
+                            <div class="player-header">
+                                <div class="player-name" id="p1-draft-name">Player 1</div>
+                                <div class="player-status status-waiting" id="p1-draft-status">Waiting</div>
+                            </div>
+                            <div class="search-bar" id="p1-search-bar"><input type="text" id="p1-search-input" placeholder="Search IDs..."></div>
+                            <div class="roster-selection" id="p1-draft-selection"></div>
+                            <h4>Your Bans:</h4><div class="ban-list" id="p1-id-bans"></div>
+                            <h4>Picked IDs:</h4><div class="pick-list" id="p1-picks"></div>
+                        </div>
+                        <div class="player-panel" id="p2-draft-panel">
+                            <div class="player-header">
+                                <div class="player-name" id="p2-draft-name">Player 2</div>
+                                <div class="player-status status-waiting" id="p2-draft-status">Waiting</div>
+                            </div>
+                            <div class="search-bar" id="p2-search-bar"><input type="text" id="p2-search-input" placeholder="Search IDs..."></div>
+                            <div class="roster-selection" id="p2-draft-selection"></div>
+                            <h4>Your Bans:</h4><div class="ban-list" id="p2-id-bans"></div>
+                            <h4>Picked IDs:</h4><div class="pick-list" id="p2-picks"></div>
+                        </div>
+                    </div>
+                    <div class="ref-actions" style="text-align: center; margin-top: 20px;">
+                        <button class="btn hidden" id="next-phase" disabled><i class="fas fa-step-forward"></i> Next Phase</button>
+                        <button class="btn btn-primary" id="complete-draft" disabled><i class="fas fa-flag-checkered"></i> Complete Draft</button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- === COMPLETED DRAFT VIEW === -->
-        <div id="completed-view">
+        <!-- Completed Draft View -->
+        <div id="completed-view" style="display: none;">
             <header>
                 <h1><i class="fas fa-flag-checkered"></i> Draft Complete</h1>
                 <p>Final Rosters</p>
             </header>
+            <div class="banned-egos-display" id="final-banned-egos">
+                <h3><i class="fas fa-ban"></i> Banned EGOs</h3>
+                <div class="banned-egos-list" id="final-banned-egos-list"></div>
+            </div>
             <div class="final-rosters-container">
-                <!-- Player 1 Section -->
                 <div class="final-player-panel">
                     <h2 id="final-p1-name">Player 1's Roster</h2>
                     <div class="final-picks" id="final-p1-picks"></div>
                     <h3>Banned from Roster</h3>
                     <div class="final-bans" id="final-p1-bans"></div>
                 </div>
-                <!-- Player 2 Section -->
                 <div class="final-player-panel">
                     <h2 id="final-p2-name">Player 2's Roster</h2>
                     <div class="final-picks" id="final-p2-picks"></div>
@@ -1044,9 +1048,7 @@
                     <div class="final-bans" id="final-p2-bans"></div>
                 </div>
             </div>
-            <button class="btn btn-large btn-primary" id="restart-draft">
-                <i class="fas fa-redo"></i> Start New Draft
-            </button>
+            <button class="btn btn-large btn-primary" id="restart-draft"><i class="fas fa-redo"></i> Start New Draft</button>
         </div>
     </div>
 
@@ -1055,6 +1057,7 @@
         // CONSTANTS & CONFIG
         // ======================
         const ROSTER_SIZE = 42;
+        const EGO_BAN_COUNT = 5;
         
         // ======================
         // APPLICATION STATE
@@ -1069,11 +1072,9 @@
                 p2: { name: "Player 2", status: "disconnected", ready: false },
                 ref: { name: "Referee", status: "disconnected" }
             },
-            roster: {
-                p1: [],
-                p2: []
-            },
+            roster: { p1: [], p2: [] },
             masterIDList: [],
+            masterEGOList: [],
             draft: {
                 phase: "roster",
                 step: 0,
@@ -1082,6 +1083,7 @@
                 actionCount: 0,
                 available: { p1: [], p2: [] },
                 idBans: { p1: [], p2: [] },
+                egoBans: { p1: [], p2: [] },
                 picks: { p1: [], p2: [] }
             },
             filters: { sinner: "", sinAffinity: "", keyword: "" },
@@ -1091,10 +1093,8 @@
             timerInterval: null,
             serverType: "remote",
             socket: null,
-            notificationShown: { bothReady: false }
         };
 
-        // This object will hold all the DOM elements for easy access.
         let elements = {};
 
         // ======================
@@ -1114,7 +1114,7 @@
         function createSlug(name) {
             if (!name) return '';
             let slug = name.toLowerCase();
-            slug = slug.replace(/ryōshū/g, 'ryshu').replace(/großhammer/g, 'grohammer').replace(/öufi/g, 'ufi');
+            slug = slug.replace(/ryōshū/g, 'ryshu').replace(/öufi/g, 'ufi');
             slug = slug.replace(/e\.g\.o::/g, 'ego-');
             slug = slug.replace(/ & /g, ' ').replace(/[.'"]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/[^\w-]+/g, '');
             return slug;
@@ -1123,7 +1123,7 @@
         // ======================
         // DATA HANDLING
         // ======================
-        function parseCSV(csv) {
+        function parseIDCSV(csv) {
             const lines = csv.split('\n').filter(line => line.trim() !== '');
             if (lines.length < 2) return [];
             const regex = /(".*?"|[^",]+)(?=\s*,|\s*$)/g;
@@ -1133,10 +1133,7 @@
                 const line = lines[i].trim();
                 if (!line) continue;
                 const values = line.match(regex) || [];
-                if (values.length !== headers.length) {
-                    console.warn(`Skipping malformed CSV line ${i + 1}:`, line);
-                    continue;
-                }
+                if (values.length !== headers.length) continue;
                 const obj = {};
                 headers.forEach((header, idx) => {
                     let value = values[idx].trim();
@@ -1145,50 +1142,81 @@
                 });
 
                 const name = obj.Name;
-                const slug = createSlug(name); 
                 const sinnerMatch = name.match(/(Yi Sang|Faust|Don Quixote|Ryōshū|Meursault|Hong Lu|Heathcliff|Ishmael|Rodion|Sinclair|Outis|Gregor)/);
                 
                 result.push({
-                    id: slug, 
+                    id: createSlug(name), 
                     name: name,
                     keywords: obj.Keywords ? obj.Keywords.split(',').map(k => k.trim()) : [],
                     sinAffinities: obj.SinAffinities ? obj.SinAffinities.split(',').map(s => s.trim()) : [],
                     rarity: obj.Rarity,
-                    imageFile: `${slug}.webp`, 
+                    imageFile: `${createSlug(name)}.webp`, 
                     sinner: sinnerMatch ? sinnerMatch[0] : "Unknown",
                 });
             }
             return result;
         }
 
+        function parseEGOData(data) {
+            const lines = data.trim().split('\n');
+            const egoList = [];
+            const colorMap = { 'Yellow': 'sloth', 'Blue': 'gloom', 'Red': 'wrath', 'Indigo': 'pride', 'Purple': 'envy', 'Orange': 'lust', 'Green': 'gluttony' };
+            
+            lines.forEach(line => {
+                if (!line.includes(' - ')) return;
+                const parts = line.split(' - ');
+                if (parts.length < 4) return;
+
+                const nameAndSinner = parts[0];
+                const rarity = parts[1].trim();
+                const sin = parts[2].trim();
+                const color = parts[3].trim();
+
+                const sinners = ["Yi Sang", "Faust", "Don Quixote", "Ryōshū", "Meursault", "Hong Lu", "Heathcliff", "Ishmael", "Rodion", "Sinclair", "Outis", "Gregor"];
+                let sinner = "Unknown";
+                let name = nameAndSinner;
+
+                for (const s of sinners) {
+                    if (nameAndSinner.includes(s)) {
+                        sinner = s;
+                        name = nameAndSinner.replace(s, '').trim();
+                        break;
+                    }
+                }
+                
+                egoList.push({
+                    id: createSlug(`${name} ${sinner}`),
+                    name: name,
+                    sinner: sinner,
+                    rarity: rarity,
+                    sin: sin,
+                    color: color,
+                    cssColor: `var(--sin-${colorMap[color]})`
+                });
+            });
+            return egoList;
+        }
+
+
         // ======================
         // SOCKET COMMUNICATION
         // ======================
         function connectWebSocket() {
-            if (state.serverType === "local") {
-                const localUrl = "ws://localhost:8080";
-                state.socket = new WebSocket(localUrl);
-            } else {
-                const loc = window.location;
-                const wsProtocol = loc.protocol === 'https:' ? 'wss:' : 'ws:';
-                const remoteUrl = `${wsProtocol}//${loc.host}/`;
-                state.socket = new WebSocket(remoteUrl);
-            }
+            const loc = window.location;
+            const wsProtocol = loc.protocol === 'https:' ? 'wss:' : 'ws:';
+            const remoteUrl = `${wsProtocol}//${loc.host}/`;
+            state.socket = new WebSocket(remoteUrl);
 
-            if (state.socket) {
-                state.socket.onopen = () => {
-                    elements.connectionStatus.innerHTML = '<i class="fas fa-plug"></i> <span>Connected</span>';
-                    elements.connectionStatus.classList.add('connected');
-                    elements.connectionStatus.classList.remove('disconnected');
-                };
-                state.socket.onmessage = (event) => handleServerMessage(JSON.parse(event.data));
-                state.socket.onclose = () => {
-                    elements.connectionStatus.innerHTML = '<i class="fas fa-plug"></i> <span>Disconnected</span>';
-                    elements.connectionStatus.classList.remove('connected');
-                    elements.connectionStatus.classList.add('disconnected');
-                };
-                state.socket.onerror = (error) => console.error('WebSocket error:', error);
-            }
+            state.socket.onopen = () => {
+                elements.connectionStatus.innerHTML = '<i class="fas fa-plug"></i> <span>Connected</span>';
+                elements.connectionStatus.classList.add('connected');
+            };
+            state.socket.onmessage = (event) => handleServerMessage(JSON.parse(event.data));
+            state.socket.onclose = () => {
+                elements.connectionStatus.innerHTML = '<i class="fas fa-plug"></i> <span>Disconnected</span>';
+                elements.connectionStatus.classList.remove('connected');
+            };
+            state.socket.onerror = (error) => console.error('WebSocket error:', error);
         }
         
         function sendMessage(message) {
@@ -1211,43 +1239,49 @@
         // ======================
         // UI RENDERING & DOM MANIPULATION
         // ======================
-
-        /**
-         * Creates a single, reusable ID element.
-         * This avoids repeating HTML strings and logic in multiple places.
-         * @param {object} idData - The full data object for the ID.
-         * @param {object} options - Configuration options { isSelected, clickHandler }.
-         * @returns {HTMLElement} The created DOM element for the ID.
-         */
         function createIdElement(idData, options = {}) {
             const { isSelected, clickHandler } = options;
             const idElement = document.createElement('div');
-            
             idElement.className = `id-item rarity-${idData.rarity} ${isSelected ? 'selected' : ''}`;
             idElement.dataset.id = idData.id;
-            
-            idElement.innerHTML = `
-                <div class="id-icon" style="background-image: url('/uploads/${idData.imageFile}')"></div>
-                <div class="id-name">${idData.name}</div>
-            `;
-            
+            idElement.innerHTML = `<div class="id-icon" style="background-image: url('/uploads/${idData.imageFile}')"></div><div class="id-name">${idData.name}</div>`;
             if (clickHandler) {
                 idElement.addEventListener('click', () => clickHandler(idData.id));
             }
             return idElement;
         }
 
-        /**
-         * Renders a list of IDs into a specified container element.
-         * @param {HTMLElement} container - The parent element to render into.
-         * @param {Array<object>} idObjectList - The list of ID data objects to render.
-         * @param {string} [player] - The player context ('p1' or 'p2') for selection state.
-         * @param {Function} [clickHandler] - The function to call when an item is clicked.
-         */
+        function createEgoElement(egoData, clickHandler) {
+            const egoElement = document.createElement('div');
+            const allBans = [...state.draft.egoBans.p1, ...state.draft.egoBans.p2];
+            const isBanned = allBans.includes(egoData.id);
+
+            egoElement.className = `ego-item ${isBanned ? 'banned' : ''}`;
+            if (state.draft.egoBans.p1.includes(egoData.id)) egoElement.classList.add('banned-p1');
+            if (state.draft.egoBans.p2.includes(egoData.id)) egoElement.classList.add('banned-p2');
+
+            egoElement.dataset.id = egoData.id;
+            egoElement.style.backgroundColor = egoData.cssColor;
+
+            egoElement.innerHTML = `
+                <div class="ego-header">
+                    <span class="ego-sinner">${egoData.sinner}</span>
+                    <span class="ego-rarity">${egoData.rarity}</span>
+                </div>
+                <div class="ego-name">${egoData.name}</div>
+            `;
+            
+            if (clickHandler && !isBanned) {
+                egoElement.addEventListener('click', () => clickHandler(egoData.id));
+            }
+            return egoElement;
+        }
+
+
         function renderIDList(container, idObjectList, player, clickHandler) {
-            container.innerHTML = ''; // Clear previous content
+            container.innerHTML = '';
             if (!Array.isArray(idObjectList) || idObjectList.length === 0) {
-                container.innerHTML = '<div class="empty-roster" style="padding: 10px; text-align: center;">No IDs to display</div>';
+                container.innerHTML = '<div class="empty-roster" style="padding: 10px; text-align: center;">No items to display</div>';
                 return;
             }
             
@@ -1265,22 +1299,21 @@
         }
 
         function updateAllUIsFromState() {
-            const isDraftComplete = state.draft.phase === 'complete';
-            const isDraftStarted = state.draft.phase !== 'roster';
+            const { phase } = state.draft;
 
             // View switching
             elements.mainPage.style.display = 'none';
-            elements.lobbyView.style.display = isDraftComplete ? 'none' : 'block';
-            elements.completedView.style.display = isDraftComplete ? 'block' : 'none';
+            elements.lobbyView.style.display = phase === 'complete' ? 'none' : 'block';
+            elements.completedView.style.display = phase === 'complete' ? 'block' : 'none';
 
-            if (isDraftComplete) {
+            elements.rosterPhase.classList.toggle('hidden', phase !== 'roster');
+            elements.egoBanPhase.classList.toggle('hidden', phase !== 'egoBan');
+            elements.idDraftPhase.classList.toggle('hidden', !['ban', 'pick', 'midBan', 'pick2'].includes(phase));
+
+            if (phase === 'complete') {
                 renderCompletedView();
                 return;
             }
-
-            // Phase visibility
-            elements.rosterPhaseSection.classList.toggle('hidden', isDraftStarted);
-            elements.draftPhaseSection.classList.toggle('hidden', !isDraftStarted);
 
             // Participants list
             elements.participantsList.innerHTML = '';
@@ -1298,37 +1331,31 @@
                 elements.participantsList.appendChild(el);
             });
 
-            // Player names and status
+            // Player names and status for roster phase
             ['p1', 'p2'].forEach(player => {
                 elements[`${player}NameDisplay`].textContent = state.participants[player].name;
-                elements[`${player}DraftName`].textContent = state.participants[player].name;
                 elements[`${player}Counter`].textContent = state.roster[player].length;
-                
                 const isReady = state.participants[player].ready;
-                const readyBtn = elements[`${player}Ready`];
-                const statusEl = elements[`${player}Status`];
-                
-                readyBtn.innerHTML = isReady ? '<i class="fas fa-times"></i> Unready' : `<i class="fas fa-check"></i> Ready`;
-                readyBtn.classList.toggle('btn-ready', isReady);
-                statusEl.textContent = isReady ? 'Ready' : 'Selecting';
-                statusEl.className = `player-status ${isReady ? 'status-ready' : 'status-waiting'}`;
-                
+                elements[`${player}Ready`].innerHTML = isReady ? '<i class="fas fa-times"></i> Unready' : `<i class="fas fa-check"></i> Ready`;
+                elements[`${player}Ready`].classList.toggle('btn-ready', isReady);
+                elements[`${player}Status`].textContent = isReady ? 'Ready' : 'Selecting';
+                elements[`${player}Status`].className = `player-status ${isReady ? 'status-ready' : 'status-waiting'}`;
                 elements[`${player}Panel`].classList.toggle('locked', isReady);
             });
             
-            // Render the main roster selection lists
-            filterAndRenderAll();
+            filterAndRenderRosterSelection();
             
-            // Update draft-specific UI elements
-            updateDraftUI();
+            if (phase === 'egoBan') renderEgoBanPhase();
+            if (['ban', 'pick', 'midBan', 'pick2'].includes(phase)) updateDraftUI();
+            
             updateDraftInstructions();
-            checkDraftReadiness();
+            checkPhaseReadiness();
         }
         
-        function filterAndRenderAll() {
+        function filterAndRenderRosterSelection() {
             const filteredList = filterIDs(state.masterIDList);
-            renderIDList(elements.p1Roster, filteredList, 'p1');
-            renderIDList(elements.p2Roster, filteredList, 'p2');
+            renderIDList(elements.p1Roster, filteredList, 'p1', toggleIDSelection);
+            renderIDList(elements.p2Roster, filteredList, 'p2', toggleIDSelection);
         }
 
         function filterIDs(sourceList) {
@@ -1341,11 +1368,45 @@
                 return true;
             });
         }
+        
+        function renderEgoBanPhase() {
+            const container = elements.egoBanContainer;
+            container.innerHTML = '';
+            const fragment = document.createDocumentFragment();
+            const clickHandler = (state.userRole === state.draft.currentPlayer || state.userRole === 'ref') ? selectEgoToBan : null;
+            
+            state.masterEGOList.forEach(ego => {
+                fragment.appendChild(createEgoElement(ego, clickHandler));
+            });
+            container.appendChild(fragment);
+
+            const canConfirm = (state.userRole === 'ref' || state.userRole === state.draft.currentPlayer) && state.draft.egoBans[state.draft.currentPlayer].length === EGO_BAN_COUNT;
+            elements.confirmEgoBans.disabled = !canConfirm;
+        }
+
+        function renderBannedEgosDisplay() {
+            const allBans = [...state.draft.egoBans.p1, ...state.draft.egoBans.p2];
+            const bannedEgoObjects = allBans.map(id => state.masterEGOList.find(ego => ego.id === id)).filter(Boolean);
+            
+            const renderList = (container) => {
+                container.innerHTML = '';
+                bannedEgoObjects.forEach(ego => {
+                    const item = document.createElement('div');
+                    item.className = 'banned-ego-item';
+                    item.style.backgroundColor = ego.cssColor;
+                    item.innerHTML = `<span class="rarity">[${ego.rarity}]</span> <span class="name">${ego.name}</span>`;
+                    container.appendChild(item);
+                });
+            };
+
+            renderList(elements.draftBannedEgosList);
+            renderList(elements.finalBannedEgosList);
+        }
 
         function updateDraftUI() {
             const renderIdSublist = (container, idList) => {
                 const idObjects = idList.map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
-                renderIDList(container, idObjects); // Re-use the main render function without click handlers
+                renderIDList(container, idObjects);
             };
             
             renderIdSublist(elements.p1IdBans, state.draft.idBans.p1);
@@ -1360,19 +1421,53 @@
             elements.p2DraftStatus.className = `player-status ${currentPlayer === "p2" ? "status-drafting" : "status-waiting"}`;
             elements.p1DraftPanel.classList.toggle('draft-active', currentPlayer === 'p1');
             elements.p2DraftPanel.classList.toggle('draft-active', currentPlayer === 'p2');
+
+            renderBannedEgosDisplay();
         }
 
         function updateDraftInstructions() {
             let phaseText = "", actionDesc = "";
-            const { phase, step, currentPlayer, action, actionCount } = state.draft;
+            const { phase, step, currentPlayer, action, actionCount, egoBans } = state.draft;
             
             elements.p1DraftSelection.innerHTML = '<div class="empty-roster"></div>';
             elements.p2DraftSelection.innerHTML = '<div class="empty-roster"></div>';
 
-            if (phase === "roster") { phaseText = "Waiting for players to complete rosters..."; }
-            else if (phase === "complete") { phaseText = "Draft Completed!"; actionDesc = "All picks and bans are finalized."; }
-            else {
-                const opponent = currentPlayer === 'p1' ? 'p2' : 'p1';
+            switch(phase) {
+                case "roster": 
+                    phaseText = "Roster Selection";
+                    actionDesc = "Players select 42 IDs. Referee starts the draft when both are ready.";
+                    break;
+                case "egoBan":
+                    const bansLeft = EGO_BAN_COUNT - egoBans[currentPlayer].length;
+                    phaseText = `EGO Ban Phase - ${state.participants[currentPlayer].name}'s turn`;
+                    actionDesc = `Select ${bansLeft} more EGO(s) to ban from the global pool.`;
+                    break;
+                case "ban": 
+                    phaseText = `Ban Phase 1 - Step ${step + 1}/8`; 
+                    actionDesc = `${state.participants[currentPlayer].name} to ban 1 ID from opponent's roster`; 
+                    break;
+                case "pick": 
+                    phaseText = `Pick Phase 1 - Step ${step + 1}/7`; 
+                    actionDesc = `${state.participants[currentPlayer].name} to pick ${actionCount} ID(s)`; 
+                    break;
+                case "midBan": 
+                    phaseText = `Mid-Ban Phase - Step ${step + 1}/6`; 
+                    actionDesc = `${state.participants[currentPlayer].name} to ban 1 ID from opponent's remaining roster`; 
+                    break;
+                case "pick2": 
+                    phaseText = `Pick Phase 2 - Step ${step + 1}/7`; 
+                    actionDesc = `${state.participants[currentPlayer].name} to pick ${actionCount} ID(s)`; 
+                    break;
+                case "complete":
+                    phaseText = "Draft Completed!";
+                    actionDesc = "All picks and bans are finalized.";
+                    break;
+                default:
+                    phaseText = "Waiting for draft to start...";
+            }
+
+            if (['ban', 'pick', 'midBan', 'pick2'].includes(phase)) {
+                 const opponent = currentPlayer === 'p1' ? 'p2' : 'p1';
                 const availableIdList = action === 'ban' ? state.draft.available[opponent] : state.draft.available[currentPlayer];
                 let availableObjects = availableIdList.map(id => state.masterIDList.find(item => item && item.id === id)).filter(Boolean);
                 
@@ -1384,11 +1479,6 @@
                 const selectionContainer = currentPlayer === 'p1' ? elements.p1DraftSelection : elements.p2DraftSelection;
                 const clickHandler = (state.userRole === currentPlayer || state.userRole === 'ref') ? selectDraftID : null;
                 renderIDList(selectionContainer, availableObjects, currentPlayer, clickHandler);
-
-                if (phase === "ban") { phaseText = `Ban Phase 1 - Step ${step + 1}/8`; actionDesc = `${state.participants[currentPlayer].name} to ban 1 ID from ${state.participants[opponent].name}'s roster`; }
-                else if (phase === "pick") { phaseText = `Pick Phase 1 - Step ${step + 1}/7`; actionDesc = `${state.participants[currentPlayer].name} to pick ${actionCount} ID(s)`; }
-                else if (phase === "midBan") { phaseText = `Mid-Ban Phase - Step ${step + 1}/6`; actionDesc = `${state.participants[currentPlayer].name} to ban 1 ID from ${state.participants[opponent].name}'s remaining roster`; }
-                else if (phase === "pick2") { phaseText = `Pick Phase 2 - Step ${step + 1}/7`; actionDesc = `${state.participants[currentPlayer].name} to pick ${actionCount} ID(s)`; }
             }
             
             elements.currentPhase.textContent = phaseText;
@@ -1400,21 +1490,24 @@
         function renderCompletedView() {
             const renderFinalList = (container, idList) => {
                 const idObjects = idList.map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
-                renderIDList(container, idObjects); // Re-use the main render function
+                renderIDList(container, idObjects);
             };
             elements.finalP1Name.textContent = `${state.participants.p1.name}'s Roster`;
             elements.finalP2Name.textContent = `${state.participants.p2.name}'s Roster`;
             renderFinalList(elements.finalP1Picks, state.draft.picks.p1);
             renderFinalList(elements.finalP1Bans, state.draft.idBans.p2); 
             renderFinalList(elements.finalP2Picks, state.draft.picks.p2);
-            renderFinalList(elements.finalP2Bans, state.draft.idBans.p1); 
+            renderFinalList(elements.finalP2Bans, state.draft.idBans.p1);
+            renderBannedEgosDisplay();
         }
 
-        function checkDraftReadiness() {
-            const p1Ready = state.participants.p1.ready && state.roster.p1.length === ROSTER_SIZE;
-            const p2Ready = state.participants.p2.ready && state.roster.p2.length === ROSTER_SIZE;
-            if (state.userRole === 'ref') {
-                elements.startDraft.disabled = !(p1Ready && p2Ready);
+        function checkPhaseReadiness() {
+            if (state.draft.phase === 'roster') {
+                const p1Ready = state.participants.p1.ready && state.roster.p1.length === ROSTER_SIZE;
+                const p2Ready = state.participants.p2.ready && state.roster.p2.length === ROSTER_SIZE;
+                if (state.userRole === 'ref') {
+                    elements.startEgoBan.disabled = !(p1Ready && p2Ready);
+                }
             }
         }
         
@@ -1428,13 +1521,17 @@
             }
             sendMessage({ type: 'rosterSelect', lobbyCode: state.lobbyCode, player, id });
         }
+
+        function selectEgoToBan(egoId) {
+             sendMessage({ type: 'egoBan', lobbyCode: state.lobbyCode, egoId });
+        }
         
         function selectDraftID(player, id) {
             sendMessage({ type: 'draftSelect', lobbyCode: state.lobbyCode, payload: { player, id } });
         }
 
         // ======================
-        // STATE HANDLERS (Update state from server messages)
+        // STATE HANDLERS
         // ======================
         function handleLobbyCreated(message) {
             state.lobbyCode = message.code;
@@ -1450,23 +1547,18 @@
         }
         
         function handleStateUpdate(message) {
-            // Update the local state object with the new state from the server.
             Object.assign(state.participants, message.state.participants);
             Object.assign(state.roster, message.state.roster);
             Object.assign(state.draft, message.state.draft);
             elements.lobbyCodeDisplay.textContent = state.lobbyCode;
-            updateAllUIsFromState(); // Trigger a full re-render of the UI.
+            updateAllUIsFromState();
         }
 
         // ======================
         // INITIALIZATION
         // ======================
         function setupEventListeners() {
-            elements.createLobbyBtn.addEventListener('click', () => {
-                const name = elements.playerNameInput.value.trim();
-                sendMessage({ type: 'createLobby', name });
-            });
-
+            elements.createLobbyBtn.addEventListener('click', () => sendMessage({ type: 'createLobby', name: elements.playerNameInput.value.trim() }));
             elements.joinLobbyBtn.addEventListener('click', () => {
                 elements.lobbyAccessForm.style.display = 'block';
                 elements.joinLobbyBtn.style.display = 'none';
@@ -1477,53 +1569,33 @@
                     option.classList.add('selected');
                 });
             });
-
             elements.enterLobbyBtn.addEventListener('click', () => {
                 const lobbyCode = elements.lobbyCodeInput.value.trim().toUpperCase();
                 const selectedRole = document.querySelector('.role-option.selected')?.dataset.role;
-                const name = elements.playerNameInput.value.trim();
-                if (lobbyCode.length !== 6 || !selectedRole) {
-                    showNotification('Enter a valid code and select a role.', true);
-                    return;
-                }
-                sendMessage({ type: 'joinLobby', lobbyCode, role: selectedRole, name });
+                if (!lobbyCode || !selectedRole) return showNotification('Enter code and select a role.', true);
+                sendMessage({ type: 'joinLobby', lobbyCode, role: selectedRole, name: elements.playerNameInput.value.trim() });
             });
             
             elements.backToMainBtn.addEventListener('click', () => window.location.reload());
             elements.restartDraft.addEventListener('click', () => window.location.reload());
             
-            // Player controls
             ['p1', 'p2'].forEach(player => {
                 elements[`${player}Random`].addEventListener('click', () => (state.userRole === player || state.userRole === 'ref') && sendMessage({ type: 'rosterRandomize', lobbyCode: state.lobbyCode, player }));
                 elements[`${player}Clear`].addEventListener('click', () => (state.userRole === player || state.userRole === 'ref') && sendMessage({ type: 'rosterClear', lobbyCode: state.lobbyCode, player }));
                 elements[`${player}Ready`].addEventListener('click', () => {
-                    if ((state.userRole === player || state.userRole === 'ref')) {
-                         if (state.roster[player].length !== ROSTER_SIZE && !state.participants[player].ready) {
-                            showNotification(`Must select ${ROSTER_SIZE} IDs to be ready.`, true);
-                            return;
-                         }
+                    if (state.userRole === player || state.userRole === 'ref') {
+                         if (state.roster[player].length !== ROSTER_SIZE && !state.participants[player].ready) return showNotification(`Must select ${ROSTER_SIZE} IDs.`, true);
                         sendMessage({ type: 'updateReady', lobbyCode: state.lobbyCode, player });
                     }
                 });
             });
-
-            // Use event delegation for roster selection for better performance.
-            ['p1', 'p2'].forEach(player => {
-                elements[`${player}Roster`].addEventListener('click', (e) => {
-                    const idItem = e.target.closest('.id-item');
-                    if (idItem && (state.userRole === player || state.userRole === 'ref')) {
-                        toggleIDSelection(player, idItem.dataset.id);
-                    }
-                });
-            });
             
-            // Filter controls
-            elements.rosterSearchInput.addEventListener('input', (e) => { state.rosterSearch = e.target.value; filterAndRenderAll(); });
+            elements.rosterSearchInput.addEventListener('input', (e) => { state.rosterSearch = e.target.value; filterAndRenderRosterSelection(); });
             [elements.sinnerFilter, elements.sinAffinityFilter, elements.keywordFilter].forEach(filterEl => {
                 filterEl.addEventListener('change', (e) => {
                     const filterType = e.target.id.split('-')[0];
                     state.filters[filterType] = e.target.value;
-                    filterAndRenderAll();
+                    filterAndRenderRosterSelection();
                 });
             });
             elements.resetFilters.addEventListener('click', () => {
@@ -1533,11 +1605,12 @@
                 elements.sinAffinityFilter.value = "";
                 elements.keywordFilter.value = "";
                 elements.rosterSearchInput.value = "";
-                filterAndRenderAll();
+                filterAndRenderRosterSelection();
             });
 
             // Draft controls
-            elements.startDraft.addEventListener('click', () => sendMessage({ type: 'draftControl', lobbyCode: state.lobbyCode, action: 'start' }));
+            elements.startEgoBan.addEventListener('click', () => sendMessage({ type: 'draftControl', lobbyCode: state.lobbyCode, action: 'startEgoBan' }));
+            elements.confirmEgoBans.addEventListener('click', () => sendMessage({ type: 'draftControl', lobbyCode: state.lobbyCode, action: 'confirmEgoBans' }));
             elements.nextPhase.addEventListener('click', () => sendMessage({ type: 'draftControl', lobbyCode: state.lobbyCode, action: 'nextPhase' }));
             elements.completeDraft.addEventListener('click', () => sendMessage({ type: 'draftControl', lobbyCode: state.lobbyCode, action: 'complete' }));
             
@@ -1545,13 +1618,8 @@
             elements.p2SearchInput.addEventListener('input', (e) => { state.draftSearch.p2 = e.target.value.toLowerCase(); updateDraftInstructions(); });
         }
 
-        /**
-         * Gathers all necessary DOM elements into the `elements` object.
-         * This keeps all DOM queries in one place for easier management.
-         */
         function cacheDOMElements() {
              elements = {
-                // Main Page
                 mainPage: document.getElementById('main-page'),
                 lobbyAccessForm: document.getElementById('lobby-access-form'),
                 createLobbyBtn: document.getElementById('create-lobby'),
@@ -1560,17 +1628,16 @@
                 lobbyCodeInput: document.getElementById('lobby-code'),
                 roleOptions: document.querySelectorAll('.role-option'),
                 playerNameInput: document.getElementById('player-name'),
-
-                // Lobby View
                 lobbyView: document.getElementById('lobby-view'),
                 backToMainBtn: document.getElementById('back-to-main'),
                 lobbyCodeDisplay: document.getElementById('lobby-code-display'),
                 participantsList: document.getElementById('participants-list'),
                 phaseTimer: document.getElementById('phase-timer'),
-                rosterPhaseSection: document.querySelector('.phase-section'),
-                draftPhaseSection: document.querySelector('.player-section'),
+                draftStatusPanel: document.getElementById('draft-status-panel'),
+                currentPhase: document.getElementById('current-phase'),
+                draftActionDescription: document.getElementById('draft-action-description'),
                 
-                // Roster Selection
+                rosterPhase: document.getElementById('roster-phase'),
                 rosterSearchInput: document.getElementById('roster-search-input'),
                 sinnerFilter: document.getElementById('sinner-filter'),
                 sinAffinityFilter: document.getElementById('sinAffinity-filter'),
@@ -1588,13 +1655,17 @@
                 p1Status: document.getElementById('p1-status'), p2Status: document.getElementById('p2-status'),
                 p1NameDisplay: document.getElementById('p1-name-display'),
                 p2NameDisplay: document.getElementById('p2-name-display'),
+                startEgoBan: document.getElementById('start-ego-ban'),
 
-                // Draft Phase
-                startDraft: document.getElementById('start-draft'),
+                egoBanPhase: document.getElementById('ego-ban-phase'),
+                egoBanContainer: document.getElementById('ego-ban-container'),
+                confirmEgoBans: document.getElementById('confirm-ego-bans'),
+
+                idDraftPhase: document.getElementById('id-draft-phase'),
+                draftBannedEgos: document.getElementById('draft-banned-egos'),
+                draftBannedEgosList: document.getElementById('draft-banned-egos-list'),
                 nextPhase: document.getElementById('next-phase'),
                 completeDraft: document.getElementById('complete-draft'),
-                currentPhase: document.getElementById('current-phase'),
-                draftActionDescription: document.getElementById('draft-action-description'),
                 p1DraftPanel: document.getElementById('p1-draft-panel'),
                 p2DraftPanel: document.getElementById('p2-draft-panel'),
                 p1DraftName: document.getElementById('p1-draft-name'),
@@ -1610,8 +1681,9 @@
                 p1Picks: document.getElementById('p1-picks'),
                 p2Picks: document.getElementById('p2-picks'),
 
-                // Completed View
                 completedView: document.getElementById('completed-view'),
+                finalBannedEgos: document.getElementById('final-banned-egos'),
+                finalBannedEgosList: document.getElementById('final-banned-egos-list'),
                 restartDraft: document.getElementById('restart-draft'), 
                 finalP1Name: document.getElementById('final-p1-name'),
                 finalP2Name: document.getElementById('final-p2-name'),
@@ -1620,14 +1692,13 @@
                 finalP2Picks: document.getElementById('final-p2-picks'),
                 finalP2Bans: document.getElementById('final-p2-bans'),
 
-                // Global
                 connectionStatus: document.getElementById('connection-status'),
                 notification: document.getElementById('notification'),
             };
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            const csvData = `Name,Keywords,SinAffinities,Rarity
+            const idCsvData = `Name,Keywords,SinAffinities,Rarity
 "LCB Sinner Yi Sang","Sinking","Gloom,Envy,Sloth","0"
 "Seven Association South Section 6 Yi Sang","Rupture","Gloom,Gluttony,Sloth","00"
 "Molar Office Fixer Yi Sang","Discard,Tremor","Lust,Sloth,Wrath","00"
@@ -1773,12 +1844,109 @@
 "Firefist Office Survivor Gregor","Burn","Lust,Wrath,Wrath","000"
 "Heishou Pack - Si Branch Gregor","Poise,Rupture","Pride,Gluttony,Envy","000"
 `;
+            const egoData = `Crow's Eye View Yi Sang - ZAYIN - Sloth - Yellow
+Bygone Days Yi Sang - ZAYIN - Gloom - Blue
+4th Match Flame Yi Sang - TETH - Wrath - Red
+Wishing Cairn Yi Sang - TETH - Sloth - Yellow
+Dimension Shredder Yi Sang - HE - Pride - Indigo
+Fell Bullet Yi Sang - HE - Pride - Indigo
+Sunshower Yi Sang - WAW - Sloth - Yellow
+Representation Emitter Faust - ZAYIN - Pride - Indigo
+Hex Nail Faust - TETH - Envy - Purple
+9:2 Faust - TETH - Lust - Orange
+Lasso Faust - TETH - Gluttony - Green
+Fluid Sac Faust - HE - Gloom - Blue
+Telepole Faust - HE - Envy - Purple
+Thoracalgia Faust - HE - Pride - Indigo
+Everlasting Faust - WAW - Sloth - Yellow
+La Sangre de Sancho Don Quixote - ZAYIN - Lust - Orange
+Lifetime Stew Don Quixote - TETH - Lust - Orange
+Wishing Cairn Don Quixote - TETH - Sloth - Yellow
+Electric Screaming Don Quixote - TETH - Envy - Purple
+Fluid Sac Don Quixote - HE - Gloom - Blue
+Telepole Don Quixote - HE - Envy - Purple
+Red Sheet Don Quixote - HE - Gluttony - Green
+Yearning-Mircalla Don Quixote - WAW - Lust - Orange
+In the Name of Love and Hate Don Quixote - WAW - Envy - Purple
+Forest for the Flames Ryōshū - ZAYIN - Lust - Orange
+Soda Ryōshū - ZAYIN - Gloom - Blue
+Red Eyes Ryōshū - TETH - Lust - Orange
+Blind Obsession Ryōshū - TETH - Pride - Indigo
+4th Match Flame Ryōshū - HE - Wrath - Red
+Red Eyes (Open) Ryōshū - HE - Envy - Purple
+Thoracalgia Ryōshū - HE - Pride - Indigo
+Contempt, Awe Ryōshū - WAW - Lust - Orange
+Chains of Others Meursault - ZAYIN - Pride - Indigo
+Screwloose Wallop Meursault - TETH - Envy - Purple
+Regret Meursault - TETH - Wrath - Red
+Electric Screaming Meursault - TETH - Envy - Purple
+Pursuance Meursault - HE - Sloth - Yellow
+Capote Meursault - HE - Wrath - Red
+Yearning-Mircalla Meursault - WAW - Lust - Orange
+Land of Illusion Hong Lu - ZAYIN - Gloom - Blue
+Roseate Desire Hong Lu - TETH - Lust - Orange
+Soda Hong Lu - TETH - Gloom - Blue
+Cavernous Wailing Hong Lu - TETH - Sloth - Yellow
+Lasso Hong Lu - TETH - Gluttony - Green
+Dimension Shredder Hong Lu - HE - Pride - Indigo
+Effervescent Corrosion Hong Lu - HE - Gluttony - Green
+Tears of the Tarnished Blood [汚血泣淚] Hong Lu - WAW - Gluttony - Green
+Bodysack Heathcliff - ZAYIN - Envy - Purple
+Holiday Heathcliff - ZAYIN - Gluttony - Green
+AEDD Heathcliff - TETH - Gloom - Blue
+Fell Bullet Heathcliff - TETH - Pride - Indigo
+Telepole Heathcliff - HE - Envy - Purple
+Ya Śūnyatā Tad Rūpam Heathcliff - HE - Lust - Orange
+Asymmetrical Inertia Heathcliff - HE - Sloth - Yellow
+Binds Heathcliff - WAW - Gloom - Blue
+Snagharpoon Ishmael - ZAYIN - Gloom - Blue
+Hundred-Footed Death Maggot [蝍蛆殺] Ishmael - ZAYIN - Gloom - Blue
+Roseate Desire Ishmael - TETH - Lust - Orange
+Capote Ishmael - TETH - Wrath - Red
+Bygone Days Ishmael - TETH - Gloom - Blue
+Ardor Blossom Star Ishmael - HE - Wrath - Red
+Wingbeat Ishmael - HE - Gluttony - Green
+Christmas Nightmare Ishmael - HE - Gluttony - Green
+Blind Obsession Ishmael - WAW - Pride - Indigo
+What is Cast Rodion - ZAYIN - Pride - Indigo
+Rime Shank Rodion - TETH - Gloom - Blue
+Effervescent Corrosion Rodion - TETH - Gluttony - Green
+4th Match Flame Rodion - HE - Wrath - Red
+Pursuance Rodion - HE - Sloth - Yellow
+Hex Nail Rodion - HE - Envy - Purple
+Sanguine Desire Rodion - HE - Lust - Orange
+Indicant's Trial Rodion - WAW - Wrath - Red
+Branch of Knowledge Sinclair - ZAYIN - Gluttony - Green
+Cavernous Wailing Sinclair - HE - Gloom - Blue
+Impending Day Sinclair - TETH - Wrath - Red
+Lifetime Stew Sinclair - TETH - Lust - Orange
+Hex Nail Sinclair - TETH - Envy - Purple
+Lantern Sinclair - HE - Gluttony - Green
+9:2 Sinclair - HE - Lust - Orange
+Tears of the Tarnished Blood [汚血泣淚] Sinclair - WAW - Gluttony - Green
+To Páthos Máthos Outis - ZAYIN - Pride - Indigo
+Ya Śūnyatā Tad Rūpam Outis - WAW - Lust - Orange
+Sunshower Outis - TETH - Gluttony - Green
+Ebony Stem Outis - HE - Gluttony - Green
+Holiday Outis - HE - Wrath - Red
+Dimension Shredder Outis - HE - Envy - Purple
+Magic Bullet Outis - HE - Pride - Indigo
+Binds Outis - WAW - Pride - Indigo
+Suddenly, One Day Gregor - ZAYIN - Sloth - Yellow
+Legerdemain Gregor - ZAYIN - Gluttony - Green
+Lantern Gregor - TETH - Gluttony - Green
+Bygone Days Gregor - TETH - Gloom - Blue
+AEDD Gregor - HE - Gloom - Blue
+Solemn Lament Gregor - HE - Gloom - Blue
+Christmas Nightmare Gregor - HE - Sloth - Yellow
+Garden of Thorns Gregor - WAW - Lust - Orange`;
             
             cacheDOMElements();
-            state.masterIDList = parseCSV(csvData);
+            state.masterIDList = parseIDCSV(idCsvData);
+            state.masterEGOList = parseEGOData(egoData);
             setupEventListeners();
             connectWebSocket();
-            filterAndRenderAll();
+            filterAndRenderRosterSelection();
         });
     </script>
 </body>
