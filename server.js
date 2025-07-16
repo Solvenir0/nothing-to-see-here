@@ -125,7 +125,7 @@ wss.on('connection', (ws) => {
             return;
         }
 
-        const { lobbyCode, role, player, id, action, payload } = incomingData;
+        const { lobbyCode, role, player, id, action, payload, name } = incomingData; // FIX 4: Destructure name
         const lobbyRef = lobbyCode ? firestore.collection('lobbies').doc(lobbyCode.toUpperCase()) : null;
 
         switch (incomingData.type) {
@@ -135,6 +135,11 @@ wss.on('connection', (ws) => {
                 
                 ws.lobbyCode = newLobbyCode;
                 ws.userRole = 'ref';
+                
+                // FIX 4: Set referee name if provided
+                if (name) {
+                    newLobbyState.participants.ref.name = name;
+                }
                 newLobbyState.participants.ref.status = "connected";
 
                 await firestore.collection('lobbies').doc(newLobbyCode).set(newLobbyState);
@@ -152,7 +157,12 @@ wss.on('connection', (ws) => {
                 ws.lobbyCode = lobbyCode.toUpperCase();
                 ws.userRole = role;
                 
-                await lobbyRef.update({ [`participants.${role}.status`]: 'connected' });
+                // FIX 4: Update participant name if provided
+                const updates = { [`participants.${role}.status`]: 'connected' };
+                if (name) {
+                    updates[`participants.${role}.name`] = name;
+                }
+                await lobbyRef.update(updates);
                 
                 const updatedDoc = await lobbyRef.get();
                 ws.send(JSON.stringify({ type: 'lobbyJoined', lobbyCode: ws.lobbyCode, role, state: updatedDoc.data() }));
