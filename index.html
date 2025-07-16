@@ -420,7 +420,6 @@
             position: relative;
         }
         
-        /* IMPROVEMENT: Add a visual lock when a player is ready */
         .player-panel.locked::after {
             content: 'LOCKED';
             position: absolute;
@@ -969,7 +968,7 @@
                     
                     <div class="player-section hidden">
                         <div class="section-title">
-                            <div class="icon">2</div>
+                            <!-- REMOVED stray '2' from here -->
                             <h2>Drafting Phase</h2>
                         </div>
                         
@@ -1214,7 +1213,7 @@
         // ======================
 
         /**
-         * IMPROVEMENT: Creates a single, reusable ID element.
+         * Creates a single, reusable ID element.
          * This avoids repeating HTML strings and logic in multiple places.
          * @param {object} idData - The full data object for the ID.
          * @param {object} options - Configuration options { isSelected, clickHandler }.
@@ -1314,7 +1313,6 @@
                 statusEl.textContent = isReady ? 'Ready' : 'Selecting';
                 statusEl.className = `player-status ${isReady ? 'status-ready' : 'status-waiting'}`;
                 
-                // IMPROVEMENT: Lock the player panel when they are ready.
                 elements[`${player}Panel`].classList.toggle('locked', isReady);
             });
             
@@ -1329,7 +1327,6 @@
         
         function filterAndRenderAll() {
             const filteredList = filterIDs(state.masterIDList);
-            // Use event delegation, so no click handler is passed here.
             renderIDList(elements.p1Roster, filteredList, 'p1');
             renderIDList(elements.p2Roster, filteredList, 'p2');
         }
@@ -1510,7 +1507,7 @@
                 });
             });
 
-            // IMPROVEMENT: Use event delegation for roster selection for better performance.
+            // Use event delegation for roster selection for better performance.
             ['p1', 'p2'].forEach(player => {
                 elements[`${player}Roster`].addEventListener('click', (e) => {
                     const idItem = e.target.closest('.id-item');
@@ -1630,8 +1627,6 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            // IMPROVEMENT: Keep the hardcoded data separate for clarity.
-            // In a larger application, this would be fetched from a server endpoint.
             const csvData = `Name,Keywords,SinAffinities,Rarity
 "LCB Sinner Yi Sang","Sinking","Gloom,Envy,Sloth","0"
 "Seven Association South Section 6 Yi Sang","Rupture","Gloom,Gluttony,Sloth","00"
