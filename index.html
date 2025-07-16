@@ -80,6 +80,14 @@
             margin-bottom: 15px;
         }
         
+        h4 {
+            font-size: 1.1rem;
+            color: #ccc;
+            margin-top: 15px;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
         .card {
             background: rgba(30, 30, 30, 0.85);
             border-radius: 15px;
@@ -441,7 +449,22 @@
             font-size: 0.9rem;
         }
         
-        .ban-list, .pick-list, .roster-list {
+        /* FIX 1: Grid layout for pick/ban lists */
+        .ban-list, .pick-list {
+            margin: 10px 0;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            min-height: 80px;
+            max-height: 180px; /* Shows 2 rows of items */
+            overflow-y: auto;
+            align-content: start; /* Aligns items to the top */
+        }
+        
+        .roster-list {
             margin: 15px 0;
             padding: 10px;
             background: rgba(0, 0, 0, 0.3);
@@ -453,7 +476,7 @@
         
         .id-item {
             padding: 8px;
-            margin: 2px 0;
+            margin: 0; /* Removed margin for grid layout */
             background: rgba(139, 0, 0, 0.3);
             border-radius: 4px;
             display: flex;
@@ -661,6 +684,28 @@
             margin: 20px auto;
         }
         
+        /* FIX 3: Roster Search Bar Styling */
+        .filter-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: flex-end;
+            padding: 15px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .filter-group {
+            flex: 1;
+            min-width: 150px;
+        }
+        .filter-label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+            color: #ccc;
+        }
+
         @media (max-width: 768px) {
             .action-container {
                 flex-direction: column;
@@ -705,13 +750,10 @@
                 <p>Select an option below to get started. You can create a new lobby as a referee, or join an existing lobby as Player 1, Player 2, or Referee.</p>
             </div>
             
-            <div class="server-selection" id="server-selection">
-                <div class="server-option" data-server="local">
-                    <i class="fas fa-laptop"></i> Local Testing
-                </div>
-                <div class="server-option selected" data-server="remote">
-                    <i class="fas fa-cloud"></i> Online Multiplayer
-                </div>
+            <!-- FIX 4: Add player name input -->
+            <div class="form-group" style="max-width: 400px; margin: 30px auto; text-align: left;">
+                <label for="player-name">Your Display Name</label>
+                <input type="text" id="player-name" placeholder="Enter your name">
             </div>
             
             <div class="action-container">
@@ -811,8 +853,13 @@
                         </div>
                         
                         <div class="filter-bar">
+                            <!-- FIX 3: Add roster search input -->
                             <div class="filter-group">
-                                <label class="filter-label">Filter by Sinner:</label>
+                                <label class="filter-label" for="roster-search-input">Search by Name:</label>
+                                <input type="text" id="roster-search-input" placeholder="e.g. LCB Sinner...">
+                            </div>
+                            <div class="filter-group">
+                                <label class="filter-label" for="sinner-filter">Filter by Sinner:</label>
                                 <select id="sinner-filter">
                                     <option value="">All Sinners</option>
                                     <option value="Yi Sang">Yi Sang</option>
@@ -831,7 +878,7 @@
                             </div>
                             
                             <div class="filter-group">
-                                <label class="filter-label">Filter by Sin Affinity:</label>
+                                <label class="filter-label" for="sinAffinity-filter">Filter by Sin Affinity:</label>
                                 <select id="sinAffinity-filter">
                                     <option value="">All Affinities</option>
                                     <option value="Gloom">Gloom</option>
@@ -845,7 +892,7 @@
                             </div>
                             
                             <div class="filter-group">
-                                <label class="filter-label">Filter by Keyword:</label>
+                                <label class="filter-label" for="keyword-filter">Filter by Keyword:</label>
                                 <select id="keyword-filter">
                                     <option value="">All Keywords</option>
                                     <option value="Sinking">Sinking</option>
@@ -869,7 +916,7 @@
                         <div class="player-area">
                             <div class="player-panel">
                                 <div class="player-header">
-                                    <div class="player-name">Player 1</div>
+                                    <div class="player-name" id="p1-name-display">Player 1</div>
                                     <div class="player-status status-waiting" id="p1-status">Selecting</div>
                                 </div>
                                 <div class="counter"><i class="fas fa-users"></i> Selected: <strong id="p1-counter">0</strong> / 42 IDs</div>
@@ -884,7 +931,7 @@
                             
                             <div class="player-panel">
                                 <div class="player-header">
-                                    <div class="player-name">Player 2</div>
+                                    <div class="player-name" id="p2-name-display">Player 2</div>
                                     <div class="player-status status-waiting" id="p2-status">Selecting</div>
                                 </div>
                                 <div class="counter"><i class="fas fa-users"></i> Selected: <strong id="p2-counter">0</strong> / 42 IDs</div>
@@ -921,7 +968,7 @@
                         <div class="player-area">
                             <div class="player-panel" id="p1-draft-panel">
                                 <div class="player-header">
-                                    <div class="player-name">Player 1</div>
+                                    <div class="player-name" id="p1-draft-name">Player 1</div>
                                     <div class="player-status status-waiting" id="p1-draft-status">Waiting</div>
                                 </div>
                                 <div class="search-bar" id="p1-search-bar">
@@ -929,8 +976,9 @@
                                 </div>
                                 <div class="roster-selection" id="p1-draft-selection"></div>
 
-                                <h4>Banned IDs (by P2):</h4>
-                                <div class="ban-list" id="p2-id-bans"></div>
+                                <!-- FIX 2: Swapped Ban Boxes -->
+                                <h4>Your Bans:</h4>
+                                <div class="ban-list" id="p1-id-bans"></div>
                                 
                                 <h4>Picked IDs:</h4>
                                 <div class="pick-list" id="p1-picks"></div>
@@ -938,7 +986,7 @@
                             
                             <div class="player-panel" id="p2-draft-panel">
                                 <div class="player-header">
-                                    <div class="player-name">Player 2</div>
+                                    <div class="player-name" id="p2-draft-name">Player 2</div>
                                     <div class="player-status status-waiting" id="p2-draft-status">Waiting</div>
                                 </div>
                                 <div class="search-bar" id="p2-search-bar">
@@ -946,8 +994,9 @@
                                 </div>
                                 <div class="roster-selection" id="p2-draft-selection"></div>
 
-                                <h4>Banned IDs (by P1):</h4>
-                                <div class="ban-list" id="p1-id-bans"></div>
+                                <!-- FIX 2: Swapped Ban Boxes -->
+                                <h4>Your Bans:</h4>
+                                <div class="ban-list" id="p2-id-bans"></div>
                                 
                                 <h4>Picked IDs:</h4>
                                 <div class="pick-list" id="p2-picks"></div>
@@ -972,14 +1021,14 @@
             <div class="final-rosters-container">
                 <!-- Player 1 Section -->
                 <div class="final-player-panel">
-                    <h2>Player 1's Roster</h2>
+                    <h2 id="final-p1-name">Player 1's Roster</h2>
                     <div class="final-picks" id="final-p1-picks"></div>
                     <h3>Banned from Roster</h3>
                     <div class="final-bans" id="final-p1-bans"></div>
                 </div>
                 <!-- Player 2 Section -->
                 <div class="final-player-panel">
-                    <h2>Player 2's Roster</h2>
+                    <h2 id="final-p2-name">Player 2's Roster</h2>
                     <div class="final-picks" id="final-p2-picks"></div>
                     <h3>Banned from Roster</h3>
                     <div class="final-bans" id="final-p2-bans"></div>
@@ -1021,7 +1070,8 @@
                 picks: { p1: [], p2: [] }
             },
             filters: { sinner: "", sinAffinity: "", keyword: "" },
-            search: { p1: "", p2: "" },
+            rosterSearch: "", // FIX 3: Add roster search to state
+            draftSearch: { p1: "", p2: "" }, // Renamed for clarity
             timer: 0,
             timerInterval: null,
             serverType: "remote",
@@ -1044,45 +1094,31 @@
             setTimeout(() => { elements.notification.classList.remove('show'); }, 3000);
         }
         
-        /**
-         * A more robust CSV parser that handles quoted fields containing commas.
-         * @param {string} csv The CSV string to parse.
-         * @returns {Array<Object>} An array of objects representing the parsed data.
-         */
         function parseCSV(csv) {
             const lines = csv.split('\n').filter(line => line.trim() !== '');
             if (lines.length < 2) return [];
-
-            // This regex splits a CSV row into values. It handles quoted fields.
             const regex = /(".*?"|[^",]+)(?=\s*,|\s*$)/g;
-
             const headers = lines[0].split(',').map(h => h.trim());
             const result = [];
-
             for (let i = 1; i < lines.length; i++) {
                 const line = lines[i].trim();
                 if (!line) continue;
-
                 const values = line.match(regex) || [];
-                
                 if (values.length !== headers.length) {
                     console.warn(`Skipping malformed CSV line ${i + 1}:`, line);
                     continue;
                 }
-
                 const obj = {};
                 headers.forEach((header, idx) => {
                     let value = values[idx].trim();
-                    // Remove quotes if they are wrapping the value
                     if (value.startsWith('"') && value.endsWith('"')) {
                         value = value.slice(1, -1);
                     }
                     obj[header] = value;
                 });
-                
                 const sinnerMatch = obj.Name.match(/(Yi Sang|Faust|Don Quixote|Ryōshū|Meursault|Hong Lu|Heathcliff|Ishmael|Rodion|Sinclair|Outis|Gregor)/);
                 result.push({
-                    id: i, // Using 1-based line number as the unique ID
+                    id: i,
                     name: obj.Name,
                     keywords: obj.Keywords ? obj.Keywords.split(',').map(k => k.trim()) : [],
                     sinAffinities: obj.SinAffinities ? obj.SinAffinities.split(',').map(s => s.trim()) : [],
@@ -1093,7 +1129,6 @@
             }
             return result;
         }
-
 
         // ======================
         // SOCKET COMMUNICATION
@@ -1150,21 +1185,21 @@
         }
 
         function filterAndRenderAll() {
-            const p1Filtered = filterIDs(state.masterIDList);
-            const p2Filtered = filterIDs(state.masterIDList);
-
+            const filteredList = filterIDs(state.masterIDList);
             const p1ClickHandler = (state.userRole === 'p1' || state.userRole === 'ref') ? toggleIDSelection : null;
             const p2ClickHandler = (state.userRole === 'p2' || state.userRole === 'ref') ? toggleIDSelection : null;
-            
-            renderIDList(elements.p1Roster, p1Filtered, 'p1', p1ClickHandler);
-            renderIDList(elements.p2Roster, p2Filtered, 'p2', p2ClickHandler);
+            renderIDList(elements.p1Roster, filteredList, 'p1', p1ClickHandler);
+            renderIDList(elements.p2Roster, filteredList, 'p2', p2ClickHandler);
         }
 
+        // FIX 3: Update filter logic to include search term
         function filterIDs(sourceList) {
+            const searchTerm = state.rosterSearch.toLowerCase();
             return sourceList.filter(fullData => {
                 if (state.filters.sinner && fullData.sinner !== state.filters.sinner) return false;
                 if (state.filters.sinAffinity && !fullData.sinAffinities.includes(state.filters.sinAffinity)) return false;
                 if (state.filters.keyword && !fullData.keywords.includes(state.filters.keyword)) return false;
+                if (searchTerm && !fullData.name.toLowerCase().includes(searchTerm)) return false;
                 return true;
             });
         }
@@ -1176,7 +1211,7 @@
             const sortedIdList = sortByID(idObjectList);
             
             if (sortedIdList.length === 0) {
-                container.innerHTML = '<div class="empty-roster" style="padding: 10px; text-align: center;">No IDs to display</div>';
+                container.innerHTML = '<div class="empty-roster" style="padding: 10px; text-align: center;">No IDs match filters</div>';
                 return;
             }
             
@@ -1186,7 +1221,6 @@
                 const isSelected = state.roster[player]?.includes(idData.id);
                 idElement.className = `id-item ${isSelected ? 'selected' : ''}`;
                 idElement.dataset.id = idData.id;
-                // **FIXED**: Removed the numeric ID prefix from the name display
                 idElement.innerHTML = `
                     <div class="id-icon" style="background-image: url(${idData.imageUrl})"></div>
                     <div class="id-name">${idData.name}</div>
@@ -1214,9 +1248,11 @@
             document.querySelector('.phase-section').classList.toggle('hidden', isDraftStarted);
             document.querySelector('.player-section').classList.toggle('hidden', !isDraftStarted);
 
+            // FIX 4: Update participant list with names from state
             elements.participantsList.innerHTML = '';
             ['p1', 'p2', 'ref'].forEach(role => {
                 const p = state.participants[role];
+                const displayName = state.userRole === role ? `${p.name} (You)` : p.name;
                 const el = document.createElement('div');
                 el.className = `participant ${state.userRole === role ? 'current-user' : ''}`;
                 const icon = role === 'ref' ? 'fa-star' : 'fa-user';
@@ -1224,9 +1260,15 @@
                 if (p.status === 'connected') {
                     statusIcon = (role !== 'ref' && p.ready) ? ' <i class="fas fa-check-circle" style="color:var(--ready);"></i>' : ' <i class="fas fa-dot-circle" style="color:var(--connected);"></i>';
                 }
-                el.innerHTML = `<i class="fas ${icon}"></i> ${p.name} ${statusIcon}`;
+                el.innerHTML = `<i class="fas ${icon}"></i> ${displayName} ${statusIcon}`;
                 elements.participantsList.appendChild(el);
             });
+
+            // Update player names in panels
+            elements.p1NameDisplay.textContent = state.participants.p1.name;
+            elements.p2NameDisplay.textContent = state.participants.p2.name;
+            elements.p1DraftName.textContent = state.participants.p1.name;
+            elements.p2DraftName.textContent = state.participants.p2.name;
 
             filterAndRenderAll();
             ['p1', 'p2'].forEach(player => {
@@ -1257,9 +1299,12 @@
                 const idObjects = idNumbers.map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
                 return sortByID(idObjects).map(idData => `<div class="id-item"><div class="id-icon" style="background-image: url(${idData.imageUrl})"></div><div class="id-name">${idData.name}</div></div>`).join('');
             };
-            elements.p1IdBans.innerHTML = renderList(state.draft.idBans.p2);
+            
+            // FIX 2: Populate the correct ban lists
+            elements.p1IdBans.innerHTML = renderList(state.draft.idBans.p1);
+            elements.p2IdBans.innerHTML = renderList(state.draft.idBans.p2);
+            
             elements.p1Picks.innerHTML = renderList(state.draft.picks.p1);
-            elements.p2IdBans.innerHTML = renderList(state.draft.idBans.p1);
             elements.p2Picks.innerHTML = renderList(state.draft.picks.p2);
             
             const { currentPlayer } = state.draft;
@@ -1288,18 +1333,17 @@
                 const availableIdNumbers = action === 'ban' ? state.draft.available[opponent] : state.draft.available[currentPlayer];
                 let availableObjects = availableIdNumbers.map(id => state.masterIDList.find(item => item && item.id === id)).filter(Boolean);
                 
-                // **NEW**: Filter by search term
-                const searchTerm = state.search[currentPlayer];
+                const searchTerm = state.draftSearch[currentPlayer];
                 if (searchTerm) {
                     availableObjects = availableObjects.filter(idObj => idObj.name.toLowerCase().includes(searchTerm));
                 }
 
                 renderIDList(selectionContainer, availableObjects, currentPlayer, clickHandler);
 
-                if (phase === "ban") { phaseText = `Ban Phase 1 - Step ${step + 1}/8`; actionDesc = `${currentPlayer.toUpperCase()} to ban 1 ID from ${opponent.toUpperCase()}'s roster`; }
-                else if (phase === "pick") { phaseText = `Pick Phase 1 - Step ${step + 1}/7`; actionDesc = `${currentPlayer.toUpperCase()} to pick ${actionCount} ID(s)`; }
-                else if (phase === "midBan") { phaseText = `Mid-Ban Phase - Step ${step + 1}/6`; actionDesc = `${currentPlayer.toUpperCase()} to ban 1 ID from ${opponent.toUpperCase()}'s remaining roster`; }
-                else if (phase === "pick2") { phaseText = `Pick Phase 2 - Step ${step + 1}/7`; actionDesc = `${currentPlayer.toUpperCase()} to pick ${actionCount} ID(s)`; }
+                if (phase === "ban") { phaseText = `Ban Phase 1 - Step ${step + 1}/8`; actionDesc = `${state.participants[currentPlayer].name} to ban 1 ID from ${state.participants[opponent].name}'s roster`; }
+                else if (phase === "pick") { phaseText = `Pick Phase 1 - Step ${step + 1}/7`; actionDesc = `${state.participants[currentPlayer].name} to pick ${actionCount} ID(s)`; }
+                else if (phase === "midBan") { phaseText = `Mid-Ban Phase - Step ${step + 1}/6`; actionDesc = `${state.participants[currentPlayer].name} to ban 1 ID from ${state.participants[opponent].name}'s remaining roster`; }
+                else if (phase === "pick2") { phaseText = `Pick Phase 2 - Step ${step + 1}/7`; actionDesc = `${state.participants[currentPlayer].name} to pick ${actionCount} ID(s)`; }
             }
             
             elements.currentPhase.textContent = phaseText;
@@ -1314,6 +1358,8 @@
                 const idObjects = idNumbers.map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
                 return sortByID(idObjects).map(idData => `<div class="id-item"><div class="id-icon" style="background-image: url(${idData.imageUrl})"></div><div class="id-name">${idData.name}</div></div>`).join('');
             };
+            elements.finalP1Name.textContent = `${state.participants.p1.name}'s Roster`;
+            elements.finalP2Name.textContent = `${state.participants.p2.name}'s Roster`;
             elements.finalP1Picks.innerHTML = renderList(state.draft.picks.p1);
             elements.finalP1Bans.innerHTML = renderList(state.draft.idBans.p2); 
             elements.finalP2Picks.innerHTML = renderList(state.draft.picks.p2);
@@ -1366,17 +1412,14 @@
             state.lobbyCode = message.lobbyCode;
             state.userRole = message.role;
             handleStateUpdate(message);
-            showNotification(`Joined lobby as ${state.userRole.toUpperCase()}`);
+            showNotification(`Joined lobby as ${state.participants[state.userRole].name}`);
         }
         
         function handleStateUpdate(message) {
+            // FIX 4: Remove line that overwrites name. The name is now handled correctly by the server and rendered with a "(You)" suffix.
             state.participants = message.state.participants;
             state.roster = message.state.roster;
             state.draft = message.state.draft;
-
-            if (state.participants[state.userRole]) {
-                 state.participants[state.userRole].name = (state.userRole === 'p1' ? 'Player 1' : state.userRole === 'p2' ? 'Player 2' : 'Referee') + ' (You)';
-            }
             elements.lobbyCodeDisplay.textContent = state.lobbyCode;
             updateAllUIsFromState();
         }
@@ -1385,7 +1428,12 @@
         // INITIALIZATION
         // ======================
         function setupEventListeners() {
-            elements.createLobbyBtn.addEventListener('click', () => sendMessage({ type: 'createLobby' }));
+            // FIX 4: Send name when creating lobby
+            elements.createLobbyBtn.addEventListener('click', () => {
+                const name = elements.playerNameInput.value.trim();
+                sendMessage({ type: 'createLobby', name });
+            });
+
             elements.joinLobbyBtn.addEventListener('click', () => {
                 elements.lobbyAccessForm.style.display = 'block';
                 elements.joinLobbyBtn.style.display = 'none';
@@ -1396,14 +1444,17 @@
                     option.classList.add('selected');
                 });
             });
+
+            // FIX 4: Send name when joining lobby
             elements.enterLobbyBtn.addEventListener('click', () => {
                 const lobbyCode = elements.lobbyCodeInput.value.trim().toUpperCase();
                 const selectedRole = document.querySelector('.role-option.selected')?.dataset.role;
+                const name = elements.playerNameInput.value.trim();
                 if (lobbyCode.length !== 6 || !selectedRole) {
                     showNotification('Enter a valid code and select a role.');
                     return;
                 }
-                sendMessage({ type: 'joinLobby', lobbyCode, role: selectedRole });
+                sendMessage({ type: 'joinLobby', lobbyCode, role: selectedRole, name });
             });
             
             elements.backToMainBtn.addEventListener('click', () => window.location.reload());
@@ -1423,6 +1474,12 @@
                 });
             });
 
+            // FIX 3: Add event listener for roster search
+            elements.rosterSearchInput.addEventListener('input', (e) => {
+                state.rosterSearch = e.target.value;
+                filterAndRenderAll();
+            });
+
             [elements.sinnerFilter, elements.sinAffinityFilter, elements.keywordFilter].forEach(filterEl => {
                 filterEl.addEventListener('change', (e) => {
                     const filterType = e.target.id.split('-')[0];
@@ -1431,11 +1488,14 @@
                 });
             });
 
+            // FIX 3: Update reset to clear search
             elements.resetFilters.addEventListener('click', () => {
                 state.filters = { sinner: "", sinAffinity: "", keyword: "" };
+                state.rosterSearch = "";
                 elements.sinnerFilter.value = "";
                 elements.sinAffinityFilter.value = "";
                 elements.keywordFilter.value = "";
+                elements.rosterSearchInput.value = "";
                 filterAndRenderAll();
             });
 
@@ -1443,48 +1503,86 @@
             elements.nextPhase.addEventListener('click', () => sendMessage({ type: 'draftControl', lobbyCode: state.lobbyCode, action: 'nextPhase' }));
             elements.completeDraft.addEventListener('click', () => sendMessage({ type: 'draftControl', lobbyCode: state.lobbyCode, action: 'complete' }));
             
-            // **NEW**: Event listeners for draft search bars
             elements.p1SearchInput.addEventListener('input', (e) => {
-                state.search.p1 = e.target.value.toLowerCase();
+                state.draftSearch.p1 = e.target.value.toLowerCase();
                 updateDraftInstructions();
             });
             elements.p2SearchInput.addEventListener('input', (e) => {
-                state.search.p2 = e.target.value.toLowerCase();
+                state.draftSearch.p2 = e.target.value.toLowerCase();
                 updateDraftInstructions();
             });
         }
 
         document.addEventListener('DOMContentLoaded', () => {
             elements = {
-                mainPage: document.getElementById('main-page'), lobbyView: document.getElementById('lobby-view'),
-                completedView: document.getElementById('completed-view'), lobbyAccessForm: document.getElementById('lobby-access-form'),
-                createLobbyBtn: document.getElementById('create-lobby'), joinLobbyBtn: document.getElementById('join-lobby'),
-                enterLobbyBtn: document.getElementById('enter-lobby'), backToMainBtn: document.getElementById('back-to-main'),
-                lobbyCodeInput: document.getElementById('lobby-code'), lobbyCodeDisplay: document.getElementById('lobby-code-display'),
-                participantsList: document.getElementById('participants-list'), roleOptions: document.querySelectorAll('.role-option'),
-                sinnerFilter: document.getElementById('sinner-filter'), sinAffinityFilter: document.getElementById('sinAffinity-filter'),
-                keywordFilter: document.getElementById('keyword-filter'), resetFilters: document.getElementById('reset-filters'),
-                p1Roster: document.getElementById('p1-roster'), p2Roster: document.getElementById('p2-roster'),
-                p1DraftSelection: document.getElementById('p1-draft-selection'), p2DraftSelection: document.getElementById('p2-draft-selection'),
-                p1Counter: document.getElementById('p1-counter'), p2Counter: document.getElementById('p2-counter'),
+                // Main Page
+                mainPage: document.getElementById('main-page'),
+                lobbyAccessForm: document.getElementById('lobby-access-form'),
+                createLobbyBtn: document.getElementById('create-lobby'),
+                joinLobbyBtn: document.getElementById('join-lobby'),
+                enterLobbyBtn: document.getElementById('enter-lobby'),
+                lobbyCodeInput: document.getElementById('lobby-code'),
+                roleOptions: document.querySelectorAll('.role-option'),
+                playerNameInput: document.getElementById('player-name'), // FIX 4
+
+                // Lobby View
+                lobbyView: document.getElementById('lobby-view'),
+                backToMainBtn: document.getElementById('back-to-main'),
+                lobbyCodeDisplay: document.getElementById('lobby-code-display'),
+                participantsList: document.getElementById('participants-list'),
+                phaseTimer: document.getElementById('phase-timer'),
+                
+                // Roster Selection
+                rosterSearchInput: document.getElementById('roster-search-input'), // FIX 3
+                sinnerFilter: document.getElementById('sinner-filter'),
+                sinAffinityFilter: document.getElementById('sinAffinity-filter'),
+                keywordFilter: document.getElementById('keyword-filter'),
+                resetFilters: document.getElementById('reset-filters'),
+                p1Roster: document.getElementById('p1-roster'),
+                p2Roster: document.getElementById('p2-roster'),
+                p1Counter: document.getElementById('p1-counter'),
+                p2Counter: document.getElementById('p2-counter'),
                 p1Random: document.getElementById('p1-random'), p2Random: document.getElementById('p2-random'),
                 p1Clear: document.getElementById('p1-clear'), p2Clear: document.getElementById('p2-clear'),
                 p1Ready: document.getElementById('p1-ready'), p2Ready: document.getElementById('p2-ready'),
                 p1Status: document.getElementById('p1-status'), p2Status: document.getElementById('p2-status'),
-                startDraft: document.getElementById('start-draft'), nextPhase: document.getElementById('next-phase'),
-                completeDraft: document.getElementById('complete-draft'), restartDraft: document.getElementById('restart-draft'), 
-                currentPhase: document.getElementById('current-phase'), phaseTimer: document.getElementById('phase-timer'),
-                p1IdBans: document.getElementById('p2-id-bans'), p2IdBans: document.getElementById('p1-id-bans'),
-                p1Picks: document.getElementById('p1-picks'), p2Picks: document.getElementById('p2-picks'),
+                p1NameDisplay: document.getElementById('p1-name-display'),
+                p2NameDisplay: document.getElementById('p2-name-display'),
+
+                // Draft Phase
+                startDraft: document.getElementById('start-draft'),
+                nextPhase: document.getElementById('next-phase'),
+                completeDraft: document.getElementById('complete-draft'),
+                currentPhase: document.getElementById('current-phase'),
                 draftActionDescription: document.getElementById('draft-action-description'),
-                p1DraftStatus: document.getElementById('p1-draft-status'), p2DraftStatus: document.getElementById('p2-draft-status'),
-                p1DraftPanel: document.getElementById('p1-draft-panel'), p2DraftPanel: document.getElementById('p2-draft-panel'),
-                // **NEW**: Search input elements
+                p1DraftPanel: document.getElementById('p1-draft-panel'),
+                p2DraftPanel: document.getElementById('p2-draft-panel'),
+                p1DraftName: document.getElementById('p1-draft-name'),
+                p2DraftName: document.getElementById('p2-draft-name'),
+                p1DraftStatus: document.getElementById('p1-draft-status'),
+                p2DraftStatus: document.getElementById('p2-draft-status'),
                 p1SearchInput: document.getElementById('p1-search-input'),
                 p2SearchInput: document.getElementById('p2-search-input'),
-                connectionStatus: document.getElementById('connection-status'), notification: document.getElementById('notification'),
-                finalP1Picks: document.getElementById('final-p1-picks'), finalP1Bans: document.getElementById('final-p1-bans'),   
-                finalP2Picks: document.getElementById('final-p2-picks'), finalP2Bans: document.getElementById('final-p2-bans'),
+                p1DraftSelection: document.getElementById('p1-draft-selection'),
+                p2DraftSelection: document.getElementById('p2-draft-selection'),
+                p1IdBans: document.getElementById('p1-id-bans'), // FIX 2
+                p2IdBans: document.getElementById('p2-id-bans'), // FIX 2
+                p1Picks: document.getElementById('p1-picks'),
+                p2Picks: document.getElementById('p2-picks'),
+
+                // Completed View
+                completedView: document.getElementById('completed-view'),
+                restartDraft: document.getElementById('restart-draft'), 
+                finalP1Name: document.getElementById('final-p1-name'),
+                finalP2Name: document.getElementById('final-p2-name'),
+                finalP1Picks: document.getElementById('final-p1-picks'),
+                finalP1Bans: document.getElementById('final-p1-bans'),   
+                finalP2Picks: document.getElementById('final-p2-picks'),
+                finalP2Bans: document.getElementById('final-p2-bans'),
+
+                // Global
+                connectionStatus: document.getElementById('connection-status'),
+                notification: document.getElementById('notification'),
             };
 
             const csvData = `Name,Keywords,SinAffinities,Rarity,ImageURL
@@ -1537,7 +1635,7 @@
 "LCB Sinner Meursault","Tremor","Sloth,Pride,Gloom","0","https://www.prydwen.gg/static/7db6c89c678c8b506d3694953b05bab1/60b4d/31_sm.webp"
 "Liu Association South Section 6 Meursault","Burn","Lust,Sloth,Wrath","00","https://www.prydwen.gg/static/27cfd501a22bcc30295cfd312451cb69/60b4d/19_sm.webp"
 "Rosespanner Workshop Fixer Meursault","Charge,Tremor","Gloom,Pride,Sloth","00","https://www.prydwen.gg/static/04b8f5d5b4b6d137fff603bd21d307dc/60b4d/49_sm.webp"
-"The Middle Little Brother Meursault","Bleed","Sloth,Envy,Wrath","00","https://www.prydwen.gg/static/cd1a9e812e7e5e97672f75ff9975e5de/60b4d/81_sm.webp"
+"The Middle Little Brother Meursault","Bleed","Sloth,Envy,Wrath","00","https://www.prydwen.gg/static/cd1a9e812e7e597672f75ff9975e5de/60b4d/81_sm.webp"
 "Dead Rabbits Boss Meursault","Rupture","Lust,Wrath,Gluttony","00","https://www.prydwen.gg/static/1d5260bbc81ea56cd2756b48ae955dc1/60b4d/97_sm.webp"
 "W Corp. L2 Cleanup Agent Meursault","Charge,Rupture","Envy,Gluttony,Pride","000","https://www.prydwen.gg/static/9a9174857333d70f7170d922a5771384/60b4d/6_sm.webp"
 "N Corp. Großhammer Meursault","Aggro,Bleed","Sloth,Wrath,Pride","000","https://www.prydwen.gg/static/1353732db379f5f1b1f27340b0b60aeb/60b4d/40_sm.webp"
