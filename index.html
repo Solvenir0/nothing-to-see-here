@@ -455,10 +455,10 @@
             background: rgba(0, 0, 0, 0.3);
             border-radius: 8px;
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(2, 1fr); /* MODIFIED: Changed from 4 to 2 */
             gap: 8px;
-            min-height: 80px;
-            max-height: 160px; 
+            min-height: 344px; /* MODIFIED: Adjusted for 4 rows */
+            max-height: 344px; /* MODIFIED: Adjusted for 4 rows */
             overflow-y: auto;
             align-content: start;
         }
@@ -753,7 +753,7 @@
             .connection-status { top: 5px; right: 5px; font-size: 0.8rem; padding: 5px 10px; }
             
             .ban-list, .pick-list {
-                grid-template-columns: repeat(3, 1fr);
+                grid-template-columns: repeat(2, 1fr); /* MODIFIED: Changed from 3 to 2 for consistency */
             }
         }
     </style>
