@@ -80,6 +80,7 @@ const csvData = `Name,Keywords,SinAffinities,Rarity
 "The Ring Pointillist Student Yi Sang","Bleed,Random","Gloom,Lust,Sloth","000"
 "Lobotomy E.G.O::Solemn Lament Yi Sang","Ammo,Sinking","Pride,Gloom,Sloth","000"
 "Liu Association South Section 3 Yi Sang","Burn","Sloth,Wrath,Envy","000"
+"N Corp. E.G.O::Fell Bullet Yi Sang","Bleed,Poise","Wrath,Lust,Pride","000"
 "LCB Sinner Faust","","Pride,Sloth,Gluttony","0"
 "W Corp. L2 Cleanup Agent Faust","Charge","Envy,Gloom,Wrath","00"
 "Lobotomy Corp. Remnant Faust","Poise,Rupture","Sloth,Gloom,Envy","000"
@@ -204,12 +205,14 @@ const csvData = `Name,Keywords,SinAffinities,Rarity
 "R.B. Sous-chef Gregor","Bleed","Lust,Gluttony,Envy","00"
 "Rosespanner Workshop Fixer Gregor","Rupture,Tremor","Gluttony,Envy,Gloom","00"
 "Kurokumo Clan Captain Gregor","Bleed","Sloth,Lust,Gloom","00"
+"Lobotomy E.G.O::Lantern Gregor","Aggro,Burn","Wrath,Sloth,Gloom","00"
 "G Corp. Manager Corporal Gregor","Rupture","Gluttony,Sloth,Lust","000"
 "Zwei Association South Section 4 Gregor","Aggro","Sloth,Gluttony,Gloom","000"
 "Twinhook Pirates First Mate Gregor","Ammo,Bleed,Poise","Sloth,Pride,Gloom","000"
 "Edgar Family Heir Gregor","Sinking","Envy,Pride,Lust","000"
-"Lobotomy E.G.O::Lantern Gregor","Aggro,Burn","Wrath,Sloth,Gloom","000"
-"The Thumb East Soldato IIII Gregor","Ammo,Burn,Tremor","Wrath,Sloth,Lust","000"
+"The Priest of La Manchaland Gregor","Aggro,Bleed,Rupture","Gluttony,Pride,Lust","000"
+"Firefist Office Survivor Gregor","Burn","Lust,Wrath,Wrath","000"
+"Heishou Pack - Si Branch Gregor","Poise,Rupture","Pride,Gluttony,Envy","000"
 `;
 const masterIDList = parseCSV(csvData);
 const allIds = masterIDList.map(item => item.id); // This will be an array of slugs
