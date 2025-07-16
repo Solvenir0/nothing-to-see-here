@@ -25,17 +25,13 @@
             --rarity-0: #cccccc;
             --rarity-00: #B22222;
             --rarity-000: #FFD700;
-            --rarity-ZAYIN: #90ee90;
-            --rarity-TETH: #87ceeb;
-            --rarity-HE: #ff6347;
-            --rarity-WAW: #dda0dd;
-            --sin-wrath: #ff4500;
-            --sin-lust: #ff69b4;
-            --sin-sloth: #ffd700;
-            --sin-gluttony: #32cd32;
-            --sin-gloom: #1e90ff;
-            --sin-pride: #4b0082;
-            --sin-envy: #800080;
+            --sin-wrath-bg: rgba(255, 69, 0, 0.7);
+            --sin-lust-bg: rgba(255, 105, 180, 0.7);
+            --sin-sloth-bg: rgba(255, 215, 0, 0.7);
+            --sin-gluttony-bg: rgba(50, 205, 50, 0.7);
+            --sin-gloom-bg: rgba(30, 144, 255, 0.7);
+            --sin-pride-bg: rgba(75, 0, 130, 0.7);
+            --sin-envy-bg: rgba(128, 0, 128, 0.7);
             --connected: #4b8b3b;
             --disconnected: #a00;
             --warning: #ff8c00;
@@ -695,7 +691,7 @@
 
         .ego-ban-container {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); /* Wider items */
             gap: 15px;
             max-height: 60vh;
             overflow-y: auto;
@@ -712,7 +708,7 @@
             cursor: pointer;
             transition: all 0.3s ease;
             border: 2px solid transparent;
-            color: #000; /* Set text color to black for better contrast on colored backgrounds */
+            color: #111; /* Dark text for better contrast */
         }
 
         .ego-item:hover {
@@ -736,7 +732,7 @@
 
         .ego-header {
             display: flex;
-            justify-content: space-between;
+            justify-content: flex-end; /* Align rarity to the right */
             font-weight: bold;
             margin-bottom: 5px;
         }
@@ -744,7 +740,8 @@
         .ego-rarity {
             padding: 2px 6px;
             border-radius: 4px;
-            background-color: rgba(255,255,255,0.3);
+            background-color: rgba(0,0,0,0.2); /* Semi-transparent black bg */
+            color: #fff; /* White text on the tag */
         }
 
         .ego-name {
@@ -752,10 +749,6 @@
             font-weight: bold;
             margin-bottom: 5px;
             flex-grow: 1;
-        }
-        .ego-sinner {
-            font-size: 0.9rem;
-            font-style: italic;
         }
 
         .banned-egos-display {
@@ -778,14 +771,15 @@
             border-radius: 5px;
             font-size: 0.9rem;
             text-align: center;
-            color: #000;
+            color: #111;
         }
         .banned-ego-item .rarity {
             font-weight: bold;
             margin-right: 5px;
-            background: rgba(255,255,255,0.3);
+            background: rgba(0,0,0,0.2);
             padding: 2px 4px;
             border-radius: 3px;
+            color: #fff;
         }
          .banned-ego-item .name {
             text-decoration: line-through;
@@ -979,6 +973,12 @@
                 <!-- EGO Ban Phase -->
                 <div id="ego-ban-phase" class="phase-section hidden">
                     <h2>EGO Ban Phase</h2>
+                    <div class="filter-bar">
+                        <div class="filter-group" style="flex-grow: 2;">
+                            <label class="filter-label" for="ego-search-input">Search EGOs:</label>
+                            <input type="text" id="ego-search-input" placeholder="Search by name or sinner...">
+                        </div>
+                    </div>
                     <div class="ego-ban-container" id="ego-ban-container">
                         <!-- EGOs will be rendered here -->
                     </div>
@@ -1088,6 +1088,7 @@
             },
             filters: { sinner: "", sinAffinity: "", keyword: "" },
             rosterSearch: "", 
+            egoSearch: "", // New state for EGO search
             draftSearch: { p1: "", p2: "" },
             timer: 0,
             timerInterval: null,
@@ -1161,6 +1162,15 @@
             const lines = data.trim().split('\n');
             const egoList = [];
             const colorMap = { 'Yellow': 'sloth', 'Blue': 'gloom', 'Red': 'wrath', 'Indigo': 'pride', 'Purple': 'envy', 'Orange': 'lust', 'Green': 'gluttony' };
+            const bgColorMap = { 
+                'Yellow': 'var(--sin-sloth-bg)',
+                'Blue': 'var(--sin-gloom-bg)',
+                'Red': 'var(--sin-wrath-bg)',
+                'Indigo': 'var(--sin-pride-bg)',
+                'Purple': 'var(--sin-envy-bg)',
+                'Orange': 'var(--sin-lust-bg)',
+                'Green': 'var(--sin-gluttony-bg)'
+            };
             
             lines.forEach(line => {
                 if (!line.includes(' - ')) return;
@@ -1186,12 +1196,12 @@
                 
                 egoList.push({
                     id: createSlug(`${name} ${sinner}`),
-                    name: name,
+                    name: `${name} (${sinner})`,
                     sinner: sinner,
                     rarity: rarity,
                     sin: sin,
                     color: color,
-                    cssColor: `var(--sin-${colorMap[color]})`
+                    cssColor: bgColorMap[color] || 'rgba(128, 128, 128, 0.7)'
                 });
             });
             return egoList;
@@ -1265,7 +1275,6 @@
 
             egoElement.innerHTML = `
                 <div class="ego-header">
-                    <span class="ego-sinner">${egoData.sinner}</span>
                     <span class="ego-rarity">${egoData.rarity}</span>
                 </div>
                 <div class="ego-name">${egoData.name}</div>
@@ -1281,7 +1290,9 @@
         function renderIDList(container, idObjectList, player, clickHandler) {
             container.innerHTML = '';
             if (!Array.isArray(idObjectList) || idObjectList.length === 0) {
-                container.innerHTML = '<div class="empty-roster" style="padding: 10px; text-align: center;">No items to display</div>';
+                if(container.id !== 'p1-id-bans' && container.id !== 'p2-id-bans' && container.id !== 'p1-picks' && container.id !== 'p2-picks') {
+                   container.innerHTML = '<div class="empty-roster" style="padding: 10px; text-align: center;">No items to display</div>';
+                }
                 return;
             }
             
@@ -1375,7 +1386,12 @@
             const fragment = document.createDocumentFragment();
             const clickHandler = (state.userRole === state.draft.currentPlayer || state.userRole === 'ref') ? selectEgoToBan : null;
             
-            state.masterEGOList.forEach(ego => {
+            const searchTerm = state.egoSearch.toLowerCase();
+            const filteredEgos = state.masterEGOList.filter(ego => 
+                !searchTerm || ego.name.toLowerCase().includes(searchTerm)
+            );
+
+            filteredEgos.forEach(ego => {
                 fragment.appendChild(createEgoElement(ego, clickHandler));
             });
             container.appendChild(fragment);
@@ -1547,9 +1563,9 @@
         }
         
         function handleStateUpdate(message) {
-            Object.assign(state.participants, message.state.participants);
-            Object.assign(state.roster, message.state.roster);
-            Object.assign(state.draft, message.state.draft);
+            state.participants = message.state.participants;
+            state.roster = message.state.roster;
+            state.draft = message.state.draft;
             elements.lobbyCodeDisplay.textContent = state.lobbyCode;
             updateAllUIsFromState();
         }
@@ -1608,6 +1624,12 @@
                 filterAndRenderRosterSelection();
             });
 
+            // EGO Search
+            elements.egoSearchInput.addEventListener('input', (e) => {
+                state.egoSearch = e.target.value;
+                renderEgoBanPhase();
+            });
+
             // Draft controls
             elements.startEgoBan.addEventListener('click', () => sendMessage({ type: 'draftControl', lobbyCode: state.lobbyCode, action: 'startEgoBan' }));
             elements.confirmEgoBans.addEventListener('click', () => sendMessage({ type: 'draftControl', lobbyCode: state.lobbyCode, action: 'confirmEgoBans' }));
@@ -1658,6 +1680,7 @@
                 startEgoBan: document.getElementById('start-ego-ban'),
 
                 egoBanPhase: document.getElementById('ego-ban-phase'),
+                egoSearchInput: document.getElementById('ego-search-input'),
                 egoBanContainer: document.getElementById('ego-ban-container'),
                 confirmEgoBans: document.getElementById('confirm-ego-bans'),
 
