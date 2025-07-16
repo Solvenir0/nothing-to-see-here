@@ -715,9 +715,9 @@
 
         .ego-ban-container {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); /* Wider items */
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
             gap: 15px;
-            max-height: 60vh;
+            max-height: 75vh; /* Increased */
             overflow-y: auto;
             padding: 15px;
             background: rgba(0,0,0,0.2);
@@ -725,7 +725,7 @@
         }
         
         #opponent-roster-display .roster-selection {
-            max-height: 65vh;
+            max-height: 75vh; /* Increased */
         }
 
         .ego-item {
@@ -813,7 +813,6 @@
             gap: 20px;
             flex-wrap: wrap;
         }
-        /* Changed flex to 1 for 50/50 split */
         .builder-main-panel { flex: 1; min-width: 400px; }
         .builder-side-panel { flex: 1; min-width: 300px; background: var(--secondary); padding: 20px; border-radius: 10px; align-self: flex-start;}
         
@@ -826,8 +825,12 @@
             padding: 10px;
         }
         .builder-selected-roster {
-            max-height: 50vh;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            max-height: 65vh;
             overflow-y: auto;
+            padding: 5px;
         }
         #builder-roster-code {
             word-wrap: break-word;
@@ -1593,7 +1596,7 @@
                     actionDesc = "Players select 42 IDs. Referee starts the draft when both are ready.";
                     break;
                 case "egoBan":
-                    const bansLeft = EGO_BAN_COUNT - egoBans[currentPlayer].length;
+                    const bansLeft = EGO_BAN_COUNT - (egoBans[currentPlayer] ? egoBans[currentPlayer].length : 0);
                     phaseText = `EGO Ban Phase - ${state.participants[currentPlayer].name}'s turn`;
                     actionDesc = `Select ${bansLeft} more EGO(s) to ban from the global pool.`;
                     break;
@@ -1630,7 +1633,10 @@
                 
                 const selectionContainer = currentPlayer === 'p1' ? elements.p1DraftSelection : elements.p2DraftSelection;
                 const clickHandler = (state.userRole === currentPlayer || state.userRole === 'ref') ? (id) => selectDraftID(currentPlayer, id) : null;
-                renderIDList(selectionContainer, availableObjects, [], clickHandler);
+                
+                // Use the current player's picks as the selectionSet for highlighting
+                const selectionSet = state.draft.picks[currentPlayer];
+                renderIDList(selectionContainer, availableObjects, selectionSet, clickHandler);
             }
             
             elements.currentPhase.textContent = phaseText;
@@ -1667,7 +1673,15 @@
             const filteredList = filterIDs(state.masterIDList, state.filters);
             renderIDList(elements.builderIdPool, filteredList, state.builderRoster, toggleBuilderIdSelection);
             
-            const selectedObjects = state.builderRoster.map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
+            // Create a sorted list of objects for the selected roster display
+            const sortedSelectedRoster = [...state.builderRoster].sort((a, b) => {
+                const indexA = state.masterIDList.findIndex(item => item.id === a);
+                const indexB = state.masterIDList.findIndex(item => item.id === b);
+                return indexA - indexB;
+            });
+            const selectedObjects = sortedSelectedRoster.map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
+            
+            // Render the sorted list. All items are selected, so the selectionSet is the full builderRoster.
             renderIDList(elements.builderSelectedRoster, selectedObjects, state.builderRoster, toggleBuilderIdSelection);
 
             elements.builderCounter.textContent = state.builderRoster.length;
