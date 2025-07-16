@@ -417,7 +417,29 @@
             border-top: 4px solid var(--accent);
             box-shadow: 0 4px 8px rgba(0,0,0,0.3);
             transition: all 0.3s ease;
+            position: relative;
         }
+        
+        /* IMPROVEMENT: Add a visual lock when a player is ready */
+        .player-panel.locked::after {
+            content: 'LOCKED';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            color: var(--accent);
+            font-weight: bold;
+            z-index: 5;
+            border-radius: 10px;
+            backdrop-filter: blur(2px);
+        }
+
 
         .controls {
             display: flex;
@@ -449,7 +471,6 @@
             font-size: 0.9rem;
         }
         
-        /* MODIFIED: Make ban/pick lists look like main roster list */
         .ban-list, .pick-list {
             margin: 10px 0;
             padding: 10px;
@@ -474,10 +495,9 @@
             gap: 10px;
             cursor: pointer;
             transition: all 0.3s, border-color 0.3s;
-            border-left: 4px solid transparent; /* MODIFIED: Add base for rarity */
+            border-left: 4px solid transparent; 
         }
         
-        /* MODIFIED: Add rarity indicator styles */
         .id-item.rarity-0 { border-left-color: var(--rarity-0); }
         .id-item.rarity-00 { border-left-color: var(--rarity-00); }
         .id-item.rarity-000 { border-left-color: var(--rarity-000); }
@@ -489,7 +509,7 @@
         
         .id-item.selected {
             background: var(--primary);
-            border-color: var(--accent); /* This will override the left border color on selection */
+            border-color: var(--accent); 
         }
         
         .id-icon {
@@ -907,7 +927,7 @@
                         </div>
                         
                         <div class="player-area">
-                            <div class="player-panel">
+                            <div class="player-panel" id="p1-panel">
                                 <div class="player-header">
                                     <div class="player-name" id="p1-name-display">Player 1</div>
                                     <div class="player-status status-waiting" id="p1-status">Selecting</div>
@@ -922,7 +942,7 @@
                                 </div>
                             </div>
                             
-                            <div class="player-panel">
+                            <div class="player-panel" id="p2-panel">
                                 <div class="player-header">
                                     <div class="player-name" id="p2-name-display">Player 2</div>
                                     <div class="player-status status-waiting" id="p2-status">Selecting</div>
@@ -1033,6 +1053,11 @@
 
     <script>
         // ======================
+        // CONSTANTS & CONFIG
+        // ======================
+        const ROSTER_SIZE = 42;
+        
+        // ======================
         // APPLICATION STATE
         // ======================
         const state = {
@@ -1070,6 +1095,7 @@
             notificationShown: { bothReady: false }
         };
 
+        // This object will hold all the DOM elements for easy access.
         let elements = {};
 
         // ======================
@@ -1086,29 +1112,18 @@
             setTimeout(() => { elements.notification.classList.remove('show'); }, 3000);
         }
 
-        // MODIFIED: More robust slug creation function
         function createSlug(name) {
             if (!name) return '';
             let slug = name.toLowerCase();
-            
-            // Perform specific, known replacements first to handle inconsistencies
-            slug = slug.replace(/ryōshū/g, 'ryshu');
-            slug = slug.replace(/großhammer/g, 'grohammer');
-            slug = slug.replace(/öufi/g, 'ufi');
-            
-            // Handle general patterns like E.G.O
+            slug = slug.replace(/ryōshū/g, 'ryshu').replace(/großhammer/g, 'grohammer').replace(/öufi/g, 'ufi');
             slug = slug.replace(/e\.g\.o::/g, 'ego-');
-            
-            // Clean up the rest of the string
-            slug = slug.replace(/ & /g, ' '); // remove ampersands
-            slug = slug.replace(/[.'"]/g, ''); // remove punctuation
-            slug = slug.replace(/\s+/g, '-'); // replace spaces with hyphens
-            slug = slug.replace(/-+/g, '-'); // collapse multiple hyphens
-            slug = slug.replace(/[^\w-]+/g, ''); // remove any remaining invalid characters
-            
+            slug = slug.replace(/ & /g, ' ').replace(/[.'"]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/[^\w-]+/g, '');
             return slug;
         }
         
+        // ======================
+        // DATA HANDLING
+        // ======================
         function parseCSV(csv) {
             const lines = csv.split('\n').filter(line => line.trim() !== '');
             if (lines.length < 2) return [];
@@ -1126,9 +1141,7 @@
                 const obj = {};
                 headers.forEach((header, idx) => {
                     let value = values[idx].trim();
-                    if (value.startsWith('"') && value.endsWith('"')) {
-                        value = value.slice(1, -1);
-                    }
+                    if (value.startsWith('"') && value.endsWith('"')) value = value.slice(1, -1);
                     obj[header] = value;
                 });
 
@@ -1197,18 +1210,128 @@
         }
 
         // ======================
-        // UI RENDERING
+        // UI RENDERING & DOM MANIPULATION
         // ======================
-        function sortByName(list) {
-            return list.sort((a, b) => a.name.localeCompare(b.name));
+
+        /**
+         * IMPROVEMENT: Creates a single, reusable ID element.
+         * This avoids repeating HTML strings and logic in multiple places.
+         * @param {object} idData - The full data object for the ID.
+         * @param {object} options - Configuration options { isSelected, clickHandler }.
+         * @returns {HTMLElement} The created DOM element for the ID.
+         */
+        function createIdElement(idData, options = {}) {
+            const { isSelected, clickHandler } = options;
+            const idElement = document.createElement('div');
+            
+            idElement.className = `id-item rarity-${idData.rarity} ${isSelected ? 'selected' : ''}`;
+            idElement.dataset.id = idData.id;
+            
+            idElement.innerHTML = `
+                <div class="id-icon" style="background-image: url('/uploads/${idData.imageFile}')"></div>
+                <div class="id-name">${idData.name}</div>
+            `;
+            
+            if (clickHandler) {
+                idElement.addEventListener('click', () => clickHandler(idData.id));
+            }
+            return idElement;
         }
 
+        /**
+         * Renders a list of IDs into a specified container element.
+         * @param {HTMLElement} container - The parent element to render into.
+         * @param {Array<object>} idObjectList - The list of ID data objects to render.
+         * @param {string} [player] - The player context ('p1' or 'p2') for selection state.
+         * @param {Function} [clickHandler] - The function to call when an item is clicked.
+         */
+        function renderIDList(container, idObjectList, player, clickHandler) {
+            container.innerHTML = ''; // Clear previous content
+            if (!Array.isArray(idObjectList) || idObjectList.length === 0) {
+                container.innerHTML = '<div class="empty-roster" style="padding: 10px; text-align: center;">No IDs to display</div>';
+                return;
+            }
+            
+            const fragment = document.createDocumentFragment();
+            idObjectList.forEach(idData => {
+                if (!idData) return;
+                const isSelected = state.roster[player]?.includes(idData.id);
+                const element = createIdElement(idData, { 
+                    isSelected, 
+                    clickHandler: clickHandler ? () => clickHandler(player, idData.id) : null
+                });
+                fragment.appendChild(element);
+            });
+            container.appendChild(fragment);
+        }
+
+        function updateAllUIsFromState() {
+            const isDraftComplete = state.draft.phase === 'complete';
+            const isDraftStarted = state.draft.phase !== 'roster';
+
+            // View switching
+            elements.mainPage.style.display = 'none';
+            elements.lobbyView.style.display = isDraftComplete ? 'none' : 'block';
+            elements.completedView.style.display = isDraftComplete ? 'block' : 'none';
+
+            if (isDraftComplete) {
+                renderCompletedView();
+                return;
+            }
+
+            // Phase visibility
+            elements.rosterPhaseSection.classList.toggle('hidden', isDraftStarted);
+            elements.draftPhaseSection.classList.toggle('hidden', !isDraftStarted);
+
+            // Participants list
+            elements.participantsList.innerHTML = '';
+            ['p1', 'p2', 'ref'].forEach(role => {
+                const p = state.participants[role];
+                const displayName = state.userRole === role ? `${p.name} (You)` : p.name;
+                const el = document.createElement('div');
+                el.className = `participant ${state.userRole === role ? 'current-user' : ''}`;
+                const icon = role === 'ref' ? 'fa-star' : 'fa-user';
+                let statusIcon = '<i class="fas fa-times-circle" style="color:var(--disconnected);"></i>';
+                if (p.status === 'connected') {
+                    statusIcon = (role !== 'ref' && p.ready) ? ` <i class="fas fa-check-circle" style="color:var(--ready);"></i>` : ` <i class="fas fa-dot-circle" style="color:var(--connected);"></i>`;
+                }
+                el.innerHTML = `<i class="fas ${icon}"></i> ${displayName} ${statusIcon}`;
+                elements.participantsList.appendChild(el);
+            });
+
+            // Player names and status
+            ['p1', 'p2'].forEach(player => {
+                elements[`${player}NameDisplay`].textContent = state.participants[player].name;
+                elements[`${player}DraftName`].textContent = state.participants[player].name;
+                elements[`${player}Counter`].textContent = state.roster[player].length;
+                
+                const isReady = state.participants[player].ready;
+                const readyBtn = elements[`${player}Ready`];
+                const statusEl = elements[`${player}Status`];
+                
+                readyBtn.innerHTML = isReady ? '<i class="fas fa-times"></i> Unready' : `<i class="fas fa-check"></i> Ready`;
+                readyBtn.classList.toggle('btn-ready', isReady);
+                statusEl.textContent = isReady ? 'Ready' : 'Selecting';
+                statusEl.className = `player-status ${isReady ? 'status-ready' : 'status-waiting'}`;
+                
+                // IMPROVEMENT: Lock the player panel when they are ready.
+                elements[`${player}Panel`].classList.toggle('locked', isReady);
+            });
+            
+            // Render the main roster selection lists
+            filterAndRenderAll();
+            
+            // Update draft-specific UI elements
+            updateDraftUI();
+            updateDraftInstructions();
+            checkDraftReadiness();
+        }
+        
         function filterAndRenderAll() {
             const filteredList = filterIDs(state.masterIDList);
-            const p1ClickHandler = (state.userRole === 'p1' || state.userRole === 'ref') ? toggleIDSelection : null;
-            const p2ClickHandler = (state.userRole === 'p2' || state.userRole === 'ref') ? toggleIDSelection : null;
-            renderIDList(elements.p1Roster, filteredList, 'p1', p1ClickHandler);
-            renderIDList(elements.p2Roster, filteredList, 'p2', p2ClickHandler);
+            // Use event delegation, so no click handler is passed here.
+            renderIDList(elements.p1Roster, filteredList, 'p1');
+            renderIDList(elements.p2Roster, filteredList, 'p2');
         }
 
         function filterIDs(sourceList) {
@@ -1222,109 +1345,16 @@
             });
         }
 
-        function renderIDList(container, idObjectList, player, clickHandler) {
-            container.innerHTML = '';
-            if (!Array.isArray(idObjectList)) return;
-            
-            if (idObjectList.length === 0) {
-                container.innerHTML = '<div class="empty-roster" style="padding: 10px; text-align: center;">No IDs match filters</div>';
-                return;
-            }
-            
-            idObjectList.forEach(idData => {
-                if (!idData) return;
-                const idElement = document.createElement('div');
-                const isSelected = state.roster[player]?.includes(idData.id);
-                idElement.className = `id-item ${isSelected ? 'selected' : ''} rarity-${idData.rarity}`; // MODIFIED: Add rarity class
-                idElement.dataset.id = idData.id;
-                idElement.innerHTML = `
-                    <div class="id-icon" style="background-image: url('/uploads/${idData.imageFile}')"></div>
-                    <div class="id-name">${idData.name}</div>
-                `;
-                if (clickHandler) {
-                   idElement.addEventListener('click', () => clickHandler(player, idData.id));
-                }
-                container.appendChild(idElement);
-            });
-        }
-        
-        function updateAllUIsFromState() {
-            const isDraftComplete = state.draft.phase === 'complete';
-            const isDraftStarted = state.draft.phase !== 'roster';
-
-            elements.mainPage.style.display = 'none';
-            elements.lobbyView.style.display = isDraftComplete ? 'none' : 'block';
-            elements.completedView.style.display = isDraftComplete ? 'block' : 'none';
-
-            if (isDraftComplete) {
-                renderCompletedView();
-                return;
-            }
-
-            document.querySelector('.phase-section').classList.toggle('hidden', isDraftStarted);
-            document.querySelector('.player-section').classList.toggle('hidden', !isDraftStarted);
-
-            elements.participantsList.innerHTML = '';
-            ['p1', 'p2', 'ref'].forEach(role => {
-                const p = state.participants[role];
-                const displayName = state.userRole === role ? `${p.name} (You)` : p.name;
-                const el = document.createElement('div');
-                el.className = `participant ${state.userRole === role ? 'current-user' : ''}`;
-                const icon = role === 'ref' ? 'fa-star' : 'fa-user';
-                let statusIcon = '<i class="fas fa-times-circle" style="color:var(--disconnected);"></i>';
-                if (p.status === 'connected') {
-                    statusIcon = (role !== 'ref' && p.ready) ? ' <i class="fas fa-check-circle" style="color:var(--ready);"></i>' : ' <i class="fas fa-dot-circle" style="color:var(--connected);"></i>';
-                }
-                el.innerHTML = `<i class="fas ${icon}"></i> ${displayName} ${statusIcon}`;
-                elements.participantsList.appendChild(el);
-            });
-
-            elements.p1NameDisplay.textContent = state.participants.p1.name;
-            elements.p2NameDisplay.textContent = state.participants.p2.name;
-            elements.p1DraftName.textContent = state.participants.p1.name;
-            elements.p2DraftName.textContent = state.participants.p2.name;
-
-            filterAndRenderAll();
-            ['p1', 'p2'].forEach(player => {
-                elements[`${player}Counter`].textContent = state.roster[player].length;
-                const readyBtn = elements[`${player}Ready`];
-                const statusEl = elements[`${player}Status`];
-                if (state.participants[player].ready) {
-                    readyBtn.innerHTML = '<i class="fas fa-times"></i> Unready';
-                    readyBtn.classList.add('btn-ready');
-                    statusEl.textContent = 'Ready';
-                    statusEl.className = 'player-status status-ready';
-                } else {
-                    readyBtn.innerHTML = '<i class="fas fa-check"></i> Ready';
-                    readyBtn.classList.remove('btn-ready');
-                    statusEl.textContent = 'Selecting';
-                    statusEl.className = 'player-status status-waiting';
-                }
-            });
-            
-            updateDraftUI();
-            updateDraftInstructions();
-            checkDraftReadiness();
-        }
-
         function updateDraftUI() {
-            // MODIFIED: renderList now creates full items with rarity
-            const renderList = (idList) => {
-                if (!idList || idList.length === 0) return '';
+            const renderIdSublist = (container, idList) => {
                 const idObjects = idList.map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
-                return idObjects.map(idData => 
-                    `<div class="id-item rarity-${idData.rarity}">
-                        <div class="id-icon" style="background-image: url('/uploads/${idData.imageFile}')"></div>
-                        <div class="id-name">${idData.name}</div>
-                    </div>`
-                ).join('');
+                renderIDList(container, idObjects); // Re-use the main render function without click handlers
             };
             
-            elements.p1IdBans.innerHTML = renderList(state.draft.idBans.p1);
-            elements.p2IdBans.innerHTML = renderList(state.draft.idBans.p2);
-            
-            elements.p1Picks.innerHTML = renderList(state.draft.picks.p1);
-            elements.p2Picks.innerHTML = renderList(state.draft.picks.p2);
+            renderIdSublist(elements.p1IdBans, state.draft.idBans.p1);
+            renderIdSublist(elements.p2IdBans, state.draft.idBans.p2);
+            renderIdSublist(elements.p1Picks, state.draft.picks.p1);
+            renderIdSublist(elements.p2Picks, state.draft.picks.p2);
             
             const { currentPlayer } = state.draft;
             elements.p1DraftStatus.textContent = currentPlayer === "p1" ? "Drafting" : "Waiting";
@@ -1342,9 +1372,6 @@
             elements.p1DraftSelection.innerHTML = '<div class="empty-roster"></div>';
             elements.p2DraftSelection.innerHTML = '<div class="empty-roster"></div>';
 
-            const selectionContainer = currentPlayer === 'p1' ? elements.p1DraftSelection : elements.p2DraftSelection;
-            const clickHandler = (state.userRole === currentPlayer || state.userRole === 'ref') ? selectDraftID : null;
-
             if (phase === "roster") { phaseText = "Waiting for players to complete rosters..."; }
             else if (phase === "complete") { phaseText = "Draft Completed!"; actionDesc = "All picks and bans are finalized."; }
             else {
@@ -1356,7 +1383,9 @@
                 if (searchTerm) {
                     availableObjects = availableObjects.filter(idObj => idObj.name.toLowerCase().includes(searchTerm));
                 }
-
+                
+                const selectionContainer = currentPlayer === 'p1' ? elements.p1DraftSelection : elements.p2DraftSelection;
+                const clickHandler = (state.userRole === currentPlayer || state.userRole === 'ref') ? selectDraftID : null;
                 renderIDList(selectionContainer, availableObjects, currentPlayer, clickHandler);
 
                 if (phase === "ban") { phaseText = `Ban Phase 1 - Step ${step + 1}/8`; actionDesc = `${state.participants[currentPlayer].name} to ban 1 ID from ${state.participants[opponent].name}'s roster`; }
@@ -1372,35 +1401,28 @@
         }
 
         function renderCompletedView() {
-            // MODIFIED: renderList now creates full items with rarity
-            const renderList = (idList) => {
-                if (!idList || idList.length === 0) return '<div class="empty-roster">None</div>';
+            const renderFinalList = (container, idList) => {
                 const idObjects = idList.map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
-                return idObjects.map(idData => 
-                    `<div class="id-item rarity-${idData.rarity}">
-                        <div class="id-icon" style="background-image: url('/uploads/${idData.imageFile}')"></div>
-                        <div class="id-name">${idData.name}</div>
-                    </div>`
-                ).join('');
+                renderIDList(container, idObjects); // Re-use the main render function
             };
             elements.finalP1Name.textContent = `${state.participants.p1.name}'s Roster`;
             elements.finalP2Name.textContent = `${state.participants.p2.name}'s Roster`;
-            elements.finalP1Picks.innerHTML = renderList(state.draft.picks.p1);
-            elements.finalP1Bans.innerHTML = renderList(state.draft.idBans.p2); 
-            elements.finalP2Picks.innerHTML = renderList(state.draft.picks.p2);
-            elements.finalP2Bans.innerHTML = renderList(state.draft.idBans.p1); 
+            renderFinalList(elements.finalP1Picks, state.draft.picks.p1);
+            renderFinalList(elements.finalP1Bans, state.draft.idBans.p2); 
+            renderFinalList(elements.finalP2Picks, state.draft.picks.p2);
+            renderFinalList(elements.finalP2Bans, state.draft.idBans.p1); 
         }
 
         function checkDraftReadiness() {
-            const p1Ready = state.participants.p1.ready && state.roster.p1.length === 42;
-            const p2Ready = state.participants.p2.ready && state.roster.p2.length === 42;
+            const p1Ready = state.participants.p1.ready && state.roster.p1.length === ROSTER_SIZE;
+            const p2Ready = state.participants.p2.ready && state.roster.p2.length === ROSTER_SIZE;
             if (state.userRole === 'ref') {
                 elements.startDraft.disabled = !(p1Ready && p2Ready);
             }
         }
         
         // ======================
-        // CLIENT ACTIONS (Send messages to server)
+        // CLIENT ACTIONS & EVENT HANDLERS
         // ======================
         function toggleIDSelection(player, id) {
             if (state.participants[player].ready) {
@@ -1410,16 +1432,6 @@
             sendMessage({ type: 'rosterSelect', lobbyCode: state.lobbyCode, player, id });
         }
         
-        function randomizeRoster(player) {
-            if (state.participants[player].ready) return;
-            sendMessage({ type: 'rosterRandomize', lobbyCode: state.lobbyCode, player });
-        }
-        
-        function clearRoster(player) {
-            if (state.participants[player].ready) return;
-            sendMessage({ type: 'rosterClear', lobbyCode: state.lobbyCode, player });
-        }
-
         function selectDraftID(player, id) {
             sendMessage({ type: 'draftSelect', lobbyCode: state.lobbyCode, payload: { player, id } });
         }
@@ -1441,11 +1453,12 @@
         }
         
         function handleStateUpdate(message) {
-            state.participants = message.state.participants;
-            state.roster = message.state.roster;
-            state.draft = message.state.draft;
+            // Update the local state object with the new state from the server.
+            Object.assign(state.participants, message.state.participants);
+            Object.assign(state.roster, message.state.roster);
+            Object.assign(state.draft, message.state.draft);
             elements.lobbyCodeDisplay.textContent = state.lobbyCode;
-            updateAllUIsFromState();
+            updateAllUIsFromState(); // Trigger a full re-render of the UI.
         }
 
         // ======================
@@ -1482,13 +1495,14 @@
             elements.backToMainBtn.addEventListener('click', () => window.location.reload());
             elements.restartDraft.addEventListener('click', () => window.location.reload());
             
+            // Player controls
             ['p1', 'p2'].forEach(player => {
-                elements[`${player}Random`].addEventListener('click', () => (state.userRole === player || state.userRole === 'ref') && randomizeRoster(player));
-                elements[`${player}Clear`].addEventListener('click', () => (state.userRole === player || state.userRole === 'ref') && clearRoster(player));
+                elements[`${player}Random`].addEventListener('click', () => (state.userRole === player || state.userRole === 'ref') && sendMessage({ type: 'rosterRandomize', lobbyCode: state.lobbyCode, player }));
+                elements[`${player}Clear`].addEventListener('click', () => (state.userRole === player || state.userRole === 'ref') && sendMessage({ type: 'rosterClear', lobbyCode: state.lobbyCode, player }));
                 elements[`${player}Ready`].addEventListener('click', () => {
                     if ((state.userRole === player || state.userRole === 'ref')) {
-                         if (state.roster[player].length !== 42 && !state.participants[player].ready) {
-                            showNotification('Must select 42 IDs to be ready.', true);
+                         if (state.roster[player].length !== ROSTER_SIZE && !state.participants[player].ready) {
+                            showNotification(`Must select ${ROSTER_SIZE} IDs to be ready.`, true);
                             return;
                          }
                         sendMessage({ type: 'updateReady', lobbyCode: state.lobbyCode, player });
@@ -1496,11 +1510,18 @@
                 });
             });
 
-            elements.rosterSearchInput.addEventListener('input', (e) => {
-                state.rosterSearch = e.target.value;
-                filterAndRenderAll();
+            // IMPROVEMENT: Use event delegation for roster selection for better performance.
+            ['p1', 'p2'].forEach(player => {
+                elements[`${player}Roster`].addEventListener('click', (e) => {
+                    const idItem = e.target.closest('.id-item');
+                    if (idItem && (state.userRole === player || state.userRole === 'ref')) {
+                        toggleIDSelection(player, idItem.dataset.id);
+                    }
+                });
             });
-
+            
+            // Filter controls
+            elements.rosterSearchInput.addEventListener('input', (e) => { state.rosterSearch = e.target.value; filterAndRenderAll(); });
             [elements.sinnerFilter, elements.sinAffinityFilter, elements.keywordFilter].forEach(filterEl => {
                 filterEl.addEventListener('change', (e) => {
                     const filterType = e.target.id.split('-')[0];
@@ -1508,7 +1529,6 @@
                     filterAndRenderAll();
                 });
             });
-
             elements.resetFilters.addEventListener('click', () => {
                 state.filters = { sinner: "", sinAffinity: "", keyword: "" };
                 state.rosterSearch = "";
@@ -1519,22 +1539,21 @@
                 filterAndRenderAll();
             });
 
+            // Draft controls
             elements.startDraft.addEventListener('click', () => sendMessage({ type: 'draftControl', lobbyCode: state.lobbyCode, action: 'start' }));
             elements.nextPhase.addEventListener('click', () => sendMessage({ type: 'draftControl', lobbyCode: state.lobbyCode, action: 'nextPhase' }));
             elements.completeDraft.addEventListener('click', () => sendMessage({ type: 'draftControl', lobbyCode: state.lobbyCode, action: 'complete' }));
             
-            elements.p1SearchInput.addEventListener('input', (e) => {
-                state.draftSearch.p1 = e.target.value.toLowerCase();
-                updateDraftInstructions();
-            });
-            elements.p2SearchInput.addEventListener('input', (e) => {
-                state.draftSearch.p2 = e.target.value.toLowerCase();
-                updateDraftInstructions();
-            });
+            elements.p1SearchInput.addEventListener('input', (e) => { state.draftSearch.p1 = e.target.value.toLowerCase(); updateDraftInstructions(); });
+            elements.p2SearchInput.addEventListener('input', (e) => { state.draftSearch.p2 = e.target.value.toLowerCase(); updateDraftInstructions(); });
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            elements = {
+        /**
+         * Gathers all necessary DOM elements into the `elements` object.
+         * This keeps all DOM queries in one place for easier management.
+         */
+        function cacheDOMElements() {
+             elements = {
                 // Main Page
                 mainPage: document.getElementById('main-page'),
                 lobbyAccessForm: document.getElementById('lobby-access-form'),
@@ -1551,6 +1570,8 @@
                 lobbyCodeDisplay: document.getElementById('lobby-code-display'),
                 participantsList: document.getElementById('participants-list'),
                 phaseTimer: document.getElementById('phase-timer'),
+                rosterPhaseSection: document.querySelector('.phase-section'),
+                draftPhaseSection: document.querySelector('.player-section'),
                 
                 // Roster Selection
                 rosterSearchInput: document.getElementById('roster-search-input'),
@@ -1558,6 +1579,8 @@
                 sinAffinityFilter: document.getElementById('sinAffinity-filter'),
                 keywordFilter: document.getElementById('keyword-filter'),
                 resetFilters: document.getElementById('reset-filters'),
+                p1Panel: document.getElementById('p1-panel'),
+                p2Panel: document.getElementById('p2-panel'),
                 p1Roster: document.getElementById('p1-roster'),
                 p2Roster: document.getElementById('p2-roster'),
                 p1Counter: document.getElementById('p1-counter'),
@@ -1604,7 +1627,11 @@
                 connectionStatus: document.getElementById('connection-status'),
                 notification: document.getElementById('notification'),
             };
+        }
 
+        document.addEventListener('DOMContentLoaded', () => {
+            // IMPROVEMENT: Keep the hardcoded data separate for clarity.
+            // In a larger application, this would be fetched from a server endpoint.
             const csvData = `Name,Keywords,SinAffinities,Rarity
 "LCB Sinner Yi Sang","Sinking","Gloom,Envy,Sloth","0"
 "Seven Association South Section 6 Yi Sang","Rupture","Gloom,Gluttony,Sloth","00"
@@ -1751,8 +1778,9 @@
 "Firefist Office Survivor Gregor","Burn","Lust,Wrath,Wrath","000"
 "Heishou Pack - Si Branch Gregor","Poise,Rupture","Pride,Gluttony,Envy","000"
 `;
-            state.masterIDList = parseCSV(csvData);
             
+            cacheDOMElements();
+            state.masterIDList = parseCSV(csvData);
             setupEventListeners();
             connectWebSocket();
             filterAndRenderAll();
