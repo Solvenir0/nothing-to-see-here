@@ -4,25 +4,33 @@ const path = require('path');
 const WebSocket = require('ws');
 const { Firestore } = require('@google-cloud/firestore');
 
-// Initialize Firestore
-const firestore = new Firestore();
+// =================================================================
+// INITIALIZATION
+// =================================================================
 
+// Initialize Firestore and Express
+const firestore = new Firestore();
 const app = express();
 const server = http.createServer(app);
 
-// Serve static files
+// Serve static files from the main directory and the 'uploads' directory
 app.use(express.static(path.join(__dirname)));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Health check
+// Health check endpoint for cloud environments
 app.get('/_ah/health', (req, res) => res.status(200).send('OK'));
 
+// Initialize WebSocket Server
 const wss = new WebSocket.Server({ server });
 
-// --- CONSTANTS & DATA ---
+// =================================================================
+// CONSTANTS & MASTER DATA
+// =================================================================
+
 const ROSTER_SIZE = 42;
 const EGO_BAN_COUNT = 5;
 
+// --- Utility function to create URL-friendly slugs from names ---
 function createSlug(name) {
     if (!name) return '';
     return name.toLowerCase()
@@ -31,6 +39,7 @@ function createSlug(name) {
         .replace(/ & /g, ' ').replace(/[.'"]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/[^\w-]+/g, '');
 }
 
+// --- Parse full ID data from CSV format ---
 function parseIDCSV(csv) {
     const lines = csv.split('\n').filter(line => line.trim() !== '');
     if (lines.length < 2) return [];
@@ -48,12 +57,65 @@ function parseIDCSV(csv) {
             if (value.startsWith('"') && value.endsWith('"')) value = value.slice(1, -1);
             obj[header] = value;
         });
-        result.push({ id: createSlug(obj.Name), name: obj.Name });
+
+        const name = obj.Name;
+        const sinnerMatch = name.match(/(Yi Sang|Faust|Don Quixote|Ryōshū|Meursault|Hong Lu|Heathcliff|Ishmael|Rodion|Sinclair|Outis|Gregor)/);
+        
+        result.push({
+            id: createSlug(name), 
+            name: name,
+            keywords: obj.Keywords ? obj.Keywords.split(',').map(k => k.trim()) : [],
+            sinAffinities: obj.SinAffinities ? obj.SinAffinities.split(',').map(s => s.trim()) : [],
+            rarity: obj.Rarity,
+            imageFile: `${createSlug(name)}.webp`, 
+            sinner: sinnerMatch ? sinnerMatch[0] : "Unknown",
+        });
     }
     return result;
 }
 
-// Embed the CSV data directly in the server file
+// --- Parse EGO data from text format ---
+function parseEGOData(data) {
+    const lines = data.trim().split('\n');
+    const egoList = [];
+    const bgColorMap = { 
+        'Yellow': 'var(--sin-sloth-bg)', 'Blue': 'var(--sin-gloom-bg)', 'Red': 'var(--sin-wrath-bg)',
+        'Indigo': 'var(--sin-pride-bg)', 'Purple': 'var(--sin-envy-bg)', 'Orange': 'var(--sin-lust-bg)',
+        'Green': 'var(--sin-gluttony-bg)'
+    };
+    
+    lines.forEach(line => {
+        if (!line.includes(' - ')) return;
+        const parts = line.split(' - ');
+        if (parts.length < 4) return;
+
+        const nameAndSinner = parts[0];
+        const rarity = parts[1].trim();
+        const sin = parts[2].trim();
+        const color = parts[3].trim();
+
+        const sinners = ["Yi Sang", "Faust", "Don Quixote", "Ryōshū", "Meursault", "Hong Lu", "Heathcliff", "Ishmael", "Rodion", "Sinclair", "Outis", "Gregor"];
+        let sinner = "Unknown";
+        let name = nameAndSinner;
+
+        for (const s of sinners) {
+            if (nameAndSinner.includes(s)) {
+                sinner = s;
+                name = nameAndSinner.replace(s, '').trim();
+                break;
+            }
+        }
+        
+        egoList.push({
+            id: createSlug(`${name} ${sinner}`),
+            name: `${name} (${sinner})`, sinner, rarity, sin, color,
+            cssColor: bgColorMap[color] || 'rgba(128, 128, 128, 0.7)'
+        });
+    });
+    return egoList;
+}
+
+// --- Hardcoded game data (Single Source of Truth) ---
 const idCsvData = `Name,Keywords,SinAffinities,Rarity
 "LCB Sinner Yi Sang","Sinking","Gloom,Envy,Sloth","0"
 "Seven Association South Section 6 Yi Sang","Rupture","Gloom,Gluttony,Sloth","00"
@@ -200,11 +262,182 @@ const idCsvData = `Name,Keywords,SinAffinities,Rarity
 "Firefist Office Survivor Gregor","Burn","Lust,Wrath,Wrath","000"
 "Heishou Pack - Si Branch Gregor","Poise,Rupture","Pride,Gluttony,Envy","000"
 `;
+const egoData = `Crow's Eye View Yi Sang - ZAYIN - Sloth - Yellow
+Bygone Days Yi Sang - ZAYIN - Gloom - Blue
+4th Match Flame Yi Sang - TETH - Wrath - Red
+Wishing Cairn Yi Sang - TETH - Sloth - Yellow
+Dimension Shredder Yi Sang - HE - Pride - Indigo
+Fell Bullet Yi Sang - HE - Pride - Indigo
+Sunshower Yi Sang - WAW - Sloth - Yellow
+Representation Emitter Faust - ZAYIN - Pride - Indigo
+Hex Nail Faust - TETH - Envy - Purple
+9:2 Faust - TETH - Lust - Orange
+Lasso Faust - TETH - Gluttony - Green
+Fluid Sac Faust - HE - Gloom - Blue
+Telepole Faust - HE - Envy - Purple
+Thoracalgia Faust - HE - Pride - Indigo
+Everlasting Faust - WAW - Sloth - Yellow
+La Sangre de Sancho Don Quixote - ZAYIN - Lust - Orange
+Lifetime Stew Don Quixote - TETH - Lust - Orange
+Wishing Cairn Don Quixote - TETH - Sloth - Yellow
+Electric Screaming Don Quixote - TETH - Envy - Purple
+Fluid Sac Don Quixote - HE - Gloom - Blue
+Telepole Don Quixote - HE - Envy - Purple
+Red Sheet Don Quixote - HE - Gluttony - Green
+Yearning-Mircalla Don Quixote - WAW - Lust - Orange
+In the Name of Love and Hate Don Quixote - WAW - Envy - Purple
+Forest for the Flames Ryōshū - ZAYIN - Lust - Orange
+Soda Ryōshū - ZAYIN - Gloom - Blue
+Red Eyes Ryōshū - TETH - Lust - Orange
+Blind Obsession Ryōshū - TETH - Pride - Indigo
+4th Match Flame Ryōshū - HE - Wrath - Red
+Red Eyes (Open) Ryōshū - HE - Envy - Purple
+Thoracalgia Ryōshū - HE - Pride - Indigo
+Contempt, Awe Ryōshū - WAW - Lust - Orange
+Chains of Others Meursault - ZAYIN - Pride - Indigo
+Screwloose Wallop Meursault - TETH - Envy - Purple
+Regret Meursault - TETH - Wrath - Red
+Electric Screaming Meursault - TETH - Envy - Purple
+Pursuance Meursault - HE - Sloth - Yellow
+Capote Meursault - HE - Wrath - Red
+Yearning-Mircalla Meursault - WAW - Lust - Orange
+Land of Illusion Hong Lu - ZAYIN - Gloom - Blue
+Roseate Desire Hong Lu - TETH - Lust - Orange
+Soda Hong Lu - TETH - Gloom - Blue
+Cavernous Wailing Hong Lu - TETH - Sloth - Yellow
+Lasso Hong Lu - TETH - Gluttony - Green
+Dimension Shredder Hong Lu - HE - Pride - Indigo
+Effervescent Corrosion Hong Lu - HE - Gluttony - Green
+Tears of the Tarnished Blood [汚血泣淚] Hong Lu - WAW - Gluttony - Green
+Bodysack Heathcliff - ZAYIN - Envy - Purple
+Holiday Heathcliff - ZAYIN - Gluttony - Green
+AEDD Heathcliff - TETH - Gloom - Blue
+Fell Bullet Heathcliff - TETH - Pride - Indigo
+Telepole Heathcliff - HE - Envy - Purple
+Ya Śūnyatā Tad Rūpam Heathcliff - HE - Lust - Orange
+Asymmetrical Inertia Heathcliff - HE - Sloth - Yellow
+Binds Heathcliff - WAW - Gloom - Blue
+Snagharpoon Ishmael - ZAYIN - Gloom - Blue
+Hundred-Footed Death Maggot [蝍蛆殺] Ishmael - ZAYIN - Gloom - Blue
+Roseate Desire Ishmael - TETH - Lust - Orange
+Capote Ishmael - TETH - Wrath - Red
+Bygone Days Ishmael - TETH - Gloom - Blue
+Ardor Blossom Star Ishmael - HE - Wrath - Red
+Wingbeat Ishmael - HE - Gluttony - Green
+Christmas Nightmare Ishmael - HE - Gluttony - Green
+Blind Obsession Ishmael - WAW - Pride - Indigo
+What is Cast Rodion - ZAYIN - Pride - Indigo
+Rime Shank Rodion - TETH - Gloom - Blue
+Effervescent Corrosion Rodion - TETH - Gluttony - Green
+4th Match Flame Rodion - HE - Wrath - Red
+Pursuance Rodion - HE - Sloth - Yellow
+Hex Nail Rodion - HE - Envy - Purple
+Sanguine Desire Rodion - HE - Lust - Orange
+Indicant's Trial Rodion - WAW - Wrath - Red
+Branch of Knowledge Sinclair - ZAYIN - Gluttony - Green
+Cavernous Wailing Sinclair - HE - Gloom - Blue
+Impending Day Sinclair - TETH - Wrath - Red
+Lifetime Stew Sinclair - TETH - Lust - Orange
+Hex Nail Sinclair - TETH - Envy - Purple
+Lantern Sinclair - HE - Gluttony - Green
+9:2 Sinclair - HE - Lust - Orange
+Tears of the Tarnished Blood [汚血泣淚] Sinclair - WAW - Gluttony - Green
+To Páthos Máthos Outis - ZAYIN - Pride - Indigo
+Ya Śūnyatā Tad Rūpam Outis - WAW - Lust - Orange
+Sunshower Outis - TETH - Gluttony - Green
+Ebony Stem Outis - HE - Gluttony - Green
+Holiday Outis - HE - Wrath - Red
+Dimension Shredder Outis - HE - Envy - Purple
+Magic Bullet Outis - HE - Pride - Indigo
+Binds Outis - WAW - Pride - Indigo
+Suddenly, One Day Gregor - ZAYIN - Sloth - Yellow
+Legerdemain Gregor - ZAYIN - Gluttony - Green
+Lantern Gregor - TETH - Gluttony - Green
+Bygone Days Gregor - TETH - Gloom - Blue
+AEDD Gregor - HE - Gloom - Blue
+Solemn Lament Gregor - HE - Gloom - Blue
+Christmas Nightmare Gregor - HE - Sloth - Yellow
+Garden of Thorns Gregor - WAW - Lust - Orange`;
+
 const masterIDList = parseIDCSV(idCsvData);
-const allIds = masterIDList.map(item => item.id);
+const masterEGOList = parseEGOData(egoData);
+const allIdSlugs = masterIDList.map(item => item.id);
 
+// =================================================================
+// DRAFT LOGIC & STATE MANAGEMENT
+// =================================================================
 
-// --- UTILITY FUNCTIONS ---
+// --- Defines the entire sequence of the draft ---
+const DRAFT_WORKFLOW = [
+    { phase: "egoBan", turn: 'p1', bans: EGO_BAN_COUNT },
+    { phase: "egoBan", turn: 'p2', bans: EGO_BAN_COUNT },
+    { phase: "ban", turn: 'p1', count: 1 }, { phase: "ban", turn: 'p2', count: 1 },
+    { phase: "ban", turn: 'p1', count: 1 }, { phase: "ban", turn: 'p2', count: 1 },
+    { phase: "ban", turn: 'p1', count: 1 }, { phase: "ban", turn: 'p2', count: 1 },
+    { phase: "ban", turn: 'p1', count: 1 }, { phase: "ban", turn: 'p2', count: 1 },
+    { phase: "pick", turn: 'p1', count: 1 }, { phase: "pick", turn: 'p2', count: 2 },
+    { phase: "pick", turn: 'p1', count: 2 }, { phase: "pick", turn: 'p2', count: 2 },
+    { phase: "pick", turn: 'p1', count: 2 }, { phase: "pick", turn: 'p2', count: 2 },
+    { phase: "pick", turn: 'p1', count: 1 },
+    { phase: "midBan", turn: 'p1', count: 1 }, { phase: "midBan", turn: 'p2', count: 1 },
+    { phase: "midBan", turn: 'p1', count: 1 }, { phase: "midBan", turn: 'p2', count: 1 },
+    { phase: "midBan", turn: 'p1', count: 1 }, { phase: "midBan", turn: 'p2', count: 1 },
+    { phase: "pick2", turn: 'p2', count: 1 }, { phase: "pick2", turn: 'p1', count: 2 },
+    { phase: "pick2", turn: 'p2', count: 2 }, { phase: "pick2", turn: 'p1', count: 2 },
+    { phase: "pick2", turn: 'p2', count: 2 }, { phase: "pick2", turn: 'p1', count: 2 },
+    { phase: "pick2", turn: 'p2', count: 1 },
+    { phase: "complete" }
+];
+
+// --- Function to advance the draft to the next step ---
+function advanceDraft(draft) {
+    const nextStepIndex = draft.step + 1;
+    if (nextStepIndex >= DRAFT_WORKFLOW.length) {
+        draft.phase = "complete";
+        return draft;
+    }
+
+    const nextStep = DRAFT_WORKFLOW[nextStepIndex];
+    draft.step = nextStepIndex;
+    draft.phase = nextStep.phase;
+    draft.currentPlayer = nextStep.turn || "";
+    draft.actionCount = nextStep.count || 0;
+    
+    // For EGO Ban phase, the action count is the number of bans remaining
+    if (draft.phase === 'egoBan') {
+        draft.actionCount = EGO_BAN_COUNT - (draft.egoBans[draft.currentPlayer]?.length || 0);
+    }
+    
+    return draft;
+}
+
+// --- Creates the initial state for a new lobby ---
+function createNewLobbyState() {
+    return {
+        participants: {
+            p1: { name: "Player 1", status: "disconnected", ready: false },
+            p2: { name: "Player 2", status: "disconnected", ready: false },
+            ref: { name: "Referee", status: "disconnected" }
+        },
+        roster: { p1: [], p2: [] },
+        draft: {
+            step: -1, // Starts at -1, so the first advance goes to step 0
+            phase: "roster",
+            currentPlayer: "",
+            actionCount: 0,
+            available: { p1: [], p2: [] },
+            idBans: { p1: [], p2: [] },
+            egoBans: { p1: [], p2: [] },
+            picks: { p1: [], p2: [] }
+        }
+    };
+}
+
+// =================================================================
+// COMMUNICATION & UTILITIES
+// =================================================================
+
+// --- Generates a unique 6-character code for a new lobby ---
 async function generateUniqueLobbyCode() {
     let code;
     let docExists;
@@ -216,285 +449,225 @@ async function generateUniqueLobbyCode() {
     return code;
 }
 
-function createNewLobbyState() {
-    return {
-        participants: {
-            p1: { name: "Player 1", status: "disconnected", ready: false },
-            p2: { name: "Player 2", status: "disconnected", ready: false },
-            ref: { name: "Referee", status: "disconnected" }
-        },
-        roster: { p1: [], p2: [] },
-        draft: {
-            phase: "roster",
-            step: 0,
-            currentPlayer: "",
-            action: "",
-            actionCount: 0,
-            available: { p1: [], p2: [] },
-            idBans: { p1: [], p2: [] },
-            egoBans: { p1: [], p2: [] },
-            picks: { p1: [], p2: [] }
-        }
-    };
-}
-
-// --- DRAFT LOGIC ---
-function nextPhase(lobbyData) {
-    const { draft } = lobbyData;
-    switch (draft.phase) {
-        case "egoBan":
-            if (draft.currentPlayer === 'p1' && draft.egoBans.p1.length === EGO_BAN_COUNT) {
-                draft.currentPlayer = 'p2';
-            } else if (draft.currentPlayer === 'p2' && draft.egoBans.p2.length === EGO_BAN_COUNT) {
-                draft.phase = "ban";
-                draft.step = 0;
-                draft.currentPlayer = "p1";
-                draft.action = "ban";
-                draft.actionCount = 1;
-            }
-            break;
-        case "ban":
-            if (draft.step < 7) {
-                draft.step++;
-                draft.currentPlayer = draft.currentPlayer === "p1" ? "p2" : "p1";
-            } else {
-                draft.phase = "pick"; draft.step = 0;
-                const pickSeq1 = [{ p: 'p1', c: 1 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 1 }];
-                const next = pickSeq1[draft.step];
-                draft.currentPlayer = next.p; draft.action = "pick"; draft.actionCount = next.c;
-            }
-            break;
-        case "pick":
-            const pickSeq1 = [{ p: 'p1', c: 1 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 1 }];
-            if (draft.step < pickSeq1.length - 1) {
-                draft.step++;
-                const next = pickSeq1[draft.step];
-                draft.currentPlayer = next.p; draft.actionCount = next.c;
-            } else {
-                draft.phase = "midBan"; draft.step = 0; draft.currentPlayer = "p1";
-                draft.action = "ban"; draft.actionCount = 1;
-            }
-            break;
-        case "midBan":
-            if (draft.step < 5) {
-                draft.step++;
-                draft.currentPlayer = draft.currentPlayer === "p1" ? "p2" : "p1";
-            } else {
-                draft.phase = "pick2"; draft.step = 0;
-                const pickSeq2 = [{ p: 'p2', c: 1 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 1 }];
-                const next = pickSeq2[draft.step];
-                draft.currentPlayer = next.p; draft.action = "pick"; draft.actionCount = next.c;
-            }
-            break;
-        case "pick2":
-            const pickSeq2 = [{ p: 'p2', c: 1 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 1 }];
-            if (draft.step < pickSeq2.length - 1) {
-                draft.step++;
-                const next = pickSeq2[draft.step];
-                draft.currentPlayer = next.p; draft.actionCount = next.c;
-            } else {
-                draft.phase = "complete"; draft.currentPlayer = "";
-            }
-            break;
-    }
-    return lobbyData;
-}
-
-// --- COMMUNICATION ---
+// --- Broadcasts the current lobby state to all connected clients in that lobby ---
 async function broadcastState(lobbyCode) {
-    const lobbyRef = firestore.collection('lobbies').doc(lobbyCode);
-    const lobbyDoc = await lobbyRef.get();
-    if (!lobbyDoc.exists) return;
+    try {
+        const lobbyRef = firestore.collection('lobbies').doc(lobbyCode);
+        const lobbyDoc = await lobbyRef.get();
+        if (!lobbyDoc.exists) return;
 
-    const lobbyData = lobbyDoc.data();
-    const message = JSON.stringify({ type: 'stateUpdate', state: lobbyData });
+        const lobbyData = lobbyDoc.data();
+        const message = JSON.stringify({ type: 'stateUpdate', state: lobbyData });
 
-    wss.clients.forEach(client => {
-        if (client.lobbyCode === lobbyCode && client.readyState === WebSocket.OPEN) {
-            client.send(message);
-        }
-    });
+        wss.clients.forEach(client => {
+            if (client.lobbyCode === lobbyCode && client.readyState === WebSocket.OPEN) {
+                client.send(message);
+            }
+        });
+    } catch (error) {
+        console.error(`Failed to broadcast state for lobby ${lobbyCode}:`, error);
+    }
 }
 
-// --- MAIN WEBSOCKET LOGIC ---
+// =================================================================
+// MAIN WEBSOCKET LOGIC
+// =================================================================
+
 wss.on('connection', (ws) => {
     console.log('Client connected');
 
     ws.on('message', async (message) => {
         let incomingData;
-        try { incomingData = JSON.parse(message); } 
-        catch (e) { console.error('Invalid JSON:', message); return; }
+        try {
+            incomingData = JSON.parse(message);
+        } catch (e) {
+            console.error('Invalid JSON received:', message);
+            return;
+        }
 
-        const { lobbyCode, role, player, id, action, payload, name, egoId, roster } = incomingData;
+        const { type, lobbyCode, role, player, id, action, payload, name, egoId, roster } = incomingData;
         const lobbyRef = lobbyCode ? firestore.collection('lobbies').doc(lobbyCode.toUpperCase()) : null;
 
-        switch (incomingData.type) {
-            case 'createLobby': {
-                const newLobbyCode = await generateUniqueLobbyCode();
-                const newLobbyState = createNewLobbyState();
-                ws.lobbyCode = newLobbyCode;
-                ws.userRole = 'ref';
-                if (name) newLobbyState.participants.ref.name = name;
-                newLobbyState.participants.ref.status = "connected";
-                await firestore.collection('lobbies').doc(newLobbyCode).set(newLobbyState);
-                ws.send(JSON.stringify({ type: 'lobbyCreated', code: newLobbyCode, state: newLobbyState }));
-                break;
-            }
-
-            case 'joinLobby': {
-                if (!lobbyRef) return;
-                const doc = await lobbyRef.get();
-                if (!doc.exists) return ws.send(JSON.stringify({ type: 'error', message: 'Lobby not found.' }));
-                const lobbyData = doc.data();
-                if (lobbyData.participants[role]?.status === 'connected') return ws.send(JSON.stringify({ type: 'error', message: `Role ${role.toUpperCase()} is taken.` }));
-                
-                ws.lobbyCode = lobbyCode.toUpperCase();
-                ws.userRole = role;
-                const updates = { [`participants.${role}.status`]: 'connected' };
-                if (name) updates[`participants.${role}.name`] = name;
-                await lobbyRef.update(updates);
-                
-                const updatedDoc = await lobbyRef.get();
-                ws.send(JSON.stringify({ type: 'lobbyJoined', lobbyCode: ws.lobbyCode, role, state: updatedDoc.data() }));
-                broadcastState(ws.lobbyCode);
-                break;
-            }
-
-            case 'rosterSelect': {
-                if (!lobbyRef) return;
-                const doc = await lobbyRef.get();
-                if (!doc.exists) return;
-                let lobbyData = doc.data();
-                if (lobbyData.participants[player].ready) return;
-                const currentRoster = lobbyData.roster[player];
-                const index = currentRoster.indexOf(id);
-                if (index === -1) { if (currentRoster.length < ROSTER_SIZE) currentRoster.push(id); } 
-                else { currentRoster.splice(index, 1); }
-                await lobbyRef.update({ [`roster.${player}`]: currentRoster });
-                broadcastState(lobbyCode.toUpperCase());
-                break;
-            }
-            
-            case 'rosterSet': {
-                if (!lobbyRef) return;
-                const doc = await lobbyRef.get();
-                if (!doc.exists) return;
-                let lobbyData = doc.data();
-                if (lobbyData.participants[player].ready) return;
-                // Basic validation
-                if (Array.isArray(roster) && roster.length === ROSTER_SIZE) {
-                    await lobbyRef.update({ [`roster.${player}`]: roster });
-                    broadcastState(lobbyCode.toUpperCase());
-                }
-                break;
-            }
-
-            case 'rosterRandomize': {
-                if (!lobbyRef) return;
-                const doc = await lobbyRef.get();
-                if (!doc.exists) return;
-                let lobbyData = doc.data();
-                if (lobbyData.participants[player].ready) return;
-
-                const shuffled = [...allIds].sort(() => 0.5 - Math.random());
-                const newRoster = shuffled.slice(0, ROSTER_SIZE);
-                
-                await lobbyRef.update({ [`roster.${player}`]: newRoster });
-                broadcastState(lobbyCode.toUpperCase());
-                break;
-            }
-
-            case 'updateReady': {
-                if (!lobbyRef) return;
-                const doc = await lobbyRef.get();
-                if (!doc.exists) return;
-                let lobbyData = doc.data();
-                const currentReadyState = lobbyData.participants[player].ready;
-                if (!currentReadyState && lobbyData.roster[player].length !== ROSTER_SIZE) return;
-                await lobbyRef.update({ [`participants.${player}.ready`]: !currentReadyState });
-                broadcastState(lobbyCode.toUpperCase());
-                break;
-            }
-
-            case 'egoBan': {
-                if (!lobbyRef) return;
-                const doc = await lobbyRef.get();
-                if (!doc.exists) return;
-                let lobbyData = doc.data();
-                const { draft } = lobbyData;
-                const { currentPlayer } = draft;
-
-                if ((ws.userRole !== currentPlayer && ws.userRole !== 'ref') || draft.phase !== 'egoBan') return;
-
-                const playerBans = draft.egoBans[currentPlayer];
-                const allBans = [...draft.egoBans.p1, ...draft.egoBans.p2];
-
-                if (playerBans.length < EGO_BAN_COUNT && !allBans.includes(egoId)) {
-                    playerBans.push(egoId);
-                    await lobbyRef.update({ [`draft.egoBans.${currentPlayer}`]: playerBans });
-                    broadcastState(lobbyCode.toUpperCase());
-                }
-                break;
-            }
-
-            case 'draftControl': {
-                if (!lobbyRef || ws.userRole !== 'ref') return;
-                const doc = await lobbyRef.get();
-                if (!doc.exists) return;
-                let lobbyData = doc.data();
-
-                if (action === 'startEgoBan') {
-                    if (lobbyData.participants.p1.ready && lobbyData.participants.p2.ready) {
-                        lobbyData.draft.phase = "egoBan";
-                        lobbyData.draft.currentPlayer = "p1";
-                    }
-                } else if (action === 'confirmEgoBans') {
-                     lobbyData = nextPhase(lobbyData);
-                } else if (action === 'nextPhase' || action === 'complete') {
-                    lobbyData = nextPhase(lobbyData);
-                }
-                
-                if (lobbyData.draft.phase === 'ban' && lobbyData.draft.available.p1.length === 0) {
-                     lobbyData.draft.available.p1 = [...lobbyData.roster.p1];
-                     lobbyData.draft.available.p2 = [...lobbyData.roster.p2];
+        try {
+            switch (type) {
+                case 'createLobby': {
+                    const newLobbyCode = await generateUniqueLobbyCode();
+                    const newLobbyState = createNewLobbyState();
+                    ws.lobbyCode = newLobbyCode;
+                    ws.userRole = 'ref';
+                    if (name) newLobbyState.participants.ref.name = name;
+                    newLobbyState.participants.ref.status = "connected";
+                    
+                    await firestore.collection('lobbies').doc(newLobbyCode).set(newLobbyState);
+                    
+                    ws.send(JSON.stringify({ type: 'init', masterIDList, masterEGOList }));
+                    ws.send(JSON.stringify({ type: 'lobbyCreated', code: newLobbyCode, state: newLobbyState }));
+                    break;
                 }
 
-                await lobbyRef.update({ draft: lobbyData.draft });
-                broadcastState(lobbyCode.toUpperCase());
-                break;
-            }
+                case 'joinLobby': {
+                    if (!lobbyRef || !role) return;
+                    
+                    await firestore.runTransaction(async (transaction) => {
+                        const doc = await transaction.get(lobbyRef);
+                        if (!doc.exists) throw new Error('Lobby not found.');
+                        
+                        const lobbyData = doc.data();
+                        if (lobbyData.participants[role]?.status === 'connected') throw new Error(`Role ${role.toUpperCase()} is taken.`);
 
-            case 'draftSelect': {
-                if (!lobbyRef) return;
-                const doc = await lobbyRef.get();
-                if (!doc.exists) return;
-                let lobbyData = doc.data();
-                
-                const { id: selectedId } = payload;
-                const actingPlayer = lobbyData.draft.currentPlayer;
-                if (ws.userRole !== actingPlayer && ws.userRole !== 'ref') return;
+                        ws.lobbyCode = lobbyCode.toUpperCase();
+                        ws.userRole = role;
+                        
+                        const updates = { [`participants.${role}.status`]: 'connected' };
+                        if (name) updates[`participants.${role}.name`] = name;
+                        transaction.update(lobbyRef, updates);
+                    });
+                    
+                    ws.send(JSON.stringify({ type: 'init', masterIDList, masterEGOList }));
+                    const updatedDoc = await lobbyRef.get();
+                    ws.send(JSON.stringify({ type: 'lobbyJoined', lobbyCode: ws.lobbyCode, role, state: updatedDoc.data() }));
+                    await broadcastState(ws.lobbyCode);
+                    break;
+                }
 
-                const currentAction = lobbyData.draft.action;
-                if (currentAction.includes('ban')) {
-                    lobbyData.draft.idBans[actingPlayer].push(selectedId);
-                } else if (currentAction.includes('pick')) {
-                    lobbyData.draft.picks[actingPlayer].push(selectedId);
+                case 'rosterSelect': {
+                    if (!lobbyRef || !player || !id) return;
+                    await firestore.runTransaction(async (t) => {
+                        const doc = await t.get(lobbyRef);
+                        if (!doc.exists) throw new Error("Lobby not found");
+                        const data = doc.data();
+                        if (data.participants[player].ready) return; // Cannot edit when ready
+                        
+                        const currentRoster = data.roster[player] || [];
+                        const index = currentRoster.indexOf(id);
+                        if (index === -1) {
+                            if (currentRoster.length < ROSTER_SIZE) currentRoster.push(id);
+                        } else {
+                            currentRoster.splice(index, 1);
+                        }
+                        t.update(lobbyRef, { [`roster.${player}`]: currentRoster });
+                    });
+                    await broadcastState(lobbyCode.toUpperCase());
+                    break;
+                }
+
+                case 'rosterSet':
+                case 'rosterRandomize': {
+                    if (!lobbyRef || !player) return;
+                     await firestore.runTransaction(async (t) => {
+                        const doc = await t.get(lobbyRef);
+                        if (!doc.exists) throw new Error("Lobby not found");
+                        if (doc.data().participants[player].ready) return;
+
+                        let newRoster = [];
+                        if (type === 'rosterSet' && Array.isArray(roster) && roster.length === ROSTER_SIZE) {
+                            newRoster = roster;
+                        } else if (type === 'rosterRandomize') {
+                            const shuffled = [...allIdSlugs].sort(() => 0.5 - Math.random());
+                            newRoster = shuffled.slice(0, ROSTER_SIZE);
+                        }
+                        
+                        if (newRoster.length > 0) {
+                           t.update(lobbyRef, { [`roster.${player}`]: newRoster });
+                        }
+                    });
+                    await broadcastState(lobbyCode.toUpperCase());
+                    break;
+                }
+
+                case 'updateReady': {
+                    if (!lobbyRef || !player) return;
+                    await firestore.runTransaction(async (t) => {
+                        const doc = await t.get(lobbyRef);
+                        if (!doc.exists) throw new Error("Lobby not found");
+                        const data = doc.data();
+                        const currentReadyState = data.participants[player].ready;
+                        if (!currentReadyState && data.roster[player].length !== ROSTER_SIZE) return; // Must have full roster to ready up
+                        t.update(lobbyRef, { [`participants.${player}.ready`]: !currentReadyState });
+                    });
+                    await broadcastState(lobbyCode.toUpperCase());
+                    break;
                 }
                 
-                let p1Index = lobbyData.draft.available.p1.indexOf(selectedId);
-                if(p1Index > -1) lobbyData.draft.available.p1.splice(p1Index, 1);
-                let p2Index = lobbyData.draft.available.p2.indexOf(selectedId);
-                if(p2Index > -1) lobbyData.draft.available.p2.splice(p2Index, 1);
+                case 'draftControl': {
+                    if (!lobbyRef || ws.userRole !== 'ref') return;
+                    await firestore.runTransaction(async (t) => {
+                        const doc = await t.get(lobbyRef);
+                        if (!doc.exists) throw new Error("Lobby not found");
+                        let data = doc.data();
+                        let draft = data.draft;
 
-                lobbyData.draft.actionCount--;
-                if (lobbyData.draft.actionCount <= 0) {
-                    lobbyData = nextPhase(lobbyData);
+                        if (action === 'startEgoBan') {
+                            if (data.participants.p1.ready && data.participants.p2.ready && draft.phase === 'roster') {
+                                // Initialize available rosters for the draft
+                                draft.available.p1 = [...data.roster.p1];
+                                draft.available.p2 = [...data.roster.p2];
+                                draft = advanceDraft(draft);
+                            }
+                        } else if (action === 'complete') {
+                            draft.phase = 'complete';
+                        }
+                        
+                        t.update(lobbyRef, { draft });
+                    });
+                    await broadcastState(lobbyCode.toUpperCase());
+                    break;
                 }
-                
-                await lobbyRef.update({ draft: lobbyData.draft });
-                broadcastState(lobbyCode.toUpperCase());
-                break;
+
+                case 'egoBan':
+                case 'draftSelect': {
+                    if (!lobbyRef || (!egoId && !payload)) return;
+                     await firestore.runTransaction(async (t) => {
+                        const doc = await t.get(lobbyRef);
+                        if (!doc.exists) throw new Error("Lobby not found");
+                        let data = doc.data();
+                        let draft = data.draft;
+                        const { currentPlayer } = draft;
+                        
+                        // Check if it's the correct user's turn
+                        if (ws.userRole !== currentPlayer && ws.userRole !== 'ref') return;
+
+                        let shouldAdvance = false;
+
+                        if (type === 'egoBan' && draft.phase === 'egoBan') {
+                            const playerBans = draft.egoBans[currentPlayer] || [];
+                            const allBans = [...(draft.egoBans.p1 || []), ...(draft.egoBans.p2 || [])];
+                            if (playerBans.length < EGO_BAN_COUNT && !allBans.includes(egoId)) {
+                                playerBans.push(egoId);
+                                draft.egoBans[currentPlayer] = playerBans;
+                                draft.actionCount--;
+                                if (draft.actionCount <= 0) shouldAdvance = true;
+                            }
+                        } else if (type === 'draftSelect' && ['ban', 'pick', 'midBan', 'pick2'].includes(draft.phase)) {
+                            const selectedId = payload.id;
+                            const isBan = draft.phase.includes('ban');
+                            const targetList = isBan ? draft.idBans[currentPlayer] : draft.picks[currentPlayer];
+                            
+                            targetList.push(selectedId);
+
+                            // Remove from both available pools
+                            let p1Index = draft.available.p1.indexOf(selectedId);
+                            if(p1Index > -1) draft.available.p1.splice(p1Index, 1);
+                            let p2Index = draft.available.p2.indexOf(selectedId);
+                            if(p2Index > -1) draft.available.p2.splice(p2Index, 1);
+                            
+                            draft.actionCount--;
+                            if (draft.actionCount <= 0) shouldAdvance = true;
+                        }
+                        
+                        if (shouldAdvance) {
+                            draft = advanceDraft(draft);
+                        }
+
+                        t.update(lobbyRef, { draft });
+                    });
+                    await broadcastState(lobbyCode.toUpperCase());
+                    break;
+                }
             }
+        } catch (error) {
+            console.error(`Error processing message type ${type}:`, error);
+            ws.send(JSON.stringify({ type: 'error', message: error.message || 'An internal error occurred.' }));
         }
     });
 
@@ -503,13 +676,19 @@ wss.on('connection', (ws) => {
         const { lobbyCode, userRole } = ws;
         if (lobbyCode && userRole) {
             const lobbyRef = firestore.collection('lobbies').doc(lobbyCode);
-            const doc = await lobbyRef.get();
-            if (doc.exists) {
-                await lobbyRef.update({
-                    [`participants.${userRole}.status`]: 'disconnected',
-                    [`participants.${userRole}.ready`]: false,
+            try {
+                await firestore.runTransaction(async (t) => {
+                    const doc = await t.get(lobbyRef);
+                    if (doc.exists) {
+                         t.update(lobbyRef, {
+                            [`participants.${userRole}.status`]: 'disconnected',
+                            [`participants.${userRole}.ready`]: false,
+                        });
+                    }
                 });
-                broadcastState(lobbyCode);
+                await broadcastState(lobbyCode);
+            } catch (error) {
+                console.error(`Error on client disconnect for lobby ${lobbyCode}:`, error);
             }
         }
     });
