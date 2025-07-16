@@ -990,7 +990,7 @@
             state.masterEGOList = message.masterEGOList;
             state.isDataLoaded = true;
             elements.loadingOverlay.classList.add('hidden');
-            setupEventListeners();
+            
             // If we are in the builder, render it now that we have data
             if (state.currentView === 'rosterBuilderPage') {
                 renderRosterBuilder();
@@ -1064,7 +1064,10 @@
             });
             elements.goToBuilder.addEventListener('click', () => {
                 switchView('rosterBuilderPage');
-                renderRosterBuilder();
+                // Render builder only if data is already loaded, otherwise handleInit will do it
+                if (state.isDataLoaded) {
+                    renderRosterBuilder();
+                }
             });
             elements.roleOptions.forEach(option => {
                 option.addEventListener('click', () => {
@@ -1262,12 +1265,15 @@
             document.getElementById('global-filter-bar-builder').innerHTML = createFilterBarHTML();
             document.getElementById('global-filter-bar-draft').innerHTML = createFilterBarHTML();
             
-            // Setup filter bar event listeners now, they don't depend on data
+            // Setup ALL event listeners on load, so the UI is immediately interactive.
+            setupEventListeners();
+            
+            // Setup filter bar event listeners
             setupFilterBar('global-filter-bar-roster', state.filters);
             setupFilterBar('global-filter-bar-builder', state.filters);
             setupFilterBar('global-filter-bar-draft', state.draftFilters);
 
-            // Connect to server, which will trigger the init flow
+            // Connect to server, which will trigger the init flow for loading data
             connectWebSocket();
         });
     </script>
