@@ -449,7 +449,6 @@
             font-size: 0.9rem;
         }
         
-        /* MODIFIED: Changed grid layout and max-height */
         .ban-list, .pick-list {
             margin: 10px 0;
             padding: 10px;
@@ -464,7 +463,6 @@
             align-content: start;
         }
 
-        /* ADDED: New rules for smaller items in ban/pick lists */
         .ban-list .id-item,
         .pick-list .id-item {
             padding: 4px;
@@ -754,7 +752,6 @@
             .phase-container { flex-direction: column; }
             .connection-status { top: 5px; right: 5px; font-size: 0.8rem; padding: 5px 10px; }
             
-            /* MODIFIED: Adjust ban/pick list for mobile */
             .ban-list, .pick-list {
                 grid-template-columns: repeat(3, 1fr);
             }
@@ -1126,15 +1123,27 @@
             setTimeout(() => { elements.notification.classList.remove('show'); }, 3000);
         }
 
-        // MODIFIED: Helper function to create a URL-friendly slug from a name
+        // MODIFIED: More robust slug creation function
         function createSlug(name) {
             if (!name) return '';
-            return name.toLowerCase()
-                .replace(/ō/g, 'o') // Handle special character for Ryōshū
-                .replace(/::/g, '') // Remove special characters like ::
-                .replace(/[.'"]/g, '') // Remove punctuation
-                .replace(/\s+/g, '-') // Replace spaces with hyphens
-                .replace(/[^\w-]+/g, ''); // Remove all other non-word chars
+            let slug = name.toLowerCase();
+            
+            // Perform specific, known replacements first to handle inconsistencies
+            slug = slug.replace(/ryōshū/g, 'ryshu');
+            slug = slug.replace(/großhammer/g, 'grohammer');
+            slug = slug.replace(/öufi/g, 'ufi');
+            
+            // Handle general patterns like E.G.O
+            slug = slug.replace(/e\.g\.o::/g, 'ego-');
+            
+            // Clean up the rest of the string
+            slug = slug.replace(/ & /g, ' '); // remove ampersands
+            slug = slug.replace(/[.'"]/g, ''); // remove punctuation
+            slug = slug.replace(/\s+/g, '-'); // replace spaces with hyphens
+            slug = slug.replace(/-+/g, '-'); // collapse multiple hyphens
+            slug = slug.replace(/[^\w-]+/g, ''); // remove any remaining invalid characters
+            
+            return slug;
         }
         
         function parseCSV(csv) {
@@ -1161,16 +1170,16 @@
                 });
 
                 const name = obj.Name;
-                const slug = createSlug(name); // MODIFIED: Generate slug
+                const slug = createSlug(name); 
                 const sinnerMatch = name.match(/(Yi Sang|Faust|Don Quixote|Ryōshū|Meursault|Hong Lu|Heathcliff|Ishmael|Rodion|Sinclair|Outis|Gregor)/);
                 
                 result.push({
-                    id: slug, // MODIFIED: Use slug as the unique ID
+                    id: slug, 
                     name: name,
                     keywords: obj.Keywords ? obj.Keywords.split(',').map(k => k.trim()) : [],
                     sinAffinities: obj.SinAffinities ? obj.SinAffinities.split(',').map(s => s.trim()) : [],
                     rarity: obj.Rarity,
-                    imageFile: `${slug}.webp`, // MODIFIED: Generate image file name from slug
+                    imageFile: `${slug}.webp`, 
                     sinner: sinnerMatch ? sinnerMatch[0] : "Unknown",
                 });
             }
@@ -1228,7 +1237,6 @@
         // UI RENDERING
         // ======================
         function sortByName(list) {
-            // This function is kept in case alphabetical sorting is desired elsewhere
             return list.sort((a, b) => a.name.localeCompare(b.name));
         }
 
@@ -1251,12 +1259,9 @@
             });
         }
 
-        // MODIFIED: Removed alphabetical sorting to respect CSV order
         function renderIDList(container, idObjectList, player, clickHandler) {
             container.innerHTML = '';
             if (!Array.isArray(idObjectList)) return;
-
-            // const sortedIdList = sortByName(idObjectList); // REMOVED: No longer sorting alphabetically
             
             if (idObjectList.length === 0) {
                 container.innerHTML = '<div class="empty-roster" style="padding: 10px; text-align: center;">No IDs match filters</div>';
@@ -1269,7 +1274,6 @@
                 const isSelected = state.roster[player]?.includes(idData.id);
                 idElement.className = `id-item ${isSelected ? 'selected' : ''}`;
                 idElement.dataset.id = idData.id;
-                // Use local image path
                 idElement.innerHTML = `
                     <div class="id-icon" style="background-image: url('/uploads/${idData.imageFile}')"></div>
                     <div class="id-name">${idData.name}</div>
@@ -1340,12 +1344,10 @@
             checkDraftReadiness();
         }
 
-        // MODIFIED: Removed alphabetical sorting
         function updateDraftUI() {
             const renderList = (idList) => {
                 if (!idList || idList.length === 0) return '';
                 const idObjects = idList.map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
-                // return sortByName(idObjects).map(idData => `<div class="id-item"><div class="id-icon" style="background-image: url('/uploads/${idData.imageFile}')"></div><div class="id-name">${idData.name}</div></div>`).join('');
                 return idObjects.map(idData => `<div class="id-item"><div class="id-icon" style="background-image: url('/uploads/${idData.imageFile}')"></div><div class="id-name">${idData.name}</div></div>`).join('');
             };
             
@@ -1400,12 +1402,10 @@
             elements.completeDraft.disabled = state.userRole !== 'ref' || phase === 'complete';
         }
 
-        // MODIFIED: Removed alphabetical sorting
         function renderCompletedView() {
             const renderList = (idList) => {
                 if (!idList || idList.length === 0) return '<div class="empty-roster">None</div>';
                 const idObjects = idList.map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
-                // return sortByName(idObjects).map(idData => `<div class="id-item"><div class="id-icon" style="background-image: url('/uploads/${idData.imageFile}')"></div><div class="id-name">${idData.name}</div></div>`).join('');
                 return idObjects.map(idData => `<div class="id-item"><div class="id-icon" style="background-image: url('/uploads/${idData.imageFile}')"></div><div class="id-name">${idData.name}</div></div>`).join('');
             };
             elements.finalP1Name.textContent = `${state.participants.p1.name}'s Roster`;
