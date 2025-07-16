@@ -717,7 +717,7 @@
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
             gap: 15px;
-            max-height: 75vh; /* Increased */
+            max-height: 75vh; 
             overflow-y: auto;
             padding: 15px;
             background: rgba(0,0,0,0.2);
@@ -725,7 +725,7 @@
         }
         
         #opponent-roster-display .roster-selection {
-            max-height: 75vh; /* Increased */
+            max-height: 75vh;
         }
 
         .ego-item {
@@ -736,7 +736,7 @@
             cursor: pointer;
             transition: all 0.3s ease;
             border: 2px solid transparent;
-            color: #111; /* Dark text for better contrast */
+            color: #111;
         }
 
         .ego-item:hover {
@@ -756,7 +756,7 @@
 
         .ego-header {
             display: flex;
-            justify-content: flex-end; /* Align rarity to the right */
+            justify-content: flex-end;
             font-weight: bold;
             margin-bottom: 5px;
         }
@@ -764,8 +764,8 @@
         .ego-rarity {
             padding: 2px 6px;
             border-radius: 4px;
-            background-color: rgba(0,0,0,0.2); /* Semi-transparent black bg */
-            color: #fff; /* White text on the tag */
+            background-color: rgba(0,0,0,0.2);
+            color: #fff;
         }
 
         .ego-name {
@@ -1637,8 +1637,8 @@
                 const clickHandler = (state.userRole === currentPlayer || state.userRole === 'ref') ? (id) => selectDraftID(currentPlayer, id) : null;
                 
                 // If it's a ban action, highlight IDs the current player has in their own roster.
-                // If it's a pick action, highlight IDs the current player has already picked.
-                const selectionSet = isBanAction ? state.roster[currentPlayer] : state.draft.picks[currentPlayer];
+                // If it's a pick action, do not highlight anything in the selection pool.
+                const selectionSet = isBanAction ? state.roster[currentPlayer] : null;
                 
                 renderIDList(selectionContainer, availableObjects, selectionSet, clickHandler);
             }
