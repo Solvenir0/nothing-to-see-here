@@ -2034,7 +2034,8 @@
         function handleLobbyJoined(message) {
             elements.rejoinOverlay.style.display = 'none'; // Hide overlay on successful join/rejoin
 
-            state.lobbyCode = message.lobbyCode;
+            // FIX: Use message.code for lobby creation and message.lobbyCode for joins/rejoins
+            state.lobbyCode = message.lobbyCode || message.code;
             state.userRole = message.role;
             state.rejoinToken = message.rejoinToken;
 
