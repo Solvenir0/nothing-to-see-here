@@ -670,8 +670,7 @@
         }
 
         .final-picks-grid {
-            display: flex;
-            gap: 20px;
+            display: block; /* Changed from flex */
             margin-top: 15px;
         }
         .final-picks-col {
@@ -1309,18 +1308,16 @@
             <div class="final-rosters-container">
                 <div class="final-player-panel">
                     <h2 id="final-p1-name">Player 1's Roster</h2>
-                    <div class="final-picks-grid">
-                        <div class="final-picks-col" id="final-p1-picks-col1"></div>
-                        <div class="final-picks-col" id="final-p1-picks-col2"></div>
+                    <div class="final-picks-grid" id="final-p1-picks">
+                        <!-- Final picks for P1 will be rendered here -->
                     </div>
                     <h3>Banned from Roster</h3>
                     <div class="final-bans" id="final-p1-bans"></div>
                 </div>
                 <div class="final-player-panel">
                     <h2 id="final-p2-name">Player 2's Roster</h2>
-                    <div class="final-picks-grid">
-                        <div class="final-picks-col" id="final-p2-picks-col1"></div>
-                        <div class="final-picks-col" id="final-p2-picks-col2"></div>
+                    <div class="final-picks-grid" id="final-p2-picks">
+                         <!-- Final picks for P2 will be rendered here -->
                     </div>
                     <h3>Banned from Roster</h3>
                     <div class="final-bans" id="final-p2-bans"></div>
@@ -1913,44 +1910,15 @@
             elements.finalP1Name.textContent = `${state.participants.p1.name}'s Roster`;
             elements.finalP2Name.textContent = `${state.participants.p2.name}'s Roster`;
 
-            const balanceAndRenderPicks = (player) => {
+            const renderPlayerPicks = (player) => {
                 const pickObjects = state.draft.picks[player].map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
-                
-                const groupedBySinner = {};
-                pickObjects.forEach(id => {
-                    if (!id.sinner) return;
-                    if (!groupedBySinner[id.sinner]) {
-                        groupedBySinner[id.sinner] = [];
-                    }
-                    groupedBySinner[id.sinner].push(id);
-                });
-
-                const col1Ids = [];
-                const col2Ids = [];
-                let col1Count = 0;
-                let col2Count = 0;
-                const sinnerOrder = ["Yi Sang", "Faust", "Don Quixote", "Ryōshū", "Meursault", "Hong Lu", "Heathcliff", "Ishmael", "Rodion", "Sinclair", "Outis", "Gregor"];
-
-                sinnerOrder.forEach(sinnerName => {
-                    if (groupedBySinner[sinnerName]) {
-                        const sinnerGroup = groupedBySinner[sinnerName];
-                        if (col1Count <= col2Count) {
-                            col1Ids.push(...sinnerGroup);
-                            col1Count += sinnerGroup.length;
-                        } else {
-                            col2Ids.push(...sinnerGroup);
-                            col2Count += sinnerGroup.length;
-                        }
-                    }
-                });
-
-                // This is where the fix is applied, by passing the new option
-                renderGroupedView(elements[`final${player}PicksCol1`], col1Ids, { showSinnerNames: true });
-                renderGroupedView(elements[`final${player}PicksCol2`], col2Ids, { showSinnerNames: true });
+                const container = elements[`final${player}Picks`];
+                // Pass the option to show sinner names and render as a single list
+                renderGroupedView(container, pickObjects, { showSinnerNames: true });
             };
 
-            balanceAndRenderPicks('p1');
-            balanceAndRenderPicks('p2');
+            renderPlayerPicks('p1');
+            renderPlayerPicks('p2');
 
             renderFinalList(elements.finalP1Bans, state.draft.idBans.p2); 
             renderFinalList(elements.finalP2Bans, state.draft.idBans.p1);
@@ -2346,10 +2314,8 @@
                 finalBannedEgosList: document.getElementById('final-banned-egos-list'),
                 restartDraft: document.getElementById('restart-draft'), 
                 finalP1Name: document.getElementById('final-p1-name'), finalP2Name: document.getElementById('final-p2-name'),
-                finalP1PicksCol1: document.getElementById('final-p1-picks-col1'),
-                finalP1PicksCol2: document.getElementById('final-p1-picks-col2'),
-                finalP2PicksCol1: document.getElementById('final-p2-picks-col1'),
-                finalP2PicksCol2: document.getElementById('final-p2-picks-col2'),
+                finalP1Picks: document.getElementById('final-p1-picks'),
+                finalP2Picks: document.getElementById('final-p2-picks'),
                 finalP1Bans: document.getElementById('final-p1-bans'),   
                 finalP2Bans: document.getElementById('final-p2-bans'),
             };
