@@ -811,21 +811,28 @@
         /* Roster Builder Styles */
         #roster-builder-page .card {
             display: flex;
-            gap: 15px;
-            flex-wrap: nowrap; /* Prevent wrapping for the 3-column layout */
+            flex-direction: column; /* Default to stacked layout */
+            gap: 20px;
         }
         
-        .builder-sinner-nav {
-            flex: 0 0 130px; /* Fixed width for the sinner nav */
+        .builder-content-wrapper {
             display: flex;
-            flex-direction: column;
+            flex-direction: column; /* Stack panels by default */
+            gap: 20px;
+        }
+
+        .builder-sinner-nav {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
             gap: 8px;
         }
         
         .sinner-nav-btn {
             padding: 10px;
             font-size: 1rem;
-            text-align: left;
+            flex-grow: 1; /* Allow buttons to grow and fill space */
+            text-align: center;
             background: var(--secondary);
             border: 1px solid var(--border);
         }
@@ -833,23 +840,20 @@
         .sinner-nav-btn.selected {
             background: var(--primary);
             color: var(--accent);
-            border-left: 4px solid var(--accent);
+            border-bottom: 4px solid var(--accent);
+            border-left: 1px solid var(--border);
         }
 
         .builder-main-panel { 
-            flex: 2; /* Takes up most of the space */
-            min-width: 350px; 
             background: rgba(0,0,0,0.2);
             padding: 15px;
             border-radius: 10px;
         }
         .builder-side-panel { 
-            flex: 1.2; 
-            min-width: 280px; 
             background: var(--secondary); 
             padding: 20px; 
             border-radius: 10px; 
-            align-self: flex-start;
+            align-self: stretch;
         }
         
         .builder-id-pool {
@@ -894,18 +898,45 @@
             margin-top: 10px;
         }
 
-        @media (max-width: 1200px) {
-            #roster-builder-page .card, .ego-ban-layout { flex-direction: column; }
-            .builder-sinner-nav {
+        /* Medium screens and up */
+        @media (min-width: 992px) {
+            #roster-builder-page .card {
                 flex-direction: row;
-                flex-wrap: wrap;
-                flex: 1 1 100%;
-                margin-bottom: 20px;
             }
-            .sinner-nav-btn {
-                flex-grow: 1;
+            .builder-sinner-nav {
+                flex-direction: column;
+                flex-wrap: nowrap;
+                flex: 0 0 130px; /* Fixed width for the sinner nav */
+            }
+            .sinner-nav-btn.selected {
+                 border-bottom: 1px solid var(--border);
+                 border-left: 4px solid var(--accent);
+            }
+            .builder-content-wrapper {
+                flex: 1;
+                display: flex;
+                flex-direction: row;
+            }
+            .builder-main-panel { 
+                flex: 2; 
+                min-width: 350px; 
+            }
+            .builder-side-panel { 
+                flex: 1;
+                min-width: 280px; 
             }
         }
+        
+        /* Large screens */
+        @media (min-width: 1400px) {
+            .builder-side-panel {
+                flex: 1.2;
+            }
+            .builder-selected-roster {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
         @media (max-width: 768px) {
             .container { max-width: 100%; }
             .action-container { flex-direction: column; align-items: center; }
@@ -1139,31 +1170,33 @@
                 <div class="builder-sinner-nav" id="builder-sinner-nav">
                     <!-- Sinner buttons will be rendered here -->
                 </div>
-                <div class="builder-main-panel">
-                    <h3>Available Identities</h3>
-                     <div class="filter-bar" id="global-filter-bar-builder"></div>
-                     <div class="builder-id-pool" id="builder-id-pool">
-                         <!-- Sinner IDs will be rendered here -->
-                     </div>
-                </div>
-                <div class="builder-side-panel">
-                    <h3>Your Roster (<span id="builder-counter">0</span>/42)</h3>
-                    <div class="builder-selected-roster" id="builder-selected-roster"></div>
-                    <div class="controls" style="margin-top: 10px;">
-                        <button class="btn" id="builder-random"><i class="fas fa-random"></i> Random</button>
-                        <button class="btn" id="builder-clear"><i class="fas fa-trash"></i> Clear</button>
+                <div class="builder-content-wrapper">
+                    <div class="builder-main-panel">
+                        <h3>Available Identities</h3>
+                         <div class="filter-bar" id="global-filter-bar-builder"></div>
+                         <div class="builder-id-pool" id="builder-id-pool">
+                             <!-- Sinner IDs will be rendered here -->
+                         </div>
                     </div>
-                    <h3 style="margin-top: 20px;">Roster Code</h3>
-                    <p>Use this code to quickly load your roster here or in a match lobby.</p>
-                    <div id="builder-roster-code-display" style="background: #111; padding: 10px; border-radius: 5px; font-family: monospace; min-height: 50px; margin-top: 10px; word-wrap: break-word;">
-                        Select 42 IDs to generate a code.
-                    </div>
-                    <button class="btn btn-primary" id="builder-copy-code" style="width: 100%; margin-top: 10px;" disabled><i class="fas fa-copy"></i> Copy Code</button>
-                    
-                    <h3 style="margin-top: 20px;">Load from Code</h3>
-                    <div class="roster-code-actions">
-                        <input type="text" id="builder-load-code-input" placeholder="Paste code here...">
-                        <button class="btn" id="builder-load-code"><i class="fas fa-upload"></i></button>
+                    <div class="builder-side-panel">
+                        <h3>Your Roster (<span id="builder-counter">0</span>/42)</h3>
+                        <div class="builder-selected-roster" id="builder-selected-roster"></div>
+                        <div class="controls" style="margin-top: 10px;">
+                            <button class="btn" id="builder-random"><i class="fas fa-random"></i> Random</button>
+                            <button class="btn" id="builder-clear"><i class="fas fa-trash"></i> Clear</button>
+                        </div>
+                        <h3 style="margin-top: 20px;">Roster Code</h3>
+                        <p>Use this code to quickly load your roster here or in a match lobby.</p>
+                        <div id="builder-roster-code-display" style="background: #111; padding: 10px; border-radius: 5px; font-family: monospace; min-height: 50px; margin-top: 10px; word-wrap: break-word;">
+                            Select 42 IDs to generate a code.
+                        </div>
+                        <button class="btn btn-primary" id="builder-copy-code" style="width: 100%; margin-top: 10px;" disabled><i class="fas fa-copy"></i> Copy Code</button>
+                        
+                        <h3 style="margin-top: 20px;">Load from Code</h3>
+                        <div class="roster-code-actions">
+                            <input type="text" id="builder-load-code-input" placeholder="Paste code here...">
+                            <button class="btn" id="builder-load-code"><i class="fas fa-upload"></i></button>
+                        </div>
                     </div>
                 </div>
             </div>
