@@ -1858,23 +1858,42 @@
             elements.finalP1Name.textContent = `${state.participants.p1.name}'s Roster`;
             elements.finalP2Name.textContent = `${state.participants.p2.name}'s Roster`;
 
-            const sinnerCol1 = ["Yi Sang", "Faust", "Don Quixote", "Ryōshū", "Meursault", "Hong Lu"];
-    
-            // Process Player 1's picks
-            const p1PickObjects = state.draft.picks.p1.map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
-            const p1PicksCol1 = p1PickObjects.filter(id => sinnerCol1.includes(id.sinner));
-            const p1PicksCol2 = p1PickObjects.filter(id => !sinnerCol1.includes(id.sinner));
-            
-            renderGroupedView(elements.finalP1PicksCol1, p1PicksCol1);
-            renderGroupedView(elements.finalP1PicksCol2, p1PicksCol2);
+            const balanceAndRenderPicks = (player) => {
+                const pickObjects = state.draft.picks[player].map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
+                
+                const groupedBySinner = {};
+                pickObjects.forEach(id => {
+                    if (!groupedBySinner[id.sinner]) {
+                        groupedBySinner[id.sinner] = [];
+                    }
+                    groupedBySinner[id.sinner].push(id);
+                });
 
-            // Process Player 2's picks
-            const p2PickObjects = state.draft.picks.p2.map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
-            const p2PicksCol1 = p2PickObjects.filter(id => sinnerCol1.includes(id.sinner));
-            const p2PicksCol2 = p2PickObjects.filter(id => !sinnerCol1.includes(id.sinner));
+                const col1Ids = [];
+                const col2Ids = [];
+                let col1Count = 0;
+                let col2Count = 0;
+                const sinnerOrder = ["Yi Sang", "Faust", "Don Quixote", "Ryōshū", "Meursault", "Hong Lu", "Heathcliff", "Ishmael", "Rodion", "Sinclair", "Outis", "Gregor"];
 
-            renderGroupedView(elements.finalP2PicksCol1, p2PicksCol1);
-            renderGroupedView(elements.finalP2PicksCol2, p2PicksCol2);
+                sinnerOrder.forEach(sinnerName => {
+                    if (groupedBySinner[sinnerName]) {
+                        const sinnerGroup = groupedBySinner[sinnerName];
+                        if (col1Count <= col2Count) {
+                            col1Ids.push(...sinnerGroup);
+                            col1Count += sinnerGroup.length;
+                        } else {
+                            col2Ids.push(...sinnerGroup);
+                            col2Count += sinnerGroup.length;
+                        }
+                    }
+                });
+
+                renderGroupedView(elements[`final${player}PicksCol1`], col1Ids);
+                renderGroupedView(elements[`final${player}PicksCol2`], col2Ids);
+            };
+
+            balanceAndRenderPicks('p1');
+            balanceAndRenderPicks('p2');
 
             renderFinalList(elements.finalP1Bans, state.draft.idBans.p2); 
             renderFinalList(elements.finalP2Bans, state.draft.idBans.p1);
