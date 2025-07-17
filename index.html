@@ -1014,6 +1014,11 @@
     </style>
 </head>
 <body>
+    <div id="rejoin-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999; color: white; display: none; flex-direction: column; align-items: center; justify-content: center; font-size: 2rem; gap: 20px;">
+        <i class="fas fa-sync fa-spin"></i>
+        <p>Attempting to rejoin lobby...</p>
+    </div>
+
     <div class="connection-status" id="connection-status">
         <i class="fas fa-plug"></i>
         <span>Connecting...</span>
@@ -1308,6 +1313,7 @@
             lobbyCode: "",
             userId: generateUserId(),
             userRole: "",
+            rejoinToken: null, // For handling reconnects
             participants: {
                 p1: { name: "Player 1", status: "disconnected", ready: false },
                 p2: { name: "Player 2", status: "disconnected", ready: false },
@@ -1496,6 +1502,19 @@
             state.socket.onopen = () => {
                 elements.connectionStatus.innerHTML = '<i class="fas fa-plug"></i> <span>Connected</span>';
                 elements.connectionStatus.classList.add('connected');
+                
+                // --- NEW REJOIN LOGIC ---
+                const session = JSON.parse(localStorage.getItem('limbusDraftSession'));
+                if (session && session.lobbyCode && session.userRole && session.rejoinToken) {
+                    console.log('Found session, attempting to rejoin:', session);
+                    elements.rejoinOverlay.style.display = 'flex';
+                    sendMessage({ 
+                        type: 'rejoinLobby', 
+                        lobbyCode: session.lobbyCode,
+                        role: session.userRole,
+                        rejoinToken: session.rejoinToken
+                    });
+                }
             };
             state.socket.onmessage = (event) => handleServerMessage(JSON.parse(event.data));
             state.socket.onclose = () => {
@@ -1518,7 +1537,16 @@
                 case 'lobbyJoined': handleLobbyJoined(message); break;
                 case 'stateUpdate': handleStateUpdate(message); break;
                 case 'notification': showNotification(message.text); break;
-                case 'error': showNotification(`Error: ${message.message}`, true); break;
+                case 'error':
+                    showNotification(`Error: ${message.message}`, true);
+                    // Clear session on rejoin errors to prevent getting stuck
+                    if (message.message.includes('rejoin') || message.message.includes('Clearing session')) {
+                        localStorage.removeItem('limbusDraftSession');
+                        elements.rejoinOverlay.style.display = 'none';
+                        // Optional: reload to go back to main screen cleanly
+                        // window.location.reload(); 
+                    }
+                    break;
             }
         }
 
@@ -2000,14 +2028,25 @@
         // STATE HANDLERS
         // ======================
         function handleLobbyCreated(message) {
-            state.lobbyCode = message.code;
-            state.userRole = 'ref';
-            handleStateUpdate(message);
+            handleLobbyJoined(message); // Re-use join logic for creation
         }
         
         function handleLobbyJoined(message) {
+            elements.rejoinOverlay.style.display = 'none'; // Hide overlay on successful join/rejoin
+
             state.lobbyCode = message.lobbyCode;
             state.userRole = message.role;
+            state.rejoinToken = message.rejoinToken;
+
+            // Store session in localStorage for automatic rejoin
+            if (state.rejoinToken) {
+                localStorage.setItem('limbusDraftSession', JSON.stringify({
+                    lobbyCode: state.lobbyCode,
+                    userRole: state.userRole,
+                    rejoinToken: state.rejoinToken
+                }));
+            }
+
             handleStateUpdate(message);
             showNotification(`Joined lobby as ${state.participants[state.userRole].name}`);
         }
@@ -2083,13 +2122,17 @@
                 sendMessage({ type: 'joinLobby', lobbyCode, role: selectedRole, name: elements.playerNameInput.value.trim() });
             });
             
-            // Back buttons
-            elements.backToMainLobby.addEventListener('click', () => window.location.reload());
+            // Back buttons / Session clearing
+            const clearSessionAndReload = () => {
+                localStorage.removeItem('limbusDraftSession');
+                window.location.reload();
+            };
+            elements.backToMainLobby.addEventListener('click', clearSessionAndReload);
+            elements.restartDraft.addEventListener('click', clearSessionAndReload);
             elements.backToMainBuilder.addEventListener('click', () => {
-                state.lobbyCode = ''; // Ensure we don't accidentally return to a lobby
+                state.lobbyCode = ''; 
                 switchView('mainPage');
             });
-            elements.restartDraft.addEventListener('click', () => window.location.reload());
             
             // Lobby Roster Controls
             ['p1', 'p2'].forEach(player => {
@@ -2205,6 +2248,7 @@
                 lobbyView: document.getElementById('lobby-view'),
                 rosterBuilderPage: document.getElementById('roster-builder-page'),
                 completedView: document.getElementById('completed-view'),
+                rejoinOverlay: document.getElementById('rejoin-overlay'),
 
                 // Main Page
                 lobbyAccessForm: document.getElementById('lobby-access-form'),
