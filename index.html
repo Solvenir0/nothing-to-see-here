@@ -651,7 +651,7 @@
         .final-player-panel {
             flex: 1;
             min-width: 400px;
-            max-width: 500px;
+            max-width: 800px; /* Increased max-width for columns */
             background: var(--panel);
             border-radius: 15px;
             padding: 20px;
@@ -669,8 +669,16 @@
             padding-top: 15px;
         }
 
-        .final-picks, .final-bans {
+        .final-picks-grid {
+            display: flex;
+            gap: 20px;
             margin-top: 15px;
+        }
+        .final-picks-col {
+            flex: 1;
+        }
+        .final-bans {
+             margin-top: 15px;
         }
 
         .final-bans .id-item { background: rgba(100, 0, 0, 0.4); opacity: 0.8; }
@@ -1250,13 +1258,19 @@
             <div class="final-rosters-container">
                 <div class="final-player-panel">
                     <h2 id="final-p1-name">Player 1's Roster</h2>
-                    <div class="final-picks" id="final-p1-picks"></div>
+                    <div class="final-picks-grid">
+                        <div class="final-picks-col" id="final-p1-picks-col1"></div>
+                        <div class="final-picks-col" id="final-p1-picks-col2"></div>
+                    </div>
                     <h3>Banned from Roster</h3>
                     <div class="final-bans" id="final-p1-bans"></div>
                 </div>
                 <div class="final-player-panel">
                     <h2 id="final-p2-name">Player 2's Roster</h2>
-                    <div class="final-picks" id="final-p2-picks"></div>
+                    <div class="final-picks-grid">
+                        <div class="final-picks-col" id="final-p2-picks-col1"></div>
+                        <div class="final-picks-col" id="final-p2-picks-col2"></div>
+                    </div>
                     <h3>Banned from Roster</h3>
                     <div class="final-bans" id="final-p2-bans"></div>
                 </div>
@@ -1844,11 +1858,23 @@
             elements.finalP1Name.textContent = `${state.participants.p1.name}'s Roster`;
             elements.finalP2Name.textContent = `${state.participants.p2.name}'s Roster`;
 
+            const sinnerCol1 = ["Yi Sang", "Faust", "Don Quixote", "Ryōshū", "Meursault", "Hong Lu"];
+    
+            // Process Player 1's picks
             const p1PickObjects = state.draft.picks.p1.map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
-            renderGroupedView(elements.finalP1Picks, p1PickObjects);
+            const p1PicksCol1 = p1PickObjects.filter(id => sinnerCol1.includes(id.sinner));
+            const p1PicksCol2 = p1PickObjects.filter(id => !sinnerCol1.includes(id.sinner));
             
+            renderGroupedView(elements.finalP1PicksCol1, p1PicksCol1);
+            renderGroupedView(elements.finalP1PicksCol2, p1PicksCol2);
+
+            // Process Player 2's picks
             const p2PickObjects = state.draft.picks.p2.map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
-            renderGroupedView(elements.finalP2Picks, p2PickObjects);
+            const p2PicksCol1 = p2PickObjects.filter(id => sinnerCol1.includes(id.sinner));
+            const p2PicksCol2 = p2PickObjects.filter(id => !sinnerCol1.includes(id.sinner));
+
+            renderGroupedView(elements.finalP2PicksCol1, p2PicksCol1);
+            renderGroupedView(elements.finalP2PicksCol2, p2PicksCol2);
 
             renderFinalList(elements.finalP1Bans, state.draft.idBans.p2); 
             renderFinalList(elements.finalP2Bans, state.draft.idBans.p1);
@@ -2244,8 +2270,12 @@
                 finalBannedEgosList: document.getElementById('final-banned-egos-list'),
                 restartDraft: document.getElementById('restart-draft'), 
                 finalP1Name: document.getElementById('final-p1-name'), finalP2Name: document.getElementById('final-p2-name'),
-                finalP1Picks: document.getElementById('final-p1-picks'), finalP1Bans: document.getElementById('final-p1-bans'),   
-                finalP2Picks: document.getElementById('final-p2-picks'), finalP2Bans: document.getElementById('final-p2-bans'),
+                finalP1PicksCol1: document.getElementById('final-p1-picks-col1'),
+                finalP1PicksCol2: document.getElementById('final-p1-picks-col2'),
+                finalP2PicksCol1: document.getElementById('final-p2-picks-col1'),
+                finalP2PicksCol2: document.getElementById('final-p2-picks-col2'),
+                finalP1Bans: document.getElementById('final-p1-bans'),   
+                finalP2Bans: document.getElementById('final-p2-bans'),
             };
         }
 
