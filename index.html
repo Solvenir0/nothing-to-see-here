@@ -829,8 +829,8 @@
         }
         
         .sinner-nav-btn {
-            padding: 10px;
-            font-size: 1rem;
+            padding: 6px 10px; /* Reduced vertical padding */
+            font-size: 0.9rem; /* Reduced font size */
             flex-grow: 1; /* Allow buttons to grow and fill space */
             text-align: center;
             background: var(--secondary);
@@ -907,6 +907,10 @@
                 flex-direction: column;
                 flex-wrap: nowrap;
                 flex: 0 0 130px; /* Fixed width for the sinner nav */
+                gap: 4px; /* Reduced gap */
+            }
+            .sinner-nav-btn {
+                text-align: left;
             }
             .sinner-nav-btn.selected {
                  border-bottom: 1px solid var(--border);
