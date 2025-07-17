@@ -673,9 +673,7 @@
             display: block; /* Changed from flex */
             margin-top: 15px;
         }
-        .final-picks-col {
-            flex: 1;
-        }
+        
         .final-bans {
              margin-top: 15px;
         }
@@ -1614,7 +1612,6 @@
         }
 
         function renderGroupedView(container, idObjectList, options = {}) {
-            // This is the main function that was modified for the fix
             const { clickHandler, selectionSet, showSinnerNames = false } = options;
 
             container.innerHTML = '';
@@ -1910,15 +1907,36 @@
             elements.finalP1Name.textContent = `${state.participants.p1.name}'s Roster`;
             elements.finalP2Name.textContent = `${state.participants.p2.name}'s Roster`;
 
-            const renderPlayerPicks = (player) => {
+            // NEW APPROACH: Use renderIDList and then modify the result to be a list.
+            const renderPlayerPicksAsList = (player) => {
                 const pickObjects = state.draft.picks[player].map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
                 const container = elements[`final${player}Picks`];
-                // Pass the option to show sinner names and render as a single list
-                renderGroupedView(container, pickObjects, { showSinnerNames: true });
+                
+                // Use the known-working renderer
+                renderIDList(container, pickObjects, null, null);
+
+                // Now, override the styles and structure to make it a vertical list
+                container.style.display = 'flex';
+                container.style.flexDirection = 'column';
+                container.style.gap = '8px';
+                // Override the grid styles from the 'roster-selection' class that renderIDList applies
+                container.style.gridTemplateColumns = 'none'; 
+                
+                // Make sure names are visible and icons are larger
+                container.querySelectorAll('.id-item').forEach(item => {
+                    item.style.width = '100%'; // Make items full width
+                });
+                container.querySelectorAll('.id-name').forEach(el => {
+                    el.style.display = 'flex';
+                });
+                container.querySelectorAll('.id-icon').forEach(el => {
+                    el.style.width = '80px';
+                    el.style.height = '80px';
+                });
             };
 
-            renderPlayerPicks('p1');
-            renderPlayerPicks('p2');
+            renderPlayerPicksAsList('p1');
+            renderPlayerPicksAsList('p2');
 
             renderFinalList(elements.finalP1Bans, state.draft.idBans.p2); 
             renderFinalList(elements.finalP2Bans, state.draft.idBans.p1);
@@ -2594,3 +2612,4 @@ Garden of Thorns Gregor - WAW - Lust - Orange`;
     </script>
 </body>
 </html>
+" and want to make another change. Please make the final draft screen look better, it looks very plain right n
