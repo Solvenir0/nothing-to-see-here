@@ -811,12 +811,12 @@
         /* Roster Builder Styles */
         #roster-builder-page .card {
             display: flex;
-            gap: 20px;
+            gap: 15px;
             flex-wrap: nowrap; /* Prevent wrapping for the 3-column layout */
         }
         
         .builder-sinner-nav {
-            flex: 0 0 150px; /* Fixed width for the sinner nav */
+            flex: 0 0 130px; /* Fixed width for the sinner nav */
             display: flex;
             flex-direction: column;
             gap: 8px;
@@ -838,14 +838,14 @@
 
         .builder-main-panel { 
             flex: 2; /* Takes up most of the space */
-            min-width: 400px; 
+            min-width: 350px; 
             background: rgba(0,0,0,0.2);
             padding: 15px;
             border-radius: 10px;
         }
         .builder-side-panel { 
-            flex: 1; 
-            min-width: 300px; 
+            flex: 1.2; 
+            min-width: 280px; 
             background: var(--secondary); 
             padding: 20px; 
             border-radius: 10px; 
@@ -868,12 +868,6 @@
             max-height: 65vh;
             overflow-y: auto;
             padding: 5px;
-        }
-
-        @media (min-width: 1200px) {
-             .builder-selected-roster {
-                grid-template-columns: repeat(2, 1fr);
-             }
         }
 
         #builder-roster-code {
@@ -1985,12 +1979,9 @@
             elements.completeDraft.addEventListener('click', () => sendMessage({ type: 'draftControl', lobbyCode: state.lobbyCode, action: 'complete' }));
         }
 
-        function createFilterBarHTML() {
-            return `
-                <div class="filter-group">
-                    <label class="filter-label">Search by Name:</label>
-                    <input type="text" class="roster-search-input" placeholder="e.g. LCB Sinner...">
-                </div>
+        function createFilterBarHTML(options = {}) {
+            const { showSinnerFilter = true } = options;
+            const sinnerFilterHTML = `
                 <div class="filter-group">
                     <label class="filter-label">Filter by Sinner:</label>
                     <select class="sinner-filter" data-filter="sinner">
@@ -2001,6 +1992,14 @@
                         <option value="Sinclair">Sinclair</option><option value="Outis">Outis</option><option value="Gregor">Gregor</option>
                     </select>
                 </div>
+            `;
+
+            return `
+                <div class="filter-group">
+                    <label class="filter-label">Search by Name:</label>
+                    <input type="text" class="roster-search-input" placeholder="e.g. LCB Sinner...">
+                </div>
+                ${showSinnerFilter ? sinnerFilterHTML : ''}
                 <div class="filter-group">
                     <label class="filter-label">Filter by Sin Affinity:</label>
                     <select class="sinAffinity-filter" data-filter="sinAffinity">
@@ -2361,9 +2360,9 @@ Garden of Thorns Gregor - WAW - Lust - Orange`;
             cacheDOMElements();
 
             // Inject filter bars and set up listeners
-            document.getElementById('global-filter-bar-roster').innerHTML = createFilterBarHTML();
-            document.getElementById('global-filter-bar-builder').innerHTML = createFilterBarHTML();
-            document.getElementById('global-filter-bar-draft').innerHTML = createFilterBarHTML();
+            document.getElementById('global-filter-bar-roster').innerHTML = createFilterBarHTML({ showSinnerFilter: true });
+            document.getElementById('global-filter-bar-builder').innerHTML = createFilterBarHTML({ showSinnerFilter: false });
+            document.getElementById('global-filter-bar-draft').innerHTML = createFilterBarHTML({ showSinnerFilter: true });
             setupFilterBar('global-filter-bar-roster', state.filters);
             setupFilterBar('global-filter-bar-builder', state.filters);
             setupFilterBar('global-filter-bar-draft', state.draftFilters);
