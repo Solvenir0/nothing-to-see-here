@@ -523,7 +523,8 @@
         
         .id-item.selected {
             background: var(--primary);
-            border-color: var(--accent); 
+            border-color: var(--accent) !important;
+            box-shadow: 0 0 10px var(--accent);
         }
         
         .id-icon {
@@ -813,25 +814,121 @@
             gap: 20px;
             flex-wrap: wrap;
         }
-        .builder-main-panel { flex: 1; min-width: 400px; }
+        .builder-main-panel { flex: 3; min-width: 400px; }
         .builder-side-panel { flex: 1; min-width: 300px; background: var(--secondary); padding: 20px; border-radius: 10px; align-self: flex-start;}
         
-        .builder-id-pool {
+        /* NEW Roster Builder Styles */
+        #builder-id-pool {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-            gap: 10px;
-            max-height: 70vh;
-            overflow-y: auto;
-            padding: 10px;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 20px;
+            max-height: none;
+            overflow-y: visible;
+            padding: 0;
         }
+        
+        @media (min-width: 1800px) {
+            #builder-id-pool {
+                grid-template-columns: repeat(6, 1fr);
+            }
+        }
+         @media (min-width: 1400px) and (max-width: 1799px) {
+            #builder-id-pool {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+         @media (min-width: 992px) and (max-width: 1399px) {
+            #builder-id-pool {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+        
+        .sinner-section {
+            background: rgba(0,0,0,0.2);
+            border-radius: 10px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid var(--border);
+        }
+
+        .sinner-section h4 {
+            color: var(--accent);
+            margin-top: 0;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid var(--border);
+            text-align: center;
+            font-size: 1.2rem;
+        }
+
+        .sinner-slider-wrapper {
+            position: relative;
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .sinner-slider-content {
+            overflow: hidden;
+            width: 230px; /* Width for one card + margin */
+        }
+
+        .sinner-id-slider {
+            display: flex;
+            transition: transform 0.4s ease-in-out;
+        }
+
+        .sinner-id-slider .id-item {
+            flex-shrink: 0;
+            width: 220px; /* Fixed width for calculation */
+            margin: 0 5px; /* Centering margin */
+        }
+
+        .slider-nav {
+            background: rgba(0,0,0,0.5);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 35px;
+            height: 35px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: background 0.3s;
+            z-index: 10;
+        }
+        .slider-nav:hover {
+            background: rgba(0,0,0,0.8);
+        }
+        .slider-nav:disabled {
+            opacity: 0.2;
+            cursor: not-allowed;
+        }
+
+        .slider-nav.prev {
+            margin-right: 5px;
+        }
+
+        .slider-nav.next {
+            margin-left: 5px;
+        }
+        
         .builder-selected-roster {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(1, 1fr);
             gap: 10px;
             max-height: 65vh;
             overflow-y: auto;
             padding: 5px;
         }
+
+        @media (min-width: 1200px) {
+             .builder-selected-roster {
+                grid-template-columns: repeat(2, 1fr);
+             }
+        }
+
         #builder-roster-code {
             word-wrap: break-word;
             background: #111;
@@ -869,6 +966,7 @@
             .role-options { flex-direction: column; }
             .phase-container { flex-direction: column; }
             .connection-status { top: 5px; right: 5px; font-size: 0.8rem; padding: 5px 10px; }
+            #builder-id-pool { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -1093,7 +1191,7 @@
                     <h3>Available Identities</h3>
                      <div class="filter-bar" id="global-filter-bar-builder"></div>
                      <div class="builder-id-pool" id="builder-id-pool">
-                         <!-- IDs will be rendered here -->
+                         <!-- Sinner sliders will be rendered here -->
                      </div>
                 </div>
                 <div class="builder-side-panel">
@@ -1171,6 +1269,7 @@
             builderRoster: [],
             masterIDList: [],
             masterEGOList: [],
+            idsBySinner: null, // Will be populated on init
             draft: {
                 phase: "roster",
                 step: 0,
@@ -1679,10 +1778,91 @@
         }
         
         function renderRosterBuilder() {
-            const filteredList = filterIDs(state.masterIDList, state.filters);
-            renderIDList(elements.builderIdPool, filteredList, state.builderRoster, toggleBuilderIdSelection);
+            // This function is now responsible for rendering the new sinner-based slider view.
             
-            // Create a sorted list of objects for the selected roster display
+            elements.builderIdPool.innerHTML = ''; // Clear the main container
+
+            // Loop through the canonical sinner order to ensure consistent layout
+            const sinnerOrder = ["Yi Sang", "Faust", "Don Quixote", "Ryōshū", "Meursault", "Hong Lu", "Heathcliff", "Ishmael", "Rodion", "Sinclair", "Outis", "Gregor"];
+            
+            sinnerOrder.forEach(sinnerName => {
+                const sinnerIDs = state.idsBySinner[sinnerName];
+                const filteredSinnerIDs = filterIDs(sinnerIDs, state.filters);
+
+                // Don't render a section if filters hide all IDs for that sinner
+                if (filteredSinnerIDs.length === 0 && (state.filters.sinner || state.filters.rosterSearch)) {
+                    return; 
+                }
+
+                const section = document.createElement('div');
+                section.className = 'sinner-section';
+                
+                // Create the inner HTML for the sinner section, including the slider structure
+                section.innerHTML = `
+                    <h4>${sinnerName}</h4>
+                    <div class="sinner-slider-wrapper">
+                        <button class="slider-nav prev" title="Previous">&lt;</button>
+                        <div class="sinner-slider-content">
+                            <div class="sinner-id-slider"></div>
+                        </div>
+                        <button class="slider-nav next" title="Next">&gt;</button>
+                    </div>
+                `;
+                
+                const slider = section.querySelector('.sinner-id-slider');
+                const prevBtn = section.querySelector('.prev');
+                const nextBtn = section.querySelector('.next');
+                
+                // Populate the slider with ID elements
+                if (filteredSinnerIDs.length > 0) {
+                    filteredSinnerIDs.forEach(idData => {
+                        const idElement = createIdElement(idData, {
+                            isSelected: state.builderRoster.includes(idData.id),
+                            clickHandler: () => toggleBuilderIdSelection(idData.id)
+                        });
+                        idElement.style.flexShrink = '0';
+                        idElement.style.width = '220px';
+                        idElement.style.margin = '0 5px';
+                        slider.appendChild(idElement);
+                    });
+                } else {
+                    slider.innerHTML = `<div style="text-align:center; width: 100%; padding: 20px 0;">No matching IDs</div>`;
+                }
+
+
+                elements.builderIdPool.appendChild(section);
+
+                // --- Slider Logic for each section ---
+                let currentIndex = 0;
+                const totalItems = filteredSinnerIDs.length;
+                const itemWidth = 230; // 220px width + 10px margin
+
+                function updateSlider() {
+                    if (totalItems > 0) {
+                       slider.style.transform = `translateX(-${currentIndex * itemWidth}px)`;
+                    }
+                    prevBtn.disabled = currentIndex === 0;
+                    nextBtn.disabled = currentIndex >= totalItems - 1 || totalItems === 0;
+                }
+
+                nextBtn.addEventListener('click', () => {
+                    if (currentIndex < totalItems - 1) {
+                        currentIndex++;
+                        updateSlider();
+                    }
+                });
+
+                prevBtn.addEventListener('click', () => {
+                    if (currentIndex > 0) {
+                        currentIndex--;
+                        updateSlider();
+                    }
+                });
+                
+                updateSlider(); // Set initial state of the slider
+            });
+
+            // --- Update Side Panel (remains the same) ---
             const sortedSelectedRoster = [...state.builderRoster].sort((a, b) => {
                 const indexA = state.masterIDList.findIndex(item => item.id === a);
                 const indexB = state.masterIDList.findIndex(item => item.id === b);
@@ -1690,7 +1870,6 @@
             });
             const selectedObjects = sortedSelectedRoster.map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
             
-            // Render the sorted list. All items are selected, so the selectionSet is the full builderRoster.
             renderIDList(elements.builderSelectedRoster, selectedObjects, state.builderRoster, toggleBuilderIdSelection);
 
             elements.builderCounter.textContent = state.builderRoster.length;
@@ -1704,6 +1883,7 @@
                 elements.builderCopyCode.disabled = true;
             }
         }
+
 
         // ======================
         // CLIENT ACTIONS & EVENT HANDLERS
@@ -1743,6 +1923,7 @@
                     showNotification(`You can only select ${ROSTER_SIZE} IDs.`);
                 }
             }
+            // Re-render the builder to update selections and side panel
             renderRosterBuilder();
         }
 
@@ -2287,6 +2468,14 @@ Garden of Thorns Gregor - WAW - Lust - Orange`;
 
             state.masterIDList = parseIDCSV(idCsvData);
             state.masterEGOList = parseEGOData(egoData);
+
+            // Pre-sort IDs by sinner for the new roster builder
+            const sinnerOrder = ["Yi Sang", "Faust", "Don Quixote", "Ryōshū", "Meursault", "Hong Lu", "Heathcliff", "Ishmael", "Rodion", "Sinclair", "Outis", "Gregor"];
+            state.idsBySinner = {};
+            sinnerOrder.forEach(sinnerName => {
+                state.idsBySinner[sinnerName] = state.masterIDList.filter(id => id.sinner === sinnerName);
+            });
+
             setupEventListeners();
             connectWebSocket();
             switchView('mainPage');
