@@ -3,6 +3,7 @@ const http = require('http');
 const path = require('path');
 const WebSocket = require('ws');
 const { Firestore } = require('@google-cloud/firestore');
+const crypto = require('crypto'); // Added for generating unique tokens
 
 // Initialize Firestore
 const firestore = new Firestore();
@@ -219,9 +220,9 @@ async function generateUniqueLobbyCode() {
 function createNewLobbyState() {
     return {
         participants: {
-            p1: { name: "Player 1", status: "disconnected", ready: false },
-            p2: { name: "Player 2", status: "disconnected", ready: false },
-            ref: { name: "Referee", status: "disconnected" }
+            p1: { name: "Player 1", status: "disconnected", ready: false, rejoinToken: null },
+            p2: { name: "Player 2", status: "disconnected", ready: false, rejoinToken: null },
+            ref: { name: "Referee", status: "disconnected", rejoinToken: null }
         },
         roster: { p1: [], p2: [] },
         draft: {
@@ -334,10 +335,12 @@ wss.on('connection', (ws) => {
                 const newLobbyState = createNewLobbyState();
                 ws.lobbyCode = newLobbyCode;
                 ws.userRole = 'ref';
+                const rejoinToken = crypto.randomUUID();
                 if (name) newLobbyState.participants.ref.name = name;
                 newLobbyState.participants.ref.status = "connected";
+                newLobbyState.participants.ref.rejoinToken = rejoinToken;
                 await firestore.collection('lobbies').doc(newLobbyCode).set(newLobbyState);
-                ws.send(JSON.stringify({ type: 'lobbyCreated', code: newLobbyCode, state: newLobbyState }));
+                ws.send(JSON.stringify({ type: 'lobbyCreated', code: newLobbyCode, role: 'ref', rejoinToken, state: newLobbyState }));
                 break;
             }
 
@@ -345,18 +348,73 @@ wss.on('connection', (ws) => {
                 if (!lobbyRef) return;
                 const doc = await lobbyRef.get();
                 if (!doc.exists) return ws.send(JSON.stringify({ type: 'error', message: 'Lobby not found.' }));
+                
                 const lobbyData = doc.data();
-                if (lobbyData.participants[role]?.status === 'connected') return ws.send(JSON.stringify({ type: 'error', message: `Role ${role.toUpperCase()} is taken.` }));
+                const participant = lobbyData.participants[role];
+
+                // A role is considered taken if someone is connected OR if it's reserved for a disconnected player (has a token)
+                if (participant && (participant.status === 'connected' || participant.rejoinToken)) {
+                    return ws.send(JSON.stringify({ type: 'error', message: `Role ${role.toUpperCase()} is taken or reserved. Try rejoining if this is you.` }));
+                }
                 
                 ws.lobbyCode = lobbyCode.toUpperCase();
                 ws.userRole = role;
-                const updates = { [`participants.${role}.status`]: 'connected' };
+                const rejoinToken = crypto.randomUUID(); // Generate a unique token
+
+                const updates = {
+                    [`participants.${role}.status`]: 'connected',
+                    [`participants.${role}.rejoinToken`]: rejoinToken // Store the token
+                };
                 if (name) updates[`participants.${role}.name`] = name;
+                
                 await lobbyRef.update(updates);
                 
                 const updatedDoc = await lobbyRef.get();
-                ws.send(JSON.stringify({ type: 'lobbyJoined', lobbyCode: ws.lobbyCode, role, state: updatedDoc.data() }));
+                // Send the token to the client so it can store it
+                ws.send(JSON.stringify({ 
+                    type: 'lobbyJoined', 
+                    lobbyCode: ws.lobbyCode, 
+                    role, 
+                    rejoinToken, // Send token to client
+                    state: updatedDoc.data() 
+                }));
                 broadcastState(ws.lobbyCode);
+                break;
+            }
+
+            case 'rejoinLobby': {
+                if (!lobbyRef || !role || !incomingData.rejoinToken) return;
+                
+                const doc = await lobbyRef.get();
+                if (!doc.exists) {
+                    return ws.send(JSON.stringify({ type: 'error', message: 'Lobby not found. Clearing session.' }));
+                }
+
+                const lobbyData = doc.data();
+                const participant = lobbyData.participants[role];
+
+                // Check if the token matches
+                if (participant && participant.rejoinToken === incomingData.rejoinToken) {
+                    ws.lobbyCode = lobbyCode.toUpperCase();
+                    ws.userRole = role;
+
+                    await lobbyRef.update({
+                        [`participants.${role}.status`]: 'connected'
+                    });
+
+                    const updatedDoc = await lobbyRef.get();
+                    ws.send(JSON.stringify({
+                        type: 'lobbyJoined', // We can reuse the 'lobbyJoined' logic on the client
+                        lobbyCode: ws.lobbyCode,
+                        role,
+                        rejoinToken: incomingData.rejoinToken, // Send the token back
+                        state: updatedDoc.data()
+                    }));
+                    broadcastState(ws.lobbyCode);
+                } else {
+                    // Token is invalid
+                    ws.send(JSON.stringify({ type: 'error', message: 'Failed to rejoin. The session might be invalid.' }));
+                }
                 break;
             }
 
