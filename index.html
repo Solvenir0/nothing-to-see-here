@@ -895,14 +895,10 @@
         }
         .sinner-grouped-roster .sinner-row { }
         .sinner-grouped-roster .sinner-header {
-            font-weight: bold;
-            color: var(--accent);
-            margin-bottom: 5px;
-            padding-left: 5px;
-            text-transform: uppercase;
-            font-size: 0.9rem;
+            height: 0;
             border-bottom: 1px solid var(--border);
-            padding-bottom: 4px;
+            margin: 8px 0;
+            padding: 0;
         }
         .sinner-grouped-roster .sinner-id-container {
             display: flex;
@@ -921,8 +917,8 @@
             display: none; /* Hide the name */
         }
         .sinner-grouped-roster .id-item .id-icon {
-            width: 50px;
-            height: 50px;
+            width: 60px; /* Increased size */
+            height: 60px; /* Increased size */
         }
         .sinner-grouped-roster .id-item:hover {
             transform: scale(1.1);
@@ -1559,7 +1555,6 @@
             const { clickHandler, selectionSet } = options;
 
             container.innerHTML = '';
-            // Apply the class that triggers the new compact styles
             container.className = 'sinner-grouped-roster';
 
             if (!Array.isArray(idObjectList) || idObjectList.length === 0) {
@@ -1579,16 +1574,19 @@
             });
 
             const fragment = document.createDocumentFragment();
+            let isFirstRenderedGroup = true;
 
             sinnerOrder.forEach(sinnerName => {
                 if (groupedBySinner[sinnerName] && groupedBySinner[sinnerName].length > 0) {
                     const sinnerRow = document.createElement('div');
                     sinnerRow.className = 'sinner-row';
 
-                    const sinnerHeader = document.createElement('div');
-                    sinnerHeader.className = 'sinner-header';
-                    sinnerHeader.textContent = sinnerName;
-                    sinnerRow.appendChild(sinnerHeader);
+                    if (!isFirstRenderedGroup) {
+                        const sinnerHeader = document.createElement('div');
+                        sinnerHeader.className = 'sinner-header';
+                        sinnerRow.appendChild(sinnerHeader);
+                    }
+                    isFirstRenderedGroup = false;
 
                     const idContainer = document.createElement('div');
                     idContainer.className = 'sinner-id-container';
@@ -1601,7 +1599,6 @@
 
                     sortedIds.forEach(idData => {
                         const isSelected = selectionSet ? selectionSet.includes(idData.id) : false;
-                        // createIdElement is called as before. CSS will hide the name.
                         const idElement = createIdElement(idData, { isSelected, clickHandler });
                         idContainer.appendChild(idElement);
                     });
