@@ -898,6 +898,63 @@
             margin-top: 10px;
         }
 
+        /* NEW: Styles for Sinner-Grouped Draft View */
+        .sinner-grouped-roster {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: 500px;
+            overflow-y: auto;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+        }
+
+        .sinner-row {
+            /* Logical grouping container */
+        }
+
+        .sinner-header {
+            font-weight: bold;
+            color: var(--accent);
+            margin-bottom: 5px;
+            padding-left: 5px;
+            text-transform: uppercase;
+            font-size: 0.9rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 4px;
+        }
+
+        .sinner-id-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .draft-id-item {
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border-radius: 5px;
+            border: 2px solid transparent;
+        }
+
+        .draft-id-item:hover {
+            transform: scale(1.08);
+            border-color: var(--accent);
+            z-index: 2;
+            position: relative;
+        }
+
+        .draft-id-item .id-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 5px;
+            background-size: cover;
+            background-position: center;
+            border: 1px solid var(--border);
+            display: block;
+        }
+
         /* Medium screens and up */
         @media (min-width: 992px) {
             #roster-builder-page .card {
@@ -1518,6 +1575,66 @@
             });
             container.appendChild(fragment);
         }
+
+        function renderGroupedDraftList(container, idObjectList, clickHandler) {
+            container.innerHTML = '';
+            if (!Array.isArray(idObjectList) || idObjectList.length === 0) {
+                container.innerHTML = '<div class="empty-roster" style="padding: 10px; text-align: center;">No available IDs.</div>';
+                return;
+            }
+
+            // Group IDs by sinner
+            const groupedBySinner = {};
+            const sinnerOrder = ["Yi Sang", "Faust", "Don Quixote", "Ryōshū", "Meursault", "Hong Lu", "Heathcliff", "Ishmael", "Rodion", "Sinclair", "Outis", "Gregor"];
+
+            idObjectList.forEach(id => {
+                if (!id) return;
+                if (!groupedBySinner[id.sinner]) {
+                    groupedBySinner[id.sinner] = [];
+                }
+                groupedBySinner[id.sinner].push(id);
+            });
+
+            const fragment = document.createDocumentFragment();
+
+            sinnerOrder.forEach(sinnerName => {
+                if (groupedBySinner[sinnerName] && groupedBySinner[sinnerName].length > 0) {
+                    const sinnerRow = document.createElement('div');
+                    sinnerRow.className = 'sinner-row';
+
+                    const sinnerHeader = document.createElement('div');
+                    sinnerHeader.className = 'sinner-header';
+                    sinnerHeader.textContent = sinnerName;
+                    sinnerRow.appendChild(sinnerHeader);
+
+                    const idContainer = document.createElement('div');
+                    idContainer.className = 'sinner-id-container';
+
+                    // Sort IDs within the sinner group based on master list order
+                    const sortedIds = groupedBySinner[sinnerName].sort((a,b) => {
+                        const indexA = state.masterIDList.findIndex(item => item.id === a.id);
+                        const indexB = state.masterIDList.findIndex(item => item.id === b.id);
+                        return indexA - indexB;
+                    });
+
+                    sortedIds.forEach(idData => {
+                        const idElement = document.createElement('div');
+                        idElement.className = 'draft-id-item';
+                        idElement.dataset.id = idData.id;
+                        idElement.innerHTML = `<div class="id-icon" style="background-image: url('/uploads/${idData.imageFile}')"></div>`;
+                        
+                        if (clickHandler) {
+                            idElement.addEventListener('click', () => clickHandler(idData.id));
+                        }
+                        idContainer.appendChild(idElement);
+                    });
+                    sinnerRow.appendChild(idContainer);
+                    fragment.appendChild(sinnerRow);
+                }
+            });
+
+            container.appendChild(fragment);
+        }
         
         function switchView(view) {
             state.currentView = view;
@@ -1676,8 +1793,11 @@
             let phaseText = "", actionDesc = "";
             const { phase, step, currentPlayer, action, actionCount, egoBans } = state.draft;
             
+            // Reset draft selection containers to their default state
             elements.p1DraftSelection.innerHTML = '<div class="empty-roster"></div>';
+            elements.p1DraftSelection.className = 'roster-selection';
             elements.p2DraftSelection.innerHTML = '<div class="empty-roster"></div>';
+            elements.p2DraftSelection.className = 'roster-selection';
 
             switch(phase) {
                 case "roster": 
@@ -1725,16 +1845,9 @@
                 const selectionContainer = currentPlayer === 'p1' ? elements.p1DraftSelection : elements.p2DraftSelection;
                 const clickHandler = (state.userRole === currentPlayer || state.userRole === 'ref') ? (id) => selectDraftID(currentPlayer, id) : null;
                 
-                let selectionSet;
-                if (isBanAction) {
-                    // During BAN phase, highlight IDs that are also in your roster (shared IDs).
-                    selectionSet = state.roster[currentPlayer];
-                } else {
-                    // During PICK phase, highlight all available IDs since they are from your own roster.
-                    selectionSet = availableIdList;
-                }
-                
-                renderIDList(selectionContainer, availableObjects, selectionSet, clickHandler);
+                // Use the new grouped rendering function
+                selectionContainer.className = 'sinner-grouped-roster';
+                renderGroupedDraftList(selectionContainer, availableObjects, clickHandler);
             }
             
             elements.currentPhase.textContent = phaseText;
