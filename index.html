@@ -718,24 +718,46 @@
         .filter-group { flex: 1; min-width: 150px; }
         .filter-label { display: block; margin-bottom: 5px; font-size: 0.9rem; color: #ccc; }
 
-        /* EGO BANNING STYLES */
-        #ego-ban-phase { width: 100%; }
-
+        /* --- NEW EGO BAN STYLES --- */
         .ego-ban-layout {
             display: flex;
+            flex-direction: column; /* Mobile first */
             gap: 20px;
-            align-items: flex-start;
         }
-        #ego-ban-phase.p1-banning #ego-selection-window { order: 1; }
-        #ego-ban-phase.p1-banning #opponent-roster-display { order: 2; }
-        #ego-ban-phase.p2-banning #ego-selection-window { order: 2; }
-        #ego-ban-phase.p2-banning #opponent-roster-display { order: 1; }
 
-        #ego-selection-window, #opponent-roster-display {
-            flex: 1;
+        #ego-ban-main-panel {
+            flex: 3;
             background: var(--panel);
-            padding: 15px;
+            padding: 20px;
             border-radius: 10px;
+            border: 1px solid var(--border);
+        }
+
+        #ego-ban-side-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        #ego-ban-player-bans-section, #opponent-roster-display {
+            background: var(--secondary);
+            padding: 20px;
+            border-radius: 10px;
+            border-top: 4px solid var(--accent);
+        }
+
+        #current-player-ego-bans {
+            margin-top: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            min-height: 240px;
+        }
+
+        #current-player-ego-bans .banned-ego-item {
+            text-decoration: none;
+            background: var(--primary-dark);
             border: 1px solid var(--border);
         }
 
@@ -743,38 +765,71 @@
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
             gap: 15px;
-            max-height: 75vh; 
+            max-height: 70vh; 
             overflow-y: auto;
             padding: 15px;
-            background: rgba(0,0,0,0.2);
-            border-radius: 8px;
         }
         
         .ego-item {
+            background: var(--panel);
+            border-radius: 8px;
+            padding: 10px;
             display: flex;
             flex-direction: column;
-            padding: 10px;
-            border-radius: 8px;
+            gap: 5px;
             cursor: pointer;
-            transition: all 0.3s ease;
-            border: 2px solid transparent;
-            color: #111;
+            transition: all 0.2s ease-in-out;
+            border: 1px solid var(--border);
+            border-left-width: 5px;
+            position: relative;
         }
 
         .ego-item:hover {
-            transform: scale(1.05);
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
             border-color: var(--accent);
         }
 
+        .ego-item.selected-for-ban {
+            border-color: var(--accent);
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+        }
+
+        .ego-item.selected-for-ban::before {
+            content: '\f058'; /* check-circle */
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: var(--accent);
+            font-size: 1.2rem;
+            text-shadow: 0 0 5px #000;
+        }
+
         .ego-item.banned {
-            opacity: 0.4;
+            opacity: 0.5;
             cursor: not-allowed;
-            background-color: #333 !important;
-            color: #999;
+            background: #222;
         }
         
-        .ego-item.banned-p1 { border: 2px dashed var(--primary); }
-        .ego-item.banned-p2 { border: 2px dashed var(--drafting); }
+        .ego-item.banned::after {
+            content: '\f05e'; /* ban icon */
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            color: var(--primary);
+            background: rgba(0,0,0,0.4);
+            border-radius: 8px;
+        }
 
         .ego-header {
             display: flex;
@@ -791,9 +846,9 @@
         }
 
         .ego-name {
+            color: var(--text);
             font-size: 1.1rem;
             font-weight: bold;
-            margin-bottom: 5px;
             flex-grow: 1;
         }
 
@@ -817,7 +872,8 @@
             border-radius: 5px;
             font-size: 0.9rem;
             text-align: center;
-            color: #111;
+            color: var(--text);
+            border: 1px solid transparent;
         }
         .banned-ego-item .rarity {
             font-weight: bold;
@@ -827,7 +883,9 @@
             border-radius: 3px;
             color: #fff;
         }
-         .banned-ego-item .name { text-decoration: line-through; }
+        .banned-ego-item .name { text-decoration: line-through; }
+        /* --- END NEW EGO BAN STYLES --- */
+
 
         /* Roster Builder Styles */
         #roster-builder-page .card {
@@ -962,6 +1020,10 @@
 
         /* Medium screens and up */
         @media (min-width: 992px) {
+            .ego-ban-layout {
+                flex-direction: row;
+                align-items: flex-start;
+            }
             #roster-builder-page .card {
                 flex-direction: row;
             }
@@ -1167,9 +1229,9 @@
 
                 <!-- EGO Ban Phase -->
                 <div id="ego-ban-phase" class="phase-section hidden">
-                    <h2>EGO Ban Phase</h2>
+                    <h2 id="ego-ban-title">EGO Ban Phase</h2>
                     <div class="ego-ban-layout">
-                        <div id="ego-selection-window">
+                        <div id="ego-ban-main-panel">
                             <h3>Available EGOs</h3>
                             <div class="filter-bar">
                                 <div class="filter-group" style="flex-grow: 2;">
@@ -1179,15 +1241,22 @@
                             </div>
                             <div class="ego-ban-container" id="ego-ban-container"></div>
                         </div>
-                        <div id="opponent-roster-display">
-                            <h3 id="opponent-roster-title">Opponent's Roster</h3>
-                            <div class="roster-selection" id="opponent-roster-list"></div>
+                        <div id="ego-ban-side-panel">
+                            <div id="ego-ban-player-bans-section">
+                                <h3>Your Bans (<span id="ego-ban-counter">0</span>/5)</h3>
+                                <div id="current-player-ego-bans"></div>
+                                <div class="controls" style="margin-top: 20px;">
+                                    <button class="btn btn-primary" id="confirm-ego-bans" disabled><i class="fas fa-check-double"></i> Confirm Bans</button>
+                                </div>
+                            </div>
+                            <div id="opponent-roster-display">
+                                <h3 id="opponent-roster-title">Opponent's Roster</h3>
+                                <div class="roster-selection" id="opponent-roster-list"></div>
+                            </div>
                         </div>
                     </div>
-                    <div class="controls" style="margin-top: 20px;">
-                        <button class="btn btn-primary" id="confirm-ego-bans" disabled><i class="fas fa-check-double"></i> Confirm Bans</button>
-                    </div>
                 </div>
+
 
                 <!-- ID Draft Phase -->
                 <div id="id-draft-phase" class="player-section hidden">
@@ -1568,14 +1637,16 @@
         function createEgoElement(egoData, clickHandler) {
             const egoElement = document.createElement('div');
             const allBans = [...state.draft.egoBans.p1, ...state.draft.egoBans.p2];
+            const currentPlayerBans = state.draft.egoBans[state.draft.currentPlayer] || [];
             const isBanned = allBans.includes(egoData.id);
+            const isSelectedForBan = currentPlayerBans.includes(egoData.id);
 
-            egoElement.className = `ego-item ${isBanned ? 'banned' : ''}`;
-            if (state.draft.egoBans.p1.includes(egoData.id)) egoElement.classList.add('banned-p1');
-            if (state.draft.egoBans.p2.includes(egoData.id)) egoElement.classList.add('banned-p2');
+            egoElement.className = 'ego-item';
+            if (isBanned) egoElement.classList.add('banned');
+            if (isSelectedForBan) egoElement.classList.add('selected-for-ban');
 
             egoElement.dataset.id = egoData.id;
-            egoElement.style.backgroundColor = egoData.cssColor;
+            egoElement.style.borderLeftColor = egoData.cssColor;
 
             egoElement.innerHTML = `
                 <div class="ego-header"><span class="ego-rarity">${egoData.rarity}</span></div>
@@ -1749,10 +1820,10 @@
         function renderEgoBanPhase() {
             const { currentPlayer } = state.draft;
             const opponent = currentPlayer === 'p1' ? 'p2' : 'p1';
+            
+            elements.egoBanTitle.textContent = `EGO Ban Phase - ${state.participants[currentPlayer].name}'s Turn`;
 
-            elements.egoBanPhase.className = `phase-section ${currentPlayer}-banning`;
-
-            // Render EGOs
+            // Render EGOs for banning
             const container = elements.egoBanContainer;
             container.innerHTML = '';
             const fragment = document.createDocumentFragment();
@@ -1768,13 +1839,27 @@
             });
             container.appendChild(fragment);
 
-            // Render Opponent Roster using the new grouped view
+            // Render current player's selected bans in the side panel
+            const currentPlayerBans = state.draft.egoBans[currentPlayer] || [];
+            const bansContainer = elements.currentPlayerEgoBans;
+            bansContainer.innerHTML = '';
+            const bannedEgoObjects = currentPlayerBans.map(id => state.masterEGOList.find(ego => ego.id === id)).filter(Boolean);
+            
+            bannedEgoObjects.forEach(ego => {
+                const item = document.createElement('div');
+                item.className = 'banned-ego-item';
+                item.style.borderLeft = `3px solid ${ego.cssColor}`;
+                item.innerHTML = `<span class="rarity">[${ego.rarity}]</span> <span class="name" style="text-decoration: none;">${ego.name}</span>`;
+                bansContainer.appendChild(item);
+            });
+            elements.egoBanCounter.textContent = currentPlayerBans.length;
+
+            // Render Opponent Roster
             elements.opponentRosterTitle.textContent = `${state.participants[opponent].name}'s Roster`;
             const opponentRosterObjects = state.roster[opponent].map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
             renderGroupedView(elements.opponentRosterList, opponentRosterObjects);
 
-
-            const canConfirm = (state.userRole === 'ref' || state.userRole === currentPlayer) && state.draft.egoBans[currentPlayer].length === EGO_BAN_COUNT;
+            const canConfirm = (state.userRole === 'ref' || state.userRole === currentPlayer) && currentPlayerBans.length === EGO_BAN_COUNT;
             elements.confirmEgoBans.disabled = !canConfirm;
         }
 
@@ -2303,12 +2388,15 @@
 
                 // EGO Ban Phase
                 egoBanPhase: document.getElementById('ego-ban-phase'),
+                egoBanTitle: document.getElementById('ego-ban-title'),
                 egoSearchInput: document.getElementById('ego-search-input'),
                 egoBanContainer: document.getElementById('ego-ban-container'),
                 confirmEgoBans: document.getElementById('confirm-ego-bans'),
                 opponentRosterDisplay: document.getElementById('opponent-roster-display'),
                 opponentRosterTitle: document.getElementById('opponent-roster-title'),
                 opponentRosterList: document.getElementById('opponent-roster-list'),
+                currentPlayerEgoBans: document.getElementById('current-player-ego-bans'),
+                egoBanCounter: document.getElementById('ego-ban-counter'),
 
                 // ID Draft Phase
                 idDraftPhase: document.getElementById('id-draft-phase'),
