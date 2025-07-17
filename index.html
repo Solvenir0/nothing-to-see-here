@@ -812,111 +812,58 @@
         #roster-builder-page .card {
             display: flex;
             gap: 20px;
-            flex-wrap: wrap;
-        }
-        .builder-main-panel { flex: 3; min-width: 400px; }
-        .builder-side-panel { flex: 1; min-width: 300px; background: var(--secondary); padding: 20px; border-radius: 10px; align-self: flex-start;}
-        
-        /* NEW Roster Builder Styles */
-        #builder-id-pool {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-            gap: 20px;
-            max-height: none;
-            overflow-y: visible;
-            padding: 0;
+            flex-wrap: nowrap; /* Prevent wrapping for the 3-column layout */
         }
         
-        @media (min-width: 1800px) {
-            #builder-id-pool {
-                grid-template-columns: repeat(6, 1fr);
-            }
-        }
-         @media (min-width: 1400px) and (max-width: 1799px) {
-            #builder-id-pool {
-                grid-template-columns: repeat(4, 1fr);
-            }
-        }
-         @media (min-width: 992px) and (max-width: 1399px) {
-            #builder-id-pool {
-                grid-template-columns: repeat(3, 1fr);
-            }
-        }
-        
-        .sinner-section {
-            background: rgba(0,0,0,0.2);
-            border-radius: 10px;
-            padding: 15px;
+        .builder-sinner-nav {
+            flex: 0 0 150px; /* Fixed width for the sinner nav */
             display: flex;
             flex-direction: column;
+            gap: 8px;
+        }
+        
+        .sinner-nav-btn {
+            padding: 10px;
+            font-size: 1rem;
+            text-align: left;
+            background: var(--secondary);
             border: 1px solid var(--border);
         }
 
-        .sinner-section h4 {
+        .sinner-nav-btn.selected {
+            background: var(--primary);
             color: var(--accent);
-            margin-top: 0;
-            margin-bottom: 10px;
-            padding-bottom: 5px;
-            border-bottom: 1px solid var(--border);
-            text-align: center;
-            font-size: 1.2rem;
+            border-left: 4px solid var(--accent);
         }
 
-        .sinner-slider-wrapper {
-            position: relative;
-            flex-grow: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        .builder-main-panel { 
+            flex: 2; /* Takes up most of the space */
+            min-width: 400px; 
+            background: rgba(0,0,0,0.2);
+            padding: 15px;
+            border-radius: 10px;
         }
-
-        .sinner-slider-content {
-            overflow: hidden;
-            width: 230px; /* Width for one card + margin */
+        .builder-side-panel { 
+            flex: 1; 
+            min-width: 300px; 
+            background: var(--secondary); 
+            padding: 20px; 
+            border-radius: 10px; 
+            align-self: flex-start;
         }
-
-        .sinner-id-slider {
-            display: flex;
-            transition: transform 0.4s ease-in-out;
-        }
-
-        .sinner-id-slider .id-item {
-            flex-shrink: 0;
-            width: 220px; /* Fixed width for calculation */
-            margin: 0 5px; /* Centering margin */
-        }
-
-        .slider-nav {
-            background: rgba(0,0,0,0.5);
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 35px;
-            height: 35px;
-            font-size: 1.2rem;
-            cursor: pointer;
-            transition: background 0.3s;
-            z-index: 10;
-        }
-        .slider-nav:hover {
-            background: rgba(0,0,0,0.8);
-        }
-        .slider-nav:disabled {
-            opacity: 0.2;
-            cursor: not-allowed;
-        }
-
-        .slider-nav.prev {
-            margin-right: 5px;
-        }
-
-        .slider-nav.next {
-            margin-left: 5px;
+        
+        .builder-id-pool {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 10px;
+            max-height: 70vh;
+            overflow-y: auto;
+            padding: 10px;
         }
         
         .builder-selected-roster {
             display: grid;
-            grid-template-columns: repeat(1, 1fr);
+            grid-template-columns: 1fr;
             gap: 10px;
             max-height: 65vh;
             overflow-y: auto;
@@ -955,6 +902,15 @@
 
         @media (max-width: 1200px) {
             #roster-builder-page .card, .ego-ban-layout { flex-direction: column; }
+            .builder-sinner-nav {
+                flex-direction: row;
+                flex-wrap: wrap;
+                flex: 1 1 100%;
+                margin-bottom: 20px;
+            }
+            .sinner-nav-btn {
+                flex-grow: 1;
+            }
         }
         @media (max-width: 768px) {
             .container { max-width: 100%; }
@@ -966,7 +922,6 @@
             .role-options { flex-direction: column; }
             .phase-container { flex-direction: column; }
             .connection-status { top: 5px; right: 5px; font-size: 0.8rem; padding: 5px 10px; }
-            #builder-id-pool { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -1187,11 +1142,14 @@
                 <p>Create a roster and generate a shareable code.</p>
             </header>
             <div class="card">
+                <div class="builder-sinner-nav" id="builder-sinner-nav">
+                    <!-- Sinner buttons will be rendered here -->
+                </div>
                 <div class="builder-main-panel">
                     <h3>Available Identities</h3>
                      <div class="filter-bar" id="global-filter-bar-builder"></div>
                      <div class="builder-id-pool" id="builder-id-pool">
-                         <!-- Sinner sliders will be rendered here -->
+                         <!-- Sinner IDs will be rendered here -->
                      </div>
                 </div>
                 <div class="builder-side-panel">
@@ -1270,6 +1228,7 @@
             masterIDList: [],
             masterEGOList: [],
             idsBySinner: null, // Will be populated on init
+            builderSelectedSinner: "Yi Sang", // Default sinner to show
             draft: {
                 phase: "roster",
                 step: 0,
@@ -1778,91 +1737,32 @@
         }
         
         function renderRosterBuilder() {
-            // This function is now responsible for rendering the new sinner-based slider view.
-            
-            elements.builderIdPool.innerHTML = ''; // Clear the main container
-
-            // Loop through the canonical sinner order to ensure consistent layout
+            // --- Render Sinner Navigation (Left Panel) ---
+            const sinnerNav = elements.builderSinnerNav;
+            sinnerNav.innerHTML = '';
             const sinnerOrder = ["Yi Sang", "Faust", "Don Quixote", "Ryōshū", "Meursault", "Hong Lu", "Heathcliff", "Ishmael", "Rodion", "Sinclair", "Outis", "Gregor"];
             
             sinnerOrder.forEach(sinnerName => {
-                const sinnerIDs = state.idsBySinner[sinnerName];
-                const filteredSinnerIDs = filterIDs(sinnerIDs, state.filters);
-
-                // Don't render a section if filters hide all IDs for that sinner
-                if (filteredSinnerIDs.length === 0 && (state.filters.sinner || state.filters.rosterSearch)) {
-                    return; 
+                const btn = document.createElement('button');
+                btn.className = 'btn sinner-nav-btn';
+                btn.textContent = sinnerName;
+                if (sinnerName === state.builderSelectedSinner) {
+                    btn.classList.add('selected');
                 }
-
-                const section = document.createElement('div');
-                section.className = 'sinner-section';
-                
-                // Create the inner HTML for the sinner section, including the slider structure
-                section.innerHTML = `
-                    <h4>${sinnerName}</h4>
-                    <div class="sinner-slider-wrapper">
-                        <button class="slider-nav prev" title="Previous">&lt;</button>
-                        <div class="sinner-slider-content">
-                            <div class="sinner-id-slider"></div>
-                        </div>
-                        <button class="slider-nav next" title="Next">&gt;</button>
-                    </div>
-                `;
-                
-                const slider = section.querySelector('.sinner-id-slider');
-                const prevBtn = section.querySelector('.prev');
-                const nextBtn = section.querySelector('.next');
-                
-                // Populate the slider with ID elements
-                if (filteredSinnerIDs.length > 0) {
-                    filteredSinnerIDs.forEach(idData => {
-                        const idElement = createIdElement(idData, {
-                            isSelected: state.builderRoster.includes(idData.id),
-                            clickHandler: () => toggleBuilderIdSelection(idData.id)
-                        });
-                        idElement.style.flexShrink = '0';
-                        idElement.style.width = '220px';
-                        idElement.style.margin = '0 5px';
-                        slider.appendChild(idElement);
-                    });
-                } else {
-                    slider.innerHTML = `<div style="text-align:center; width: 100%; padding: 20px 0;">No matching IDs</div>`;
-                }
-
-
-                elements.builderIdPool.appendChild(section);
-
-                // --- Slider Logic for each section ---
-                let currentIndex = 0;
-                const totalItems = filteredSinnerIDs.length;
-                const itemWidth = 230; // 220px width + 10px margin
-
-                function updateSlider() {
-                    if (totalItems > 0) {
-                       slider.style.transform = `translateX(-${currentIndex * itemWidth}px)`;
-                    }
-                    prevBtn.disabled = currentIndex === 0;
-                    nextBtn.disabled = currentIndex >= totalItems - 1 || totalItems === 0;
-                }
-
-                nextBtn.addEventListener('click', () => {
-                    if (currentIndex < totalItems - 1) {
-                        currentIndex++;
-                        updateSlider();
-                    }
+                btn.addEventListener('click', () => {
+                    state.builderSelectedSinner = sinnerName;
+                    renderRosterBuilder(); // Re-render the whole builder view
                 });
-
-                prevBtn.addEventListener('click', () => {
-                    if (currentIndex > 0) {
-                        currentIndex--;
-                        updateSlider();
-                    }
-                });
-                
-                updateSlider(); // Set initial state of the slider
+                sinnerNav.appendChild(btn);
             });
 
-            // --- Update Side Panel (remains the same) ---
+            // --- Render ID Pool (Center Panel) ---
+            const sinnerIDs = state.idsBySinner[state.builderSelectedSinner];
+            const filteredSinnerIDs = filterIDs(sinnerIDs, state.filters);
+            renderIDList(elements.builderIdPool, filteredSinnerIDs, state.builderRoster, toggleBuilderIdSelection);
+
+
+            // --- Render Selected Roster (Right Panel) ---
             const sortedSelectedRoster = [...state.builderRoster].sort((a, b) => {
                 const indexA = state.masterIDList.findIndex(item => item.id === a);
                 const indexB = state.masterIDList.findIndex(item => item.id === b);
@@ -1997,6 +1897,7 @@
                 elements.joinLobbyBtn.style.display = 'none';
             });
             elements.goToBuilder.addEventListener('click', () => {
+                state.builderSelectedSinner = "Yi Sang"; // Reset to default
                 switchView('rosterBuilderPage');
                 renderRosterBuilder();
             });
@@ -2170,6 +2071,7 @@
                 startEgoBan: document.getElementById('start-ego-ban'),
 
                 // Roster Builder
+                builderSinnerNav: document.getElementById('builder-sinner-nav'),
                 builderIdPool: document.getElementById('builder-id-pool'),
                 builderSelectedRoster: document.getElementById('builder-selected-roster'),
                 builderCounter: document.getElementById('builder-counter'),
