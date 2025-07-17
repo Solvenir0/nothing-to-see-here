@@ -940,6 +940,57 @@
             background: var(--primary);
         }
 
+        /* START: Added styles for the fix */
+        #completed-view .sinner-grouped-roster {
+            background: transparent;
+            padding: 0;
+            max-height: none; /* Remove height limit */
+        }
+
+        #completed-view .sinner-grouped-roster .sinner-header {
+            height: auto;
+            color: var(--accent);
+            font-size: 1.3rem;
+            font-weight: bold;
+            border-bottom: 2px solid var(--primary);
+            margin-top: 20px;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            text-align: left;
+        }
+        #completed-view .sinner-row:first-child .sinner-header {
+            margin-top: 0;
+        }
+
+        #completed-view .sinner-grouped-roster .sinner-id-container {
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        #completed-view .sinner-grouped-roster .id-item {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            gap: 10px;
+            padding: 5px;
+        }
+
+        #completed-view .sinner-grouped-roster .id-item:hover {
+            transform: none;
+            border-color: var(--border);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        #completed-view .sinner-grouped-roster .id-item .id-name {
+            display: flex; /* REVEALS THE NAME */
+        }
+
+        #completed-view .sinner-grouped-roster .id-item .id-icon {
+            width: 80px; /* MAKES IMAGES BIGGER */
+            height: 80px;
+        }
+        /* END: Added styles for the fix */
+
+
         /* Medium screens and up */
         @media (min-width: 992px) {
             #roster-builder-page .card {
@@ -1566,7 +1617,8 @@
         }
 
         function renderGroupedView(container, idObjectList, options = {}) {
-            const { clickHandler, selectionSet } = options;
+            // This is the main function that was modified for the fix
+            const { clickHandler, selectionSet, showSinnerNames = false } = options;
 
             container.innerHTML = '';
             container.className = 'sinner-grouped-roster';
@@ -1595,9 +1647,12 @@
                     const sinnerRow = document.createElement('div');
                     sinnerRow.className = 'sinner-row';
 
-                    if (!isFirstRenderedGroup) {
+                    if (!isFirstRenderedGroup || showSinnerNames) {
                         const sinnerHeader = document.createElement('div');
                         sinnerHeader.className = 'sinner-header';
+                        if (showSinnerNames) {
+                            sinnerHeader.textContent = sinnerName;
+                        }
                         sinnerRow.appendChild(sinnerHeader);
                     }
                     isFirstRenderedGroup = false;
@@ -1863,6 +1918,7 @@
                 
                 const groupedBySinner = {};
                 pickObjects.forEach(id => {
+                    if (!id.sinner) return;
                     if (!groupedBySinner[id.sinner]) {
                         groupedBySinner[id.sinner] = [];
                     }
@@ -1888,8 +1944,9 @@
                     }
                 });
 
-                renderGroupedView(elements[`final${player}PicksCol1`], col1Ids);
-                renderGroupedView(elements[`final${player}PicksCol2`], col2Ids);
+                // This is where the fix is applied, by passing the new option
+                renderGroupedView(elements[`final${player}PicksCol1`], col1Ids, { showSinnerNames: true });
+                renderGroupedView(elements[`final${player}PicksCol2`], col2Ids, { showSinnerNames: true });
             };
 
             balanceAndRenderPicks('p1');
