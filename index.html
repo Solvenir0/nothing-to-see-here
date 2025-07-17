@@ -669,8 +669,33 @@
             padding-top: 15px;
         }
 
-        .final-picks, .final-bans {
+        .final-picks {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
             margin-top: 15px;
+            background: rgba(0,0,0,0.2);
+            padding: 10px;
+            border-radius: 8px;
+        }
+        .final-picks .id-item .id-name {
+            display: none;
+        }
+        .final-picks .id-item .id-icon {
+            width: 70px;
+            height: 70px;
+        }
+
+        .final-bans {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+        @media (min-width: 500px) {
+            .final-bans {
+                grid-template-columns: repeat(2, 1fr);
+            }
         }
 
         .final-bans .id-item { background: rgba(100, 0, 0, 0.4); opacity: 0.8; }
@@ -1836,22 +1861,31 @@
         }
 
         function renderCompletedView() {
-            const renderFinalList = (container, idList) => {
+            const renderFullIdList = (container, idList) => {
                 const idObjects = idList.map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
                 renderIDList(container, idObjects, null, null);
+            };
+
+            const renderCompactIdList = (container, idList) => {
+                container.innerHTML = '';
+                const idObjects = idList.map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
+                const fragment = document.createDocumentFragment();
+                idObjects.forEach(idData => {
+                    const element = createIdElement(idData, {});
+                    fragment.appendChild(element);
+                });
+                container.appendChild(fragment);
             };
 
             elements.finalP1Name.textContent = `${state.participants.p1.name}'s Roster`;
             elements.finalP2Name.textContent = `${state.participants.p2.name}'s Roster`;
 
-            const p1PickObjects = state.draft.picks.p1.map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
-            renderGroupedView(elements.finalP1Picks, p1PickObjects);
-            
-            const p2PickObjects = state.draft.picks.p2.map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
-            renderGroupedView(elements.finalP2Picks, p2PickObjects);
+            renderCompactIdList(elements.finalP1Picks, state.draft.picks.p1);
+            renderCompactIdList(elements.finalP2Picks, state.draft.picks.p2);
 
-            renderFinalList(elements.finalP1Bans, state.draft.idBans.p2); 
-            renderFinalList(elements.finalP2Bans, state.draft.idBans.p1);
+            renderFullIdList(elements.finalP1Bans, state.draft.idBans.p2); 
+            renderFullIdList(elements.finalP2Bans, state.draft.idBans.p1);
+            
             renderBannedEgosDisplay();
         }
 
