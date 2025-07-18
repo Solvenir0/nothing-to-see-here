@@ -26,8 +26,9 @@ const TIMERS = {
 // --- DRAFT LOGIC SEQUENCES ---
 const DRAFT_LOGIC = {
     '1-2-2': {
+        ban1Steps: 8,
         pick1: [{ p: 'p1', c: 1 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 1 }],
-        midBanSteps: 6,
+        midBanSteps: 8, // FIX: Was 6, should be 8 for 4 bans each
         pick2: [{ p: 'p2', c: 1 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 1 }]
     },
     '2-3-2': {
@@ -356,7 +357,6 @@ function advancePhase(lobbyData) {
             if (draft.currentPlayer === 'p1' && draft.egoBans.p1.length === EGO_BAN_COUNT) {
                 draft.currentPlayer = 'p2';
             } else if (draft.currentPlayer === 'p2' && draft.egoBans.p2.length === EGO_BAN_COUNT) {
-                // This is the first transition to ID drafting, populate available pools
                 draft.available.p1 = [...lobbyData.roster.p1];
                 draft.available.p2 = [...lobbyData.roster.p2];
                 
@@ -366,7 +366,7 @@ function advancePhase(lobbyData) {
                     draft.currentPlayer = "p1";
                     draft.action = "ban";
                     draft.actionCount = 1;
-                } else { // 2-3-2 logic
+                } else {
                     const next = logic.pick[0];
                     draft.currentPlayer = next.p;
                     draft.action = "pick";
@@ -374,21 +374,22 @@ function advancePhase(lobbyData) {
                 }
             }
             break;
-        case "ban": // Only for 1-2-2 logic
-            if (draft.step < 7) {
+        case "ban":
+            const banSteps = draft.action === 'midBan' ? logic.midBanSteps : logic.ban1Steps;
+            if (draft.step < banSteps -1) {
                 draft.step++;
                 draft.currentPlayer = draft.currentPlayer === "p1" ? "p2" : "p1";
             } else {
                 draft.phase = "pick";
                 draft.step = 0;
-                const next = logic.pick1[0];
+                const next = draft.action === 'midBan' ? logic.pick2[0] : logic.pick1[0];
+                draft.action = draft.action === 'midBan' ? 'pick2' : 'pick';
                 draft.currentPlayer = next.p;
-                draft.action = "pick";
                 draft.actionCount = next.c;
             }
             break;
         case "pick":
-            const currentPickSeq = draft.draftLogic === '1-2-2' ? (draft.step < logic.pick1.length ? logic.pick1 : logic.pick2) : logic.pick;
+            const currentPickSeq = draft.draftLogic === '1-2-2' ? (draft.action === 'pick2' ? logic.pick2 : logic.pick1) : logic.pick;
             
             if (draft.step < currentPickSeq.length - 1) {
                 draft.step++;
@@ -397,7 +398,7 @@ function advancePhase(lobbyData) {
                 draft.actionCount = next.c;
             } else {
                 if (draft.draftLogic === '1-2-2' && draft.action !== 'pick2') {
-                    draft.phase = "ban"; // Mid-ban
+                    draft.phase = "ban";
                     draft.action = "midBan";
                     draft.step = 0;
                     draft.currentPlayer = "p1";
@@ -426,9 +427,12 @@ async function handleDraftConfirm(lobbyRef, lobbyData, ws) {
 
     if (draft.phase === 'egoBan') {
         const playerBans = draft.egoBans[currentPlayer];
-        const allBans = [...draft.egoBans.p1, ...draft.egoBans.p2];
-        if (playerBans.length < EGO_BAN_COUNT && !allBans.includes(selectedId)) {
-            playerBans.push(selectedId);
+        const banIndex = playerBans.indexOf(selectedId);
+        
+        if (banIndex > -1) {
+            playerBans.splice(banIndex, 1); // Un-ban
+        } else if (playerBans.length < EGO_BAN_COUNT) {
+            playerBans.push(selectedId); // Ban
         }
     } else if (['ban', 'pick'].includes(draft.phase)) {
         const listToUpdate = draft.action === 'ban' ? draft.idBans[currentPlayer] : draft.picks[currentPlayer];
@@ -477,7 +481,6 @@ wss.on('connection', (ws) => {
                 newLobbyState.participants.ref.rejoinToken = rejoinToken;
                 await firestore.collection('lobbies').doc(newLobbyCode).set(newLobbyState);
                 ws.send(JSON.stringify({ type: 'lobbyCreated', code: newLobbyCode, role: 'ref', rejoinToken, state: newLobbyState }));
-                // Start roster timer on creation
                 await setTimerForLobby(newLobbyCode, newLobbyState);
                 await broadcastState(newLobbyCode);
                 break;
