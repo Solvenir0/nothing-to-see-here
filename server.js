@@ -376,9 +376,10 @@ function advancePhase(lobbyData) {
             break;
         case "ban":
             const banSteps = draft.action === 'midBan' ? logic.midBanSteps : logic.ban1Steps;
-            if (draft.step < banSteps -1) {
+            if (draft.step < banSteps - 1) {
                 draft.step++;
                 draft.currentPlayer = draft.currentPlayer === "p1" ? "p2" : "p1";
+                draft.actionCount = 1; // FIX: Reset action count for the next player's ban.
             } else {
                 draft.phase = "pick";
                 draft.step = 0;
