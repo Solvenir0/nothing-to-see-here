@@ -260,11 +260,13 @@ function createIdElement(idData, options = {}) {
     idElement.className = `id-item rarity-${idData.rarity}`;
     if (isSelected) idElement.classList.add('selected');
     if (isHovered) idElement.classList.add('hovered');
-    if (isNotInRoster) idElement.classList.add('not-in-roster');
+    // The 'not-in-roster' highlight system for shared/enemy IDs was removed as per user request.
+    // A new system using a 'shared-icon' is used instead for shared IDs.
 
     idElement.dataset.id = idData.id;
     let html = `<div class="id-icon" style="background-image: url('/uploads/${idData.imageFile}')"></div><div class="id-name">${idData.name}</div>`;
     if (isShared) {
+        // Add the shared icon as per user request
         html += '<div class="shared-icon"><i class="fas fa-link"></i></div>';
     }
     idElement.innerHTML = html;
