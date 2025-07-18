@@ -1947,7 +1947,8 @@
 
             elements.opponentRosterTitle.textContent = `${state.participants[opponent].name}'s Roster`;
             const opponentRosterObjects = state.roster[opponent].map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
-            renderGroupedView(elements.opponentRosterList, opponentRosterObjects, { notInRosterSet: state.roster[currentPlayer] });
+            // FIX: Removed notInRosterSet from here
+            renderGroupedView(elements.opponentRosterList, opponentRosterObjects, {});
 
             const canConfirm = (state.userRole === 'ref' || state.userRole === currentPlayer) && currentPlayerBans.length === EGO_BAN_COUNT;
             elements.confirmEgoBans.disabled = !canConfirm;
