@@ -630,14 +630,11 @@ function updateDraftInstructions() {
     }
 
     if (['ban', 'pick'].includes(phase)) {
-        console.log(`%c[Draft Render] Phase: ${phase}, Action: ${action}, CurrentPlayer: ${currentPlayer}`, "color: yellow; font-weight: bold;");
         const opponent = currentPlayer === 'p1' ? 'p2' : 'p1';
         const isBanAction = action.includes('ban');
         const targetPlayer = isBanAction ? opponent : currentPlayer;
-        console.log(`[Draft Render] Target pool is for player: ${targetPlayer}`);
 
         const availableIdList = state.draft.available[targetPlayer];
-        console.log(`[Draft Render] Raw available ID list for ${targetPlayer}:`, availableIdList ? [...availableIdList] : 'undefined');
 
         if (!availableIdList) {
             console.error(`[Draft Render] ERROR: availableIdList for ${targetPlayer} is undefined!`);
@@ -645,10 +642,8 @@ function updateDraftInstructions() {
         }
 
         let availableObjects = availableIdList.map(id => state.masterIDList.find(item => item && item.id === id)).filter(Boolean);
-        console.log(`[Draft Render] Mapped objects (before filter): ${availableObjects.length}`);
         
         availableObjects = filterIDs(availableObjects, state.draftFilters, true);
-        console.log(`[Draft Render] Mapped objects (after filter): ${availableObjects.length}`);
         
         const clickHandler = (state.userRole === currentPlayer || state.userRole === 'ref') ? (id) => hoverDraftID(id) : null;
         
@@ -666,7 +661,7 @@ function updateDraftInstructions() {
             sharedIdSet: sharedIds
         });
 
-        elements.confirmSelectionId.disabled = !hovered[currentPlayer];
+        elements.confirmSelectionId.disabled = !hovered[currentPlayer] || state.draft.actionCount <= 0;
     }
     
     elements.currentPhase.textContent = phaseText;
