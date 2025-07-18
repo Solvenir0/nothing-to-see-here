@@ -36,6 +36,8 @@ const state = {
         picks: { p1: [], p2: [] },
         hovered: { p1: null, p2: null },
         draftLogic: '1-2-2',
+        coinFlipWinner: null,
+        turnOrderDecided: false,
         timer: {
             enabled: false,
             running: false,
@@ -418,6 +420,11 @@ function updateAllUIsFromState() {
     elements.rosterPhase.classList.toggle('hidden', phase !== 'roster');
     elements.egoBanPhase.classList.toggle('hidden', phase !== 'egoBan');
     elements.idDraftPhase.classList.toggle('hidden', !['ban', 'pick'].includes(phase));
+    elements.coinFlipModal.classList.toggle('hidden', phase !== 'coinFlip');
+
+    if (phase === 'coinFlip') {
+        handleCoinFlipUI();
+    }
 
     elements.participantsList.innerHTML = '';
     ['p1', 'p2', 'ref'].forEach(role => {
@@ -599,6 +606,10 @@ function updateDraftInstructions() {
             phaseText = "Roster Selection";
             actionDesc = "Players select 42 IDs. Referee starts the draft when both are ready.";
             break;
+        case "coinFlip":
+            phaseText = "Coin Flip";
+            actionDesc = "Winner of the coin flip will decide who goes first.";
+            break;
         case "egoBan":
             const bansLeft = EGO_BAN_COUNT - (egoBans[currentPlayer] ? egoBans[currentPlayer].length : 0);
             phaseText = `EGO Ban Phase - ${state.participants[currentPlayer].name}'s turn`;
@@ -669,6 +680,26 @@ function updateDraftInstructions() {
     elements.completeDraft.disabled = state.userRole !== 'ref' || phase === 'complete';
 }
 
+function handleCoinFlipUI() {
+    const { coinFlipWinner } = state.draft;
+    const winnerName = coinFlipWinner ? state.participants[coinFlipWinner].name : '';
+
+    if (!coinFlipWinner) {
+        elements.coinIcon.classList.add('flipping');
+        elements.coinFlipStatus.textContent = 'Flipping coin...';
+        elements.turnChoiceButtons.classList.add('hidden');
+    } else {
+        elements.coinIcon.classList.remove('flipping');
+        elements.coinFlipStatus.textContent = `${winnerName} wins the toss!`;
+        if (state.userRole === coinFlipWinner) {
+            elements.turnChoiceButtons.classList.remove('hidden');
+        } else {
+            elements.turnChoiceButtons.classList.add('hidden');
+            elements.coinFlipStatus.textContent += `\nWaiting for them to choose turn order...`;
+        }
+    }
+}
+
 function renderCompletedView() {
     const renderFullIdList = (container, idList) => {
         const idObjects = idList.map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
@@ -692,8 +723,8 @@ function renderCompletedView() {
     renderCompactIdList(elements.finalP1Picks, state.draft.picks.p1);
     renderCompactIdList(elements.finalP2Picks, state.draft.picks.p2);
 
-    renderFullIdList(elements.finalP1Bans, state.draft.idBans.p2); 
-    renderFullIdList(elements.finalP2Bans, state.draft.idBans.p1);
+    renderCompactIdList(elements.finalP1Bans, state.draft.idBans.p2); 
+    renderCompactIdList(elements.finalP2Bans, state.draft.idBans.p1);
     
     renderBannedEgosDisplay();
 }
@@ -703,7 +734,7 @@ function checkPhaseReadiness() {
         const p1Ready = state.participants.p1.ready && state.roster.p1.length === ROSTER_SIZE;
         const p2Ready = state.participants.p2.ready && state.roster.p2.length === ROSTER_SIZE;
         if (state.userRole === 'ref') {
-            elements.startEgoBan.disabled = !(p1Ready && p2Ready);
+            elements.startCoinFlip.disabled = !(p1Ready && p2Ready);
         }
     }
 }
@@ -990,7 +1021,9 @@ function setupEventListeners() {
     });
 
     // Draft controls
-    elements.startEgoBan.addEventListener('click', () => sendMessage({ type: 'draftControl', lobbyCode: state.lobbyCode, action: 'startEgoBan' }));
+    elements.startCoinFlip.addEventListener('click', () => sendMessage({ type: 'startCoinFlip', lobbyCode: state.lobbyCode }));
+    elements.goFirstBtn.addEventListener('click', () => sendMessage({ type: 'setTurnOrder', lobbyCode: state.lobbyCode, choice: 'first' }));
+    elements.goSecondBtn.addEventListener('click', () => sendMessage({ type: 'setTurnOrder', lobbyCode: state.lobbyCode, choice: 'second' }));
     elements.confirmEgoBans.addEventListener('click', () => sendMessage({ type: 'draftControl', lobbyCode: state.lobbyCode, action: 'confirmEgoBans' }));
     elements.completeDraft.addEventListener('click', () => sendMessage({ type: 'draftControl', lobbyCode: state.lobbyCode, action: 'complete' }));
     elements.confirmSelectionId.addEventListener('click', () => confirmSelection('id'));
@@ -1090,7 +1123,7 @@ function cacheDOMElements() {
         p1NameDisplay: document.getElementById('p1-name-display'), p2NameDisplay: document.getElementById('p2-name-display'),
         p1RosterCodeInput: document.getElementById('p1-roster-code-input'), p2RosterCodeInput: document.getElementById('p2-roster-code-input'),
         p1RosterLoad: document.getElementById('p1-roster-load'), p2RosterLoad: document.getElementById('p2-roster-load'),
-        startEgoBan: document.getElementById('start-ego-ban'),
+        startCoinFlip: document.getElementById('start-coin-flip'),
 
         // Roster Builder
         builderSinnerNav: document.getElementById('builder-sinner-nav'),
@@ -1140,6 +1173,14 @@ function cacheDOMElements() {
         finalP2Picks: document.getElementById('final-p2-picks'),
         finalP1Bans: document.getElementById('final-p1-bans'),   
         finalP2Bans: document.getElementById('final-p2-bans'),
+
+        // Coin Flip Modal
+        coinFlipModal: document.getElementById('coin-flip-modal'),
+        coinIcon: document.getElementById('coin-icon'),
+        coinFlipStatus: document.getElementById('coin-flip-status'),
+        turnChoiceButtons: document.getElementById('turn-choice-buttons'),
+        goFirstBtn: document.getElementById('go-first-btn'),
+        goSecondBtn: document.getElementById('go-second-btn'),
     };
 }
 
