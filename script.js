@@ -691,11 +691,17 @@ function handleCoinFlipUI() {
     } else {
         elements.coinIcon.classList.remove('flipping');
         elements.coinFlipStatus.textContent = `${winnerName} wins the toss!`;
-        if (state.userRole === coinFlipWinner) {
+        
+        const canChoose = state.userRole === coinFlipWinner || state.userRole === 'ref';
+
+        if (canChoose) {
             elements.turnChoiceButtons.classList.remove('hidden');
+            if (state.userRole === 'ref' && state.userRole !== coinFlipWinner) {
+                 elements.coinFlipStatus.textContent += `\nReferee to choose turn order.`;
+            }
         } else {
             elements.turnChoiceButtons.classList.add('hidden');
-            elements.coinFlipStatus.textContent += `\nWaiting for them to choose turn order...`;
+            elements.coinFlipStatus.textContent += `\nWaiting for the turn order to be decided...`;
         }
     }
 }
