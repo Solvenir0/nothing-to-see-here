@@ -374,6 +374,7 @@ function advancePhase(lobbyData) {
                 draft.currentPlayer = firstPlayer;
                 draft.action = "ban";
                 draft.actionCount = 1;
+
             }
             break;
         case "ban":
@@ -381,7 +382,7 @@ function advancePhase(lobbyData) {
             if (draft.step < banSteps - 1) {
                 draft.step++;
                 draft.currentPlayer = draft.currentPlayer === firstPlayer ? secondPlayer : firstPlayer;
-                draft.actionCount = 1;
+                draft.actionCount = 1; // FIX: Reset action count for the next player's ban.
             } else {
                 draft.phase = "pick";
                 draft.step = 0;
@@ -635,12 +636,14 @@ wss.on('connection', (ws) => {
                 let lobbyData = doc.data();
                 const { draft } = lobbyData;
 
-                if (ws.userRole !== draft.coinFlipWinner) return;
+                if (ws.userRole !== draft.coinFlipWinner && ws.userRole !== 'ref') return;
 
                 if (choice === 'second') {
                     if (draft.coinFlipWinner === 'p1') draft.playerOrder = ['p2', 'p1'];
+                    else draft.playerOrder = ['p1', 'p2'];
                 } else { // 'first'
                     if (draft.coinFlipWinner === 'p2') draft.playerOrder = ['p2', 'p1'];
+                    else draft.playerOrder = ['p1', 'p2'];
                 }
                 
                 draft.phase = 'egoBan';
