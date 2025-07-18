@@ -256,6 +256,15 @@ function handleServerMessage(message) {
 // ======================
 // UI RENDERING & DOM MANIPULATION
 // ======================
+function sortIdsByMasterList(idList) {
+    if (!Array.isArray(idList)) return [];
+    return idList.slice().sort((a, b) => {
+        const indexA = state.masterIDList.findIndex(item => item.id === a);
+        const indexB = state.masterIDList.findIndex(item => item.id === b);
+        return indexA - indexB;
+    });
+}
+
 function createIdElement(idData, options = {}) {
     const { isSelected, isHovered, clickHandler, isNotInRoster, isShared } = options;
     const idElement = document.createElement('div');
@@ -572,7 +581,8 @@ function renderBannedEgosDisplay() {
 
 function updateDraftUI() {
     const renderCompactIdSublist = (container, idList) => {
-        const idObjects = idList.map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
+        const sortedIdList = sortIdsByMasterList(idList);
+        const idObjects = sortedIdList.map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
         renderIDList(container, idObjects, {});
     };
     
@@ -707,14 +717,10 @@ function handleCoinFlipUI() {
 }
 
 function renderCompletedView() {
-    const renderFullIdList = (container, idList) => {
-        const idObjects = idList.map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
-        renderIDList(container, idObjects, {});
-    };
-
     const renderCompactIdList = (container, idList) => {
         container.innerHTML = '';
-        const idObjects = idList.map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
+        const sortedIdList = sortIdsByMasterList(idList);
+        const idObjects = sortedIdList.map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
         const fragment = document.createDocumentFragment();
         idObjects.forEach(idData => {
             const element = createIdElement(idData, {});
