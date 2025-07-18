@@ -579,8 +579,11 @@ function updateDraftUI() {
     elements.p2DraftStatus.textContent = currentPlayer === "p2" ? "Drafting" : "Waiting";
     elements.p1DraftStatus.className = `player-status ${currentPlayer === "p1" ? "status-drafting" : "status-waiting"}`;
     elements.p2DraftStatus.className = `player-status ${currentPlayer === "p2" ? "status-drafting" : "status-waiting"}`;
-    elements.p1DraftPanel.classList.toggle('draft-active', currentPlayer === 'p1');
-    elements.p2DraftPanel.classList.toggle('draft-active', currentPlayer === 'p2');
+    
+    elements.p1DraftColumn.classList.toggle('draft-active', currentPlayer === 'p1');
+    elements.p2DraftColumn.classList.toggle('draft-active', currentPlayer === 'p2');
+    elements.draftInteractionHub.classList.toggle('draft-active', !!currentPlayer);
+
 
     renderBannedEgosDisplay();
 }
@@ -1102,7 +1105,9 @@ function cacheDOMElements() {
         idDraftPhase: document.getElementById('id-draft-phase'),
         draftBannedEgosList: document.getElementById('draft-banned-egos-list'),
         completeDraft: document.getElementById('complete-draft'),
-        p1DraftPanel: document.getElementById('p1-draft-panel'), p2DraftPanel: document.getElementById('p2-draft-panel'),
+        p1DraftColumn: document.getElementById('p1-draft-column'), 
+        p2DraftColumn: document.getElementById('p2-draft-column'),
+        draftInteractionHub: document.getElementById('draft-interaction-hub'),
         p1DraftName: document.getElementById('p1-draft-name'), p2DraftName: document.getElementById('p2-draft-name'),
         p1DraftStatus: document.getElementById('p1-draft-status'), p2DraftStatus: document.getElementById('p2-draft-status'),
         draftPoolContainer: document.getElementById('draft-pool-container'),
