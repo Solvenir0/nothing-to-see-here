@@ -211,45 +211,53 @@
                         </div>
                     </div>
                 </div>
-
-
+                
                 <!-- ID Draft Phase -->
-                <div id="id-draft-phase" class="player-section hidden">
-                    <h2>ID Draft Phase</h2>
+                <div id="id-draft-phase" class="phase-section hidden">
                     <div class="banned-egos-display" id="draft-banned-egos">
                         <h3><i class="fas fa-ban"></i> Banned EGOs</h3>
                         <div class="banned-egos-list" id="draft-banned-egos-list"></div>
                     </div>
-                    <div class="filter-bar" id="global-filter-bar-draft">
-                        <!-- Filters for draft phase rendered here by JS -->
-                    </div>
-                    <div class="draft-selection-area" style="text-align: center; margin-bottom: 20px;">
-                        <div id="draft-pool-container">
-                            <!-- Draft pool will be rendered here by JS -->
-                        </div>
-                        <button class="btn btn-primary btn-large" id="confirm-selection-id" style="margin-top: 15px;" disabled><i class="fas fa-check"></i> Confirm Selection</button>
-                    </div>
-                    <div class="player-area">
-                         <div class="player-panel" id="p1-draft-panel">
+                
+                    <div class="triptych-layout">
+                        <!-- Left Column: Player 1 Info -->
+                        <div class="draft-player-column" id="p1-draft-column">
                             <div class="player-header">
                                 <div class="player-name" id="p1-draft-name">Player 1</div>
                                 <div class="player-status status-waiting" id="p1-draft-status">Waiting</div>
                             </div>
-                            <h4>Your Bans:</h4><div class="compact-id-list" id="p1-id-bans"></div>
-                            <h4>Picked IDs:</h4><div class="compact-id-list" id="p1-picks"></div>
+                            <h4>Picked IDs</h4>
+                            <div class="compact-id-list" id="p1-picks"></div>
+                            <h4>Banned from Roster</h4>
+                            <div class="compact-id-list" id="p1-id-bans"></div>
                         </div>
-                        <div class="player-panel" id="p2-draft-panel">
+                
+                        <!-- Center Column: Interaction Hub -->
+                        <div class="draft-interaction-hub">
+                            <div class="filter-bar" id="global-filter-bar-draft">
+                                <!-- Filters for draft phase rendered here by JS -->
+                            </div>
+                            <div class="draft-pool-container" id="draft-pool-container">
+                                <!-- Draft pool will be rendered here by JS -->
+                            </div>
+                             <div class="draft-controls">
+                                <button class="btn btn-primary btn-large" id="confirm-selection-id" disabled><i class="fas fa-check"></i> Confirm Selection</button>
+                                <button class="btn hidden" id="next-phase" disabled><i class="fas fa-step-forward"></i> Next Phase</button>
+                                <button class="btn btn-primary" id="complete-draft" disabled><i class="fas fa-flag-checkered"></i> Complete Draft</button>
+                            </div>
+                        </div>
+                
+                        <!-- Right Column: Player 2 Info -->
+                        <div class="draft-player-column" id="p2-draft-column">
                             <div class="player-header">
                                 <div class="player-name" id="p2-draft-name">Player 2</div>
                                 <div class="player-status status-waiting" id="p2-draft-status">Waiting</div>
                             </div>
-                            <h4>Your Bans:</h4><div class="compact-id-list" id="p2-id-bans"></div>
-                            <h4>Picked IDs:</h4><div class="compact-id-list" id="p2-picks"></div>
+                            <h4>Picked IDs</h4>
+                            <div class="compact-id-list" id="p2-picks"></div>
+                            <h4>Banned from Roster</h4>
+                            <div class="compact-id-list" id="p2-id-bans"></div>
                         </div>
-                    </div>
-                    <div class="ref-actions" style="text-align: center; margin-top: 20px;">
-                        <button class="btn hidden" id="next-phase" disabled><i class="fas fa-step-forward"></i> Next Phase</button>
-                        <button class="btn btn-primary" id="complete-draft" disabled><i class="fas fa-flag-checkered"></i> Complete Draft</button>
                     </div>
                 </div>
             </div>
