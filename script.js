@@ -205,9 +205,12 @@ function connectWebSocket() {
     const remoteUrl = `${wsProtocol}//${loc.host}/`;
     state.socket = new WebSocket(remoteUrl);
 
+    elements.connectionStatus.className = 'connection-status connecting';
+    elements.connectionStatus.innerHTML = '<i class="fas fa-plug"></i> <span>Connecting...</span>';
+
     state.socket.onopen = () => {
+        elements.connectionStatus.className = 'connection-status connected';
         elements.connectionStatus.innerHTML = '<i class="fas fa-plug"></i> <span>Connected</span>';
-        elements.connectionStatus.classList.add('connected');
         
         const session = JSON.parse(localStorage.getItem('limbusDraftSession'));
         if (session && session.lobbyCode && session.userRole && session.rejoinToken) {
@@ -223,8 +226,8 @@ function connectWebSocket() {
     };
     state.socket.onmessage = (event) => handleServerMessage(JSON.parse(event.data));
     state.socket.onclose = () => {
+        elements.connectionStatus.className = 'connection-status';
         elements.connectionStatus.innerHTML = '<i class="fas fa-plug"></i> <span>Disconnected</span>';
-        elements.connectionStatus.classList.remove('connected');
         if (state.timerInterval) clearInterval(state.timerInterval);
     };
     state.socket.onerror = (error) => console.error('WebSocket error:', error);
@@ -430,6 +433,8 @@ function updateAllUIsFromState() {
     elements.egoBanPhase.classList.toggle('hidden', phase !== 'egoBan');
     elements.idDraftPhase.classList.toggle('hidden', !['ban', 'pick'].includes(phase));
     elements.coinFlipModal.classList.toggle('hidden', phase !== 'coinFlip');
+    elements.draftStatusPanel.classList.toggle('hidden', phase === 'roster' || phase === 'complete');
+
 
     if (phase === 'coinFlip') {
         handleCoinFlipUI();
