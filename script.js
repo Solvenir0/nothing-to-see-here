@@ -510,14 +510,12 @@ function renderEgoBanPhase() {
 
     elements.opponentRosterTitle.textContent = `${state.participants[opponent].name}'s Roster`;
     const opponentRosterObjects = state.roster[opponent].map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
-    // FIX: Removed notInRosterSet from here
     renderGroupedView(elements.opponentRosterList, opponentRosterObjects, {});
 
     const canConfirm = (state.userRole === 'ref' || state.userRole === currentPlayer) && currentPlayerBans.length === EGO_BAN_COUNT;
     elements.confirmEgoBans.disabled = !canConfirm;
     elements.confirmSelectionEgo.disabled = !hovered[currentPlayer];
 
-    // Show P1's bans for P2
     const p1BansPreview = elements.p1EgoBansPreview;
     if (currentPlayer === 'p2' && state.draft.egoBans.p1.length === EGO_BAN_COUNT) {
         p1BansPreview.classList.remove('hidden');
@@ -627,6 +625,7 @@ function updateDraftInstructions() {
         renderGroupedView(poolEl, availableObjects, { 
             clickHandler, 
             hoverId: hovered[currentPlayer],
+            // FIX: Pass the current player's roster for comparison during a ban
             notInRosterSet: isBanAction ? state.roster[currentPlayer] : null
         });
 
