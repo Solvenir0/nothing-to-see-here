@@ -1,3 +1,6 @@
+// =================================================================================
+// FILE: server.js
+// =================================================================================
 const express = require('express');
 const http = require('http');
 const path = require('path');
@@ -382,7 +385,7 @@ function advancePhase(lobbyData) {
             if (draft.step < banSteps - 1) {
                 draft.step++;
                 draft.currentPlayer = draft.currentPlayer === firstPlayer ? secondPlayer : firstPlayer;
-                draft.actionCount = 1; // FIX: Reset action count for the next player's ban.
+                draft.actionCount = 1;
             } else {
                 draft.phase = "pick";
                 draft.step = 0;
@@ -405,7 +408,9 @@ function advancePhase(lobbyData) {
                     draft.phase = "ban";
                     draft.action = "midBan";
                     draft.step = 0;
-                    draft.currentPlayer = firstPlayer;
+                    // FIX: The player who picked last (always firstPlayer in this logic)
+                    // should not be the one to start the next ban phase.
+                    draft.currentPlayer = secondPlayer;
                     draft.actionCount = 1;
                 } else {
                     draft.phase = "complete";
@@ -650,6 +655,7 @@ wss.on('connection', (ws) => {
                 draft.currentPlayer = draft.playerOrder[0];
 
                 await lobbyRef.update({ draft: draft });
+                await setTimerForLobby(lobbyCode.toUpperCase(), lobbyData);
                 broadcastState(lobbyCode.toUpperCase());
                 break;
             }
@@ -746,3 +752,4 @@ wss.on('connection', (ws) => {
 
 const PORT = process.env.PORT || 8080;
 server.listen(PORT, () => console.log(`Server is listening on port ${PORT}`));
+
