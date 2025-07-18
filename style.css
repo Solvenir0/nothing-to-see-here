@@ -329,7 +329,7 @@ input:focus, select:focus {
     text-align: center;
 }
 
-.player-panel.draft-active {
+.draft-player-column.draft-active, .draft-interaction-hub.draft-active {
     box-shadow: 0 0 15px var(--accent);
     border: 2px solid var(--accent);
     transform: scale(1.02);
@@ -415,18 +415,7 @@ input:focus, select:focus {
     z-index: 10;
 }
 
-.phase-container {
-    display: flex;
-    gap: 20px;
-    flex-wrap: wrap;
-}
-
 .phase-section {
-    flex: 1;
-    min-width: 300px;
-}
-
-.player-section {
     flex: 1;
     min-width: 300px;
 }
@@ -516,6 +505,8 @@ input:focus, select:focus {
     gap: 8px;
     min-height: 90px;
     align-content: start;
+    max-height: 40vh;
+    overflow-y: auto;
 }
 
 .compact-id-list .id-item {
@@ -1072,6 +1063,43 @@ input:focus, select:focus {
     box-shadow: 0 0 8px var(--hover);
 }
 
+/* --- Triptych Layout --- */
+.triptych-layout {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+}
+
+.draft-player-column {
+    flex: 1;
+    min-width: 250px;
+    background: var(--secondary);
+    padding: 15px;
+    border-radius: 10px;
+    border-top: 4px solid var(--accent);
+    height: 100%;
+}
+
+.draft-interaction-hub {
+    flex: 2;
+    min-width: 400px;
+    background: var(--panel);
+    padding: 20px;
+    border-radius: 10px;
+}
+
+.draft-pool-container {
+    margin-bottom: 20px;
+}
+
+.draft-controls {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+
 /* Medium screens and up */
 @media (min-width: 992px) {
     .ego-ban-layout {
@@ -1114,7 +1142,23 @@ input:focus, select:focus {
     .builder-side-panel {
         flex: 1.2;
     }
+    .draft-player-column {
+        flex: 1;
+    }
+    .draft-interaction-hub {
+        flex: 2.5;
+    }
 }
+
+@media (max-width: 991px) {
+    .triptych-layout {
+        flex-direction: column;
+    }
+    .draft-player-column, .draft-interaction-hub {
+        width: 100%;
+    }
+}
+
 
 @media (max-width: 768px) {
     .container { max-width: 100%; }
@@ -1124,6 +1168,6 @@ input:focus, select:focus {
     h1 { font-size: 2.5rem; }
     .code-display { font-size: 1.5rem; letter-spacing: 4px; }
     .role-options { flex-direction: column; }
-    .phase-container { flex-direction: column; }
+    .phase-container, .player-area { flex-direction: column; }
     .connection-status { top: 5px; right: 5px; font-size: 0.8rem; padding: 5px 10px; }
 }
