@@ -712,7 +712,7 @@ function handleCoinFlipUI() {
         if (canChoose) {
             elements.turnChoiceButtons.classList.remove('hidden');
             if (state.userRole === 'ref' && state.userRole !== coinFlipWinner) {
-                 elements.coinFlipStatus.textContent += `\nReferee to choose turn order.`;
+                 elements.coinFlipStatus.innerHTML = `${winnerName} wins the toss!<br><small>Waiting for them to choose (or you can choose for them).</small>`;
             }
         } else {
             elements.turnChoiceButtons.classList.add('hidden');
