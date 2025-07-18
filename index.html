@@ -140,11 +140,6 @@
                     </div>
                 </div>
                 
-                <div id="draft-status-panel">
-                    <h3 id="current-phase">Waiting for draft to start...</h3>
-                    <p id="draft-action-description"></p>
-                </div>
-
                 <!-- Roster Selection Phase -->
                 <div id="roster-phase" class="phase-section">
                     <h2>Roster Selection Phase</h2>
@@ -348,6 +343,11 @@
             </div>
             <button class="btn btn-large btn-primary" id="restart-draft"><i class="fas fa-redo"></i> Start New Draft</button>
         </div>
+    </div>
+
+    <div id="draft-status-panel" class="hidden">
+        <h3 id="current-phase">Waiting for draft to start...</h3>
+        <p id="draft-action-description"></p>
     </div>
 
     <script src="data.js"></script>
