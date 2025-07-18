@@ -294,42 +294,15 @@ async function handleTimer(lobbyCode) {
     console.log(`Timer expired for ${lobbyCode}. Phase: ${phase}, Player: ${currentPlayer}, Hovered: ${hoveredId}`);
     
     if (hoveredId) {
-        // If something is hovered, confirm it
-        await handleDraftConfirm(lobbyRef, lobbyData, ws = null);
+        await handleDraftConfirm(lobbyRef, lobbyData, null);
     } else {
-        // If nothing is hovered, make a random valid selection and confirm it
-        let randomSelection;
-        if (phase === 'egoBan') {
-            const allBannedEgos = [...lobbyData.draft.egoBans.p1, ...lobbyData.draft.egoBans.p2];
-            // This needs masterEGOList from client... for now, we can't do random EGO ban.
-            // This part needs a rethink. Server needs EGO data.
-            console.log("Cannot auto-select EGO, server doesn't have the list.");
-            // For now, let's just move to the next player if possible, or do nothing.
-             if (lobbyData.draft.egoBans[currentPlayer].length < EGO_BAN_COUNT) {
-                 // Skip this ban, essentially. Not ideal.
-             }
-        } else if (phase === 'ban' || phase === 'pick') {
-            const opponent = currentPlayer === 'p1' ? 'p2' : 'p1';
-            const sourcePool = (action === 'ban') ? lobbyData.draft.available[opponent] : lobbyData.draft.available[currentPlayer];
-            
-            const draftableIDs = sourcePool.filter(id => {
-                const idData = masterIDList.find(master => master.id === id);
-                return idData && idData.rarity !== '0' && !idData.name.toLowerCase().includes('lcb sinner');
-            });
-
-            if (draftableIDs.length > 0) {
-                randomSelection = draftableIDs[Math.floor(Math.random() * draftableIDs.length)];
-                lobbyData.draft.hovered[currentPlayer] = randomSelection;
-                await handleDraftConfirm(lobbyRef, lobbyData, ws = null);
-            } else {
-                console.log("No valid random picks available.");
-                // No valid picks, advance phase
-                lobbyData = advancePhase(lobbyData);
-                await lobbyRef.update({ draft: lobbyData.draft });
-                await setTimerForLobby(lobbyCode, lobbyData);
-                await broadcastState(lobbyCode);
-            }
-        }
+        // Random selection logic needs EGO list, which is client-side.
+        // For now, we just advance the phase as if the player did nothing.
+        console.log("Timer expired with no hover. Advancing phase.");
+        lobbyData = advancePhase(lobbyData);
+        await lobbyRef.update({ draft: lobbyData.draft });
+        await setTimerForLobby(lobbyCode, lobbyData);
+        await broadcastState(lobbyCode);
     }
 }
 
@@ -339,14 +312,16 @@ async function setTimerForLobby(lobbyCode, lobbyData) {
     }
     
     const { draft } = lobbyData;
-    if (!draft.timer.enabled || draft.phase === 'roster' || draft.phase === 'complete' || draft.timer.paused) {
+    if (!draft.timer.enabled || draft.phase === 'complete' || draft.timer.paused) {
         draft.timer.running = false;
         await firestore.collection('lobbies').doc(lobbyCode).update({ 'draft.timer.running': false });
         return;
     }
 
     let duration = 0;
-    if (draft.phase === 'egoBan') {
+    if (draft.phase === 'roster') {
+        duration = TIMERS.roster;
+    } else if (draft.phase === 'egoBan') {
         const bansMade = draft.egoBans[draft.currentPlayer].length;
         if (bansMade < EGO_BAN_COUNT) {
              duration = TIMERS.egoBan - (bansMade * TIMERS.pick);
@@ -360,7 +335,7 @@ async function setTimerForLobby(lobbyCode, lobbyData) {
         draft.timer.endTime = Date.now() + duration * 1000;
 
         const timeoutId = setTimeout(() => handleTimer(lobbyCode), duration * 1000);
-        lobbyTimers[lobbyCode] = { timeoutId, unpauseFn: null };
+        lobbyTimers[lobbyCode] = { timeoutId };
         
         await firestore.collection('lobbies').doc(lobbyCode).update({ 
             'draft.timer.running': true,
@@ -381,6 +356,10 @@ function advancePhase(lobbyData) {
             if (draft.currentPlayer === 'p1' && draft.egoBans.p1.length === EGO_BAN_COUNT) {
                 draft.currentPlayer = 'p2';
             } else if (draft.currentPlayer === 'p2' && draft.egoBans.p2.length === EGO_BAN_COUNT) {
+                // This is the first transition to ID drafting, populate available pools
+                draft.available.p1 = [...lobbyData.roster.p1];
+                draft.available.p2 = [...lobbyData.roster.p2];
+                
                 draft.phase = draft.draftLogic === '1-2-2' ? "ban" : "pick";
                 draft.step = 0;
                 if (draft.draftLogic === '1-2-2') {
@@ -498,6 +477,9 @@ wss.on('connection', (ws) => {
                 newLobbyState.participants.ref.rejoinToken = rejoinToken;
                 await firestore.collection('lobbies').doc(newLobbyCode).set(newLobbyState);
                 ws.send(JSON.stringify({ type: 'lobbyCreated', code: newLobbyCode, role: 'ref', rejoinToken, state: newLobbyState }));
+                // Start roster timer on creation
+                await setTimerForLobby(newLobbyCode, newLobbyState);
+                await broadcastState(newLobbyCode);
                 break;
             }
 
@@ -670,11 +652,6 @@ wss.on('connection', (ws) => {
                     lobbyData.draft.phase = "complete";
                 }
                 
-                if ((lobbyData.draft.phase === 'ban' || lobbyData.draft.phase === 'pick') && lobbyData.draft.available.p1.length === 0) {
-                     lobbyData.draft.available.p1 = [...lobbyData.roster.p1];
-                     lobbyData.draft.available.p2 = [...lobbyData.roster.p2];
-                }
-
                 await lobbyRef.update({ draft: lobbyData.draft });
                 await setTimerForLobby(lobbyCode.toUpperCase(), lobbyData);
                 broadcastState(lobbyCode.toUpperCase());
