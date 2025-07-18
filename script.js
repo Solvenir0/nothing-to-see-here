@@ -255,7 +255,7 @@ function handleServerMessage(message) {
 // UI RENDERING & DOM MANIPULATION
 // ======================
 function createIdElement(idData, options = {}) {
-    const { isSelected, isHovered, clickHandler, isNotInRoster } = options;
+    const { isSelected, isHovered, clickHandler, isNotInRoster, isShared } = options;
     const idElement = document.createElement('div');
     idElement.className = `id-item rarity-${idData.rarity}`;
     if (isSelected) idElement.classList.add('selected');
@@ -263,7 +263,12 @@ function createIdElement(idData, options = {}) {
     if (isNotInRoster) idElement.classList.add('not-in-roster');
 
     idElement.dataset.id = idData.id;
-    idElement.innerHTML = `<div class="id-icon" style="background-image: url('/uploads/${idData.imageFile}')"></div><div class="id-name">${idData.name}</div>`;
+    let html = `<div class="id-icon" style="background-image: url('/uploads/${idData.imageFile}')"></div><div class="id-name">${idData.name}</div>`;
+    if (isShared) {
+        html += '<div class="shared-icon"><i class="fas fa-link"></i></div>';
+    }
+    idElement.innerHTML = html;
+    
     if (clickHandler) {
         idElement.addEventListener('click', () => clickHandler(idData.id));
     }
@@ -294,7 +299,7 @@ function createEgoElement(egoData, options = {}) {
 }
 
 function renderIDList(container, idObjectList, options = {}) {
-    const { selectionSet, clickHandler, hoverId, notInRosterSet } = options;
+    const { selectionSet, clickHandler, hoverId, notInRosterSet, sharedIdSet } = options;
     container.innerHTML = '';
     if (!container.classList.contains('compact-id-list')) {
         container.className = 'roster-selection';
@@ -312,10 +317,12 @@ function renderIDList(container, idObjectList, options = {}) {
         const isSelected = selectionSet ? selectionSet.includes(idData.id) : false;
         const isHovered = hoverId ? hoverId === idData.id : false;
         const isNotInRoster = notInRosterSet ? !notInRosterSet.includes(idData.id) : false;
+        const isShared = sharedIdSet ? sharedIdSet.includes(idData.id) : false;
         const element = createIdElement(idData, { 
             isSelected, 
             isHovered,
             isNotInRoster,
+            isShared,
             clickHandler: clickHandler ? () => clickHandler(idData.id) : null 
         });
         fragment.appendChild(element);
@@ -324,7 +331,7 @@ function renderIDList(container, idObjectList, options = {}) {
 }
 
 function renderGroupedView(container, idObjectList, options = {}) {
-    const { clickHandler, selectionSet, hoverId, notInRosterSet } = options;
+    const { clickHandler, selectionSet, hoverId, notInRosterSet, sharedIdSet } = options;
 
     container.innerHTML = '';
     container.className = 'sinner-grouped-roster';
@@ -373,7 +380,8 @@ function renderGroupedView(container, idObjectList, options = {}) {
                 const isSelected = selectionSet ? selectionSet.includes(idData.id) : false;
                 const isHovered = hoverId ? hoverId === idData.id : false;
                 const isNotInRoster = notInRosterSet ? !notInRosterSet.includes(idData.id) : false;
-                const idElement = createIdElement(idData, { isSelected, isHovered, isNotInRoster, clickHandler });
+                const isShared = sharedIdSet ? sharedIdSet.includes(idData.id) : false;
+                const idElement = createIdElement(idData, { isSelected, isHovered, isNotInRoster, isShared, clickHandler });
                 idContainer.appendChild(idElement);
             });
             sinnerRow.appendChild(idContainer);
@@ -394,7 +402,7 @@ function switchView(view) {
 
 function updateAllUIsFromState() {
     const { draft } = state;
-    const { phase, currentPlayer } = draft;
+    const { phase } = draft;
 
     if (phase === 'complete') {
         switchView('completedView');
@@ -622,11 +630,13 @@ function updateDraftInstructions() {
         poolEl.style.maxHeight = '60vh';
         elements.draftPoolContainer.appendChild(poolEl);
 
+        const sharedIds = isBanAction ? state.roster[targetPlayer].filter(id => state.roster[currentPlayer].includes(id)) : [];
+
         renderGroupedView(poolEl, availableObjects, { 
             clickHandler, 
             hoverId: hovered[currentPlayer],
-            // FIX: Pass the current player's roster for comparison during a ban
-            notInRosterSet: isBanAction ? state.roster[currentPlayer] : null
+            notInRosterSet: isBanAction ? state.roster[currentPlayer] : null,
+            sharedIdSet: sharedIds
         });
 
         elements.confirmSelectionId.disabled = !hovered[currentPlayer];
