@@ -722,7 +722,7 @@ input:focus, select:focus {
     padding-top: 15px;
 }
 
-.final-picks, .final-bans {
+.final-picks {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
     gap: 8px;
@@ -731,15 +731,15 @@ input:focus, select:focus {
     padding: 10px;
     border-radius: 8px;
 }
-.final-picks .id-item, .final-bans .id-item {
+.final-picks .id-item {
     padding: 0;
     background: transparent;
     border: none;
 }
-.final-picks .id-item .id-name, .final-bans .id-item .id-name {
+.final-picks .id-item .id-name {
     display: none;
 }
-.final-picks .id-item .id-icon, .final-bans .id-item .id-icon {
+.final-picks .id-item .id-icon {
     width: 100%;
     height: auto;
     aspect-ratio: 1 / 1;
@@ -747,11 +747,15 @@ input:focus, select:focus {
     border: 1px solid var(--border);
 }
 
-.final-bans .id-item .id-icon {
-    filter: grayscale(80%);
-    opacity: 0.7;
+.final-bans {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 10px;
+    margin-top: 15px;
 }
 
+.final-bans .id-item { background: rgba(100, 0, 0, 0.4); opacity: 0.8; }
+.final-bans .id-name { text-decoration: line-through; color: #f0f0f0; }
 #restart-draft { margin: 20px auto; }
 
 .filter-bar {
