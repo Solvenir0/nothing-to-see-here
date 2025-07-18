@@ -37,6 +37,7 @@
             --warning: #ff8c00;
             --ready: #4b8b3b;
             --drafting: #4169e1;
+            --hover: #ff8c00;
         }
         
         body {
@@ -122,18 +123,24 @@
             box-shadow: 0 4px 8px rgba(0,0,0,0.3);
         }
         
-        .btn:hover {
+        .btn:hover:not(:disabled) {
             background: #a00;
             transform: translateY(-3px);
             box-shadow: 0 6px 12px rgba(0,0,0,0.4);
         }
         
+        .btn:disabled {
+            background: #555;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
         .btn-primary {
             background: var(--accent);
             color: #000;
         }
         
-        .btn-primary:hover {
+        .btn-primary:hover:not(:disabled) {
             background: #ffc400;
         }
 
@@ -141,7 +148,7 @@
             background: #444;
             color: #fff;
         }
-        .btn-secondary:hover {
+        .btn-secondary:hover:not(:disabled) {
             background: #555;
         }
         
@@ -224,6 +231,18 @@
             line-height: 1.6;
             flex-grow: 1;
         }
+
+        .lobby-options {
+            background: rgba(0,0,0,0.2);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px auto;
+            max-width: 800px;
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
         
         .lobby-access {
             background: rgba(74, 0, 0, 0.6);
@@ -299,7 +318,7 @@
             text-align: center;
         }
 
-        .timer {
+        .timer-display {
             font-size: 2rem;
             font-weight: bold;
             color: var(--accent);
@@ -307,6 +326,8 @@
             background: rgba(0,0,0,0.3);
             border-radius: 8px;
             margin-top: 10px;
+            min-width: 120px;
+            text-align: center;
         }
         
         .player-panel.draft-active {
@@ -485,18 +506,37 @@
             font-size: 0.9rem;
         }
         
-        .ban-list, .pick-list {
+        /* Compact Pick/Ban List */
+        .compact-id-list {
             margin: 10px 0;
             padding: 10px;
             background: rgba(0, 0, 0, 0.3);
             border-radius: 8px;
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-            gap: 10px;
-            min-height: 100px;
-            max-height: 250px; 
-            overflow-y: auto;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 8px;
+            min-height: 90px;
             align-content: start;
+        }
+
+        .compact-id-list .id-item {
+            padding: 0;
+            background: transparent;
+            border: none;
+            cursor: default;
+        }
+        .compact-id-list .id-item:hover {
+            transform: none;
+        }
+        .compact-id-list .id-item .id-name {
+            display: none;
+        }
+        .compact-id-list .id-item .id-icon {
+            width: 100%;
+            height: auto;
+            aspect-ratio: 1 / 1;
+            border-radius: 8px;
+            border: 2px solid var(--border);
         }
 
         .id-item {
@@ -509,7 +549,7 @@
             gap: 10px;
             cursor: pointer;
             transition: all 0.3s, border-color 0.3s;
-            border-left: 4px solid transparent; 
+            border: 2px solid transparent;
         }
         
         .id-item.rarity-0 { border-left-color: var(--rarity-0); }
@@ -525,6 +565,14 @@
             background: var(--primary);
             border-color: var(--accent) !important;
             box-shadow: 0 0 10px var(--accent);
+        }
+        .id-item.hovered {
+            border-color: var(--hover) !important;
+            box-shadow: 0 0 10px var(--hover);
+        }
+        .id-item.not-in-roster {
+            border: 2px solid red !important;
+            box-shadow: 0 0 8px red;
         }
         
         .id-icon {
@@ -626,7 +674,7 @@
             color: white;
             font-weight: bold;
             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            z-index: 100;
+            z-index: 1000;
             opacity: 0;
             transition: opacity 0.3s, transform 0.3s;
             max-width: 90%;
@@ -671,8 +719,8 @@
 
         .final-picks {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
-            gap: 5px;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 8px;
             margin-top: 15px;
             background: rgba(0,0,0,0.2);
             padding: 10px;
@@ -696,7 +744,7 @@
 
         .final-bans {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
             gap: 10px;
             margin-top: 15px;
         }
@@ -763,17 +811,17 @@
 
         .ego-ban-container {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 15px;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); /* more compact */
+            gap: 10px; /* more compact */
             max-height: 70vh; 
             overflow-y: auto;
-            padding: 15px;
+            padding: 10px;
         }
         
         .ego-item {
             background: var(--panel);
             border-radius: 8px;
-            padding: 10px;
+            padding: 8px; /* more compact */
             display: flex;
             flex-direction: column;
             gap: 5px;
@@ -790,21 +838,9 @@
             border-color: var(--accent);
         }
 
-        .ego-item.selected-for-ban {
-            border-color: var(--accent);
-            box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
-        }
-
-        .ego-item.selected-for-ban::before {
-            content: '\f058'; /* check-circle */
-            font-family: 'Font Awesome 6 Free';
-            font-weight: 900;
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            color: var(--accent);
-            font-size: 1.2rem;
-            text-shadow: 0 0 5px #000;
+        .ego-item.hovered {
+            border-color: var(--hover) !important;
+            box-shadow: 0 0 10px var(--hover);
         }
 
         .ego-item.banned {
@@ -847,7 +883,7 @@
 
         .ego-name {
             color: var(--text);
-            font-size: 1.1rem;
+            font-size: 1.0rem; /* more compact */
             font-weight: bold;
             flex-grow: 1;
         }
@@ -1003,8 +1039,8 @@
             display: none; /* Hide the name */
         }
         .sinner-grouped-roster .id-item .id-icon {
-            width: 70px; /* Increased size */
-            height: 70px; /* Increased size */
+            width: 80px; /* Increased size */
+            height: 80px; /* Increased size */
         }
         .sinner-grouped-roster .id-item:hover {
             transform: scale(1.1);
@@ -1016,6 +1052,10 @@
             border-color: var(--accent) !important;
             box-shadow: 0 0 8px var(--accent);
             background: var(--primary);
+        }
+        .sinner-grouped-roster .id-item.hovered {
+            border-color: var(--hover) !important;
+            box-shadow: 0 0 8px var(--hover);
         }
 
         /* Medium screens and up */
@@ -1107,6 +1147,23 @@
                 <label for="player-name">Your Display Name</label>
                 <input type="text" id="player-name" placeholder="Enter your name">
             </div>
+
+            <div class="lobby-options">
+                <div class="form-group">
+                    <label for="draft-logic-select">Draft Logic</label>
+                    <select id="draft-logic-select">
+                        <option value="1-2-2" selected>Standard (1-2-2)</option>
+                        <option value="2-3-2">Alternate (2-3-2)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="timer-toggle">Enable Timer</label>
+                    <select id="timer-toggle">
+                        <option value="false" selected>Off</option>
+                        <option value="true">On</option>
+                    </select>
+                </div>
+            </div>
             
             <div class="action-container">
                 <div class="action-card">
@@ -1166,7 +1223,8 @@
                     </div>
                     <div>
                         <h3>PHASE TIMER</h3>
-                        <div class="timer" id="phase-timer">--:--</div>
+                        <div class="timer-display" id="phase-timer">--:--</div>
+                        <button class="btn btn-secondary" id="ref-timer-control" style="margin-top: 5px;"><i class="fas fa-pause"></i> Pause Timer</button>
                     </div>
                     <div>
                         <h3>PARTICIPANTS</h3>
@@ -1230,6 +1288,10 @@
                 <!-- EGO Ban Phase -->
                 <div id="ego-ban-phase" class="phase-section hidden">
                     <h2 id="ego-ban-title">EGO Ban Phase</h2>
+                    <div id="p1-ego-bans-preview" class="banned-egos-display hidden">
+                        <h3>Player 1's Bans</h3>
+                        <div class="banned-egos-list"></div>
+                    </div>
                     <div class="ego-ban-layout">
                         <div id="ego-ban-main-panel">
                             <h3>Available EGOs</h3>
@@ -1238,6 +1300,7 @@
                                     <label class="filter-label" for="ego-search-input">Search EGOs:</label>
                                     <input type="text" id="ego-search-input" placeholder="Search by name or sinner...">
                                 </div>
+                                <button class="btn btn-primary" id="confirm-selection-ego" disabled><i class="fas fa-check"></i> Confirm Ban</button>
                             </div>
                             <div class="ego-ban-container" id="ego-ban-container"></div>
                         </div>
@@ -1246,12 +1309,12 @@
                                 <h3>Your Bans (<span id="ego-ban-counter">0</span>/5)</h3>
                                 <div id="current-player-ego-bans"></div>
                                 <div class="controls" style="margin-top: 20px;">
-                                    <button class="btn btn-primary" id="confirm-ego-bans" disabled><i class="fas fa-check-double"></i> Confirm Bans</button>
+                                    <button class="btn btn-primary" id="confirm-ego-bans" disabled><i class="fas fa-check-double"></i> Confirm All Bans</button>
                                 </div>
                             </div>
                             <div id="opponent-roster-display">
                                 <h3 id="opponent-roster-title">Opponent's Roster</h3>
-                                <div class="roster-selection" id="opponent-roster-list"></div>
+                                <div class="sinner-grouped-roster" id="opponent-roster-list"></div>
                             </div>
                         </div>
                     </div>
@@ -1268,24 +1331,28 @@
                     <div class="filter-bar" id="global-filter-bar-draft">
                         <!-- Filters for draft phase rendered here by JS -->
                     </div>
+                    <div class="draft-selection-area" style="text-align: center; margin-bottom: 20px;">
+                        <div id="draft-pool-container">
+                            <!-- Draft pool will be rendered here by JS -->
+                        </div>
+                        <button class="btn btn-primary btn-large" id="confirm-selection-id" style="margin-top: 15px;" disabled><i class="fas fa-check"></i> Confirm Selection</button>
+                    </div>
                     <div class="player-area">
                          <div class="player-panel" id="p1-draft-panel">
                             <div class="player-header">
                                 <div class="player-name" id="p1-draft-name">Player 1</div>
                                 <div class="player-status status-waiting" id="p1-draft-status">Waiting</div>
                             </div>
-                            <div class="roster-selection" id="p1-draft-selection"></div>
-                            <h4>Your Bans:</h4><div class="ban-list" id="p1-id-bans"></div>
-                            <h4>Picked IDs:</h4><div class="pick-list" id="p1-picks"></div>
+                            <h4>Your Bans:</h4><div class="compact-id-list" id="p1-id-bans"></div>
+                            <h4>Picked IDs:</h4><div class="compact-id-list" id="p1-picks"></div>
                         </div>
                         <div class="player-panel" id="p2-draft-panel">
                             <div class="player-header">
                                 <div class="player-name" id="p2-draft-name">Player 2</div>
                                 <div class="player-status status-waiting" id="p2-draft-status">Waiting</div>
                             </div>
-                            <div class="roster-selection" id="p2-draft-selection"></div>
-                            <h4>Your Bans:</h4><div class="ban-list" id="p2-id-bans"></div>
-                            <h4>Picked IDs:</h4><div class="pick-list" id="p2-picks"></div>
+                            <h4>Your Bans:</h4><div class="compact-id-list" id="p2-id-bans"></div>
+                            <h4>Picked IDs:</h4><div class="compact-id-list" id="p2-picks"></div>
                         </div>
                     </div>
                     <div class="ref-actions" style="text-align: center; margin-top: 20px;">
@@ -1317,7 +1384,7 @@
                     </div>
                     <div class="builder-side-panel">
                         <h3>Your Roster (<span id="builder-counter">0</span>/42)</h3>
-                        <div class="roster-selection" id="builder-selected-roster"></div>
+                        <div class="sinner-grouped-roster" id="builder-selected-roster"></div>
                         <div class="controls" style="margin-top: 10px;">
                             <button class="btn" id="builder-random"><i class="fas fa-random"></i> Random</button>
                             <button class="btn" id="builder-clear"><i class="fas fa-trash"></i> Clear</button>
@@ -1382,7 +1449,7 @@
             lobbyCode: "",
             userId: generateUserId(),
             userRole: "",
-            rejoinToken: null, // For handling reconnects
+            rejoinToken: null,
             participants: {
                 p1: { name: "Player 1", status: "disconnected", ready: false },
                 p2: { name: "Player 2", status: "disconnected", ready: false },
@@ -1392,8 +1459,8 @@
             builderRoster: [],
             masterIDList: [],
             masterEGOList: [],
-            idsBySinner: null, // Will be populated on init
-            builderSelectedSinner: "Yi Sang", // Default sinner to show
+            idsBySinner: null,
+            builderSelectedSinner: "Yi Sang",
             draft: {
                 phase: "roster",
                 step: 0,
@@ -1403,14 +1470,19 @@
                 available: { p1: [], p2: [] },
                 idBans: { p1: [], p2: [] },
                 egoBans: { p1: [], p2: [] },
-                picks: { p1: [], p2: [] }
+                picks: { p1: [], p2: [] },
+                hovered: { p1: null, p2: null },
+                draftLogic: '1-2-2',
+                timer: {
+                    enabled: false,
+                    running: false,
+                    endTime: 0,
+                }
             },
             filters: { sinner: "", sinAffinity: "", keyword: "", rosterSearch: "" },
             draftFilters: { sinner: "", sinAffinity: "", keyword: "", rosterSearch: "" },
             egoSearch: "",
-            timer: 0,
             timerInterval: null,
-            serverType: "remote",
             socket: null,
         };
 
@@ -1572,7 +1644,6 @@
                 elements.connectionStatus.innerHTML = '<i class="fas fa-plug"></i> <span>Connected</span>';
                 elements.connectionStatus.classList.add('connected');
                 
-                // --- NEW REJOIN LOGIC ---
                 const session = JSON.parse(localStorage.getItem('limbusDraftSession'));
                 if (session && session.lobbyCode && session.userRole && session.rejoinToken) {
                     console.log('Found session, attempting to rejoin:', session);
@@ -1589,6 +1660,7 @@
             state.socket.onclose = () => {
                 elements.connectionStatus.innerHTML = '<i class="fas fa-plug"></i> <span>Disconnected</span>';
                 elements.connectionStatus.classList.remove('connected');
+                if (state.timerInterval) clearInterval(state.timerInterval);
             };
             state.socket.onerror = (error) => console.error('WebSocket error:', error);
         }
@@ -1608,12 +1680,9 @@
                 case 'notification': showNotification(message.text); break;
                 case 'error':
                     showNotification(`Error: ${message.message}`, true);
-                    // Clear session on rejoin errors to prevent getting stuck
                     if (message.message.includes('rejoin') || message.message.includes('Clearing session')) {
                         localStorage.removeItem('limbusDraftSession');
                         elements.rejoinOverlay.style.display = 'none';
-                        // Optional: reload to go back to main screen cleanly
-                        // window.location.reload(); 
                     }
                     break;
             }
@@ -1623,9 +1692,13 @@
         // UI RENDERING & DOM MANIPULATION
         // ======================
         function createIdElement(idData, options = {}) {
-            const { isSelected, clickHandler } = options;
+            const { isSelected, isHovered, clickHandler, isNotInRoster } = options;
             const idElement = document.createElement('div');
-            idElement.className = `id-item rarity-${idData.rarity} ${isSelected ? 'selected' : ''}`;
+            idElement.className = `id-item rarity-${idData.rarity}`;
+            if (isSelected) idElement.classList.add('selected');
+            if (isHovered) idElement.classList.add('hovered');
+            if (isNotInRoster) idElement.classList.add('not-in-roster');
+
             idElement.dataset.id = idData.id;
             idElement.innerHTML = `<div class="id-icon" style="background-image: url('/uploads/${idData.imageFile}')"></div><div class="id-name">${idData.name}</div>`;
             if (clickHandler) {
@@ -1634,16 +1707,15 @@
             return idElement;
         }
 
-        function createEgoElement(egoData, clickHandler) {
+        function createEgoElement(egoData, options = {}) {
+            const { clickHandler, isHovered } = options;
             const egoElement = document.createElement('div');
             const allBans = [...state.draft.egoBans.p1, ...state.draft.egoBans.p2];
-            const currentPlayerBans = state.draft.egoBans[state.draft.currentPlayer] || [];
             const isBanned = allBans.includes(egoData.id);
-            const isSelectedForBan = currentPlayerBans.includes(egoData.id);
-
+            
             egoElement.className = 'ego-item';
             if (isBanned) egoElement.classList.add('banned');
-            if (isSelectedForBan) egoElement.classList.add('selected-for-ban');
+            if (isHovered) egoElement.classList.add('hovered');
 
             egoElement.dataset.id = egoData.id;
             egoElement.style.borderLeftColor = egoData.cssColor;
@@ -1658,11 +1730,14 @@
             return egoElement;
         }
 
-        function renderIDList(container, idObjectList, selectionSet, clickHandler) {
+        function renderIDList(container, idObjectList, options = {}) {
+            const { selectionSet, clickHandler, hoverId, notInRosterSet } = options;
             container.innerHTML = '';
-            container.className = 'roster-selection'; // Reset class to default
+            if (!container.classList.contains('compact-id-list')) {
+                container.className = 'roster-selection';
+            }
             if (!Array.isArray(idObjectList) || idObjectList.length === 0) {
-                if(!container.classList.contains('ban-list') && !container.classList.contains('pick-list')) {
+                if(!container.classList.contains('compact-id-list')) {
                    container.innerHTML = '<div class="empty-roster" style="padding: 10px; text-align: center;">No items to display</div>';
                 }
                 return;
@@ -1672,14 +1747,21 @@
             idObjectList.forEach(idData => {
                 if (!idData) return;
                 const isSelected = selectionSet ? selectionSet.includes(idData.id) : false;
-                const element = createIdElement(idData, { isSelected, clickHandler: clickHandler ? () => clickHandler(idData.id) : null });
+                const isHovered = hoverId ? hoverId === idData.id : false;
+                const isNotInRoster = notInRosterSet ? !notInRosterSet.includes(idData.id) : false;
+                const element = createIdElement(idData, { 
+                    isSelected, 
+                    isHovered,
+                    isNotInRoster,
+                    clickHandler: clickHandler ? () => clickHandler(idData.id) : null 
+                });
                 fragment.appendChild(element);
             });
             container.appendChild(fragment);
         }
 
         function renderGroupedView(container, idObjectList, options = {}) {
-            const { clickHandler, selectionSet } = options;
+            const { clickHandler, selectionSet, hoverId, notInRosterSet } = options;
 
             container.innerHTML = '';
             container.className = 'sinner-grouped-roster';
@@ -1726,7 +1808,9 @@
 
                     sortedIds.forEach(idData => {
                         const isSelected = selectionSet ? selectionSet.includes(idData.id) : false;
-                        const idElement = createIdElement(idData, { isSelected, clickHandler });
+                        const isHovered = hoverId ? hoverId === idData.id : false;
+                        const isNotInRoster = notInRosterSet ? !notInRosterSet.includes(idData.id) : false;
+                        const idElement = createIdElement(idData, { isSelected, isHovered, isNotInRoster, clickHandler });
                         idContainer.appendChild(idElement);
                     });
                     sinnerRow.appendChild(idContainer);
@@ -1746,9 +1830,9 @@
         }
 
         function updateAllUIsFromState() {
-            const { phase } = state.draft;
+            const { draft } = state;
+            const { phase, currentPlayer } = draft;
 
-            // View switching
             if (phase === 'complete') {
                 switchView('completedView');
                 renderCompletedView();
@@ -1760,9 +1844,8 @@
 
             elements.rosterPhase.classList.toggle('hidden', phase !== 'roster');
             elements.egoBanPhase.classList.toggle('hidden', phase !== 'egoBan');
-            elements.idDraftPhase.classList.toggle('hidden', !['ban', 'pick', 'midBan', 'pick2'].includes(phase));
+            elements.idDraftPhase.classList.toggle('hidden', !['ban', 'pick'].includes(phase));
 
-            // Participants list
             elements.participantsList.innerHTML = '';
             ['p1', 'p2', 'ref'].forEach(role => {
                 const p = state.participants[role];
@@ -1778,7 +1861,6 @@
                 elements.participantsList.appendChild(el);
             });
 
-            // Player names and status for roster phase
             ['p1', 'p2'].forEach(player => {
                 elements[`${player}NameDisplay`].textContent = state.participants[player].name;
                 elements[`${player}Counter`].textContent = state.roster[player].length;
@@ -1793,22 +1875,30 @@
             filterAndRenderRosterSelection();
             
             if (phase === 'egoBan') renderEgoBanPhase();
-            if (['ban', 'pick', 'midBan', 'pick2'].includes(phase)) updateDraftUI();
+            if (['ban', 'pick'].includes(phase)) updateDraftUI();
             
             updateDraftInstructions();
             checkPhaseReadiness();
+            updateTimerUI();
         }
         
         function filterAndRenderRosterSelection() {
             const filteredList = filterIDs(state.masterIDList, state.filters);
-            renderIDList(elements.p1Roster, filteredList, state.roster.p1, (id) => toggleIDSelection('p1', id));
-            renderIDList(elements.p2Roster, filteredList, state.roster.p2, (id) => toggleIDSelection('p2', id));
+            renderIDList(elements.p1Roster, filteredList, {
+                selectionSet: state.roster.p1, 
+                clickHandler: (id) => toggleIDSelection('p1', id)
+            });
+            renderIDList(elements.p2Roster, filteredList, {
+                selectionSet: state.roster.p2, 
+                clickHandler: (id) => toggleIDSelection('p2', id)
+            });
         }
 
-        function filterIDs(sourceList, filterObject) {
+        function filterIDs(sourceList, filterObject, draftPhase = false) {
             const searchTerm = filterObject.rosterSearch.toLowerCase();
             return sourceList.filter(fullData => {
                 if (!fullData) return false;
+                if (draftPhase && (fullData.rarity === '0' || fullData.name.toLowerCase().includes('lcb sinner'))) return false;
                 if (filterObject.sinner && fullData.sinner !== filterObject.sinner) return false;
                 if (filterObject.sinAffinity && !fullData.sinAffinities.includes(filterObject.sinAffinity)) return false;
                 if (filterObject.keyword && !fullData.keywords.includes(filterObject.keyword)) return false;
@@ -1818,28 +1908,29 @@
         }
         
         function renderEgoBanPhase() {
-            const { currentPlayer } = state.draft;
+            const { currentPlayer, hovered } = state.draft;
             const opponent = currentPlayer === 'p1' ? 'p2' : 'p1';
             
             elements.egoBanTitle.textContent = `EGO Ban Phase - ${state.participants[currentPlayer].name}'s Turn`;
 
-            // Render EGOs for banning
-            const container = elements.egoBanContainer;
-            container.innerHTML = '';
-            const fragment = document.createDocumentFragment();
-            const clickHandler = (state.userRole === currentPlayer || state.userRole === 'ref') ? selectEgoToBan : null;
+            const clickHandler = (state.userRole === currentPlayer || state.userRole === 'ref') ? hoverEgoToBan : null;
             
             const searchTerm = state.egoSearch.toLowerCase();
             const filteredEgos = state.masterEGOList.filter(ego => 
-                !searchTerm || ego.name.toLowerCase().includes(searchTerm)
+                ego.rarity !== 'ZAYIN' && (!searchTerm || ego.name.toLowerCase().includes(searchTerm))
             );
 
+            const container = elements.egoBanContainer;
+            container.innerHTML = '';
+            const fragment = document.createDocumentFragment();
             filteredEgos.forEach(ego => {
-                fragment.appendChild(createEgoElement(ego, clickHandler));
+                fragment.appendChild(createEgoElement(ego, { 
+                    clickHandler, 
+                    isHovered: hovered[currentPlayer] === ego.id 
+                }));
             });
             container.appendChild(fragment);
 
-            // Render current player's selected bans in the side panel
             const currentPlayerBans = state.draft.egoBans[currentPlayer] || [];
             const bansContainer = elements.currentPlayerEgoBans;
             bansContainer.innerHTML = '';
@@ -1854,13 +1945,31 @@
             });
             elements.egoBanCounter.textContent = currentPlayerBans.length;
 
-            // Render Opponent Roster
             elements.opponentRosterTitle.textContent = `${state.participants[opponent].name}'s Roster`;
             const opponentRosterObjects = state.roster[opponent].map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
-            renderGroupedView(elements.opponentRosterList, opponentRosterObjects);
+            renderGroupedView(elements.opponentRosterList, opponentRosterObjects, { notInRosterSet: state.roster[currentPlayer] });
 
             const canConfirm = (state.userRole === 'ref' || state.userRole === currentPlayer) && currentPlayerBans.length === EGO_BAN_COUNT;
             elements.confirmEgoBans.disabled = !canConfirm;
+            elements.confirmSelectionEgo.disabled = !hovered[currentPlayer];
+
+            // Show P1's bans for P2
+            const p1BansPreview = elements.p1EgoBansPreview;
+            if (currentPlayer === 'p2' && state.draft.egoBans.p1.length === EGO_BAN_COUNT) {
+                p1BansPreview.classList.remove('hidden');
+                const p1BannedObjects = state.draft.egoBans.p1.map(id => state.masterEGOList.find(e => e.id === id)).filter(Boolean);
+                const listEl = p1BansPreview.querySelector('.banned-egos-list');
+                listEl.innerHTML = '';
+                p1BannedObjects.forEach(ego => {
+                    const item = document.createElement('div');
+                    item.className = 'banned-ego-item';
+                    item.style.backgroundColor = ego.cssColor;
+                    item.innerHTML = `<span class="rarity">[${ego.rarity}]</span> <span class="name">${ego.name}</span>`;
+                    listEl.appendChild(item);
+                });
+            } else {
+                p1BansPreview.classList.add('hidden');
+            }
         }
 
         function renderBannedEgosDisplay() {
@@ -1883,15 +1992,15 @@
         }
 
         function updateDraftUI() {
-            const renderIdSublist = (container, idList) => {
+            const renderCompactIdSublist = (container, idList) => {
                 const idObjects = idList.map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
-                renderIDList(container, idObjects, null, null);
+                renderIDList(container, idObjects, {});
             };
             
-            renderIdSublist(elements.p1IdBans, state.draft.idBans.p1);
-            renderIdSublist(elements.p2IdBans, state.draft.idBans.p2);
-            renderIdSublist(elements.p1Picks, state.draft.picks.p1);
-            renderIdSublist(elements.p2Picks, state.draft.picks.p2);
+            renderCompactIdSublist(elements.p1IdBans, state.draft.idBans.p1);
+            renderCompactIdSublist(elements.p2IdBans, state.draft.idBans.p2);
+            renderCompactIdSublist(elements.p1Picks, state.draft.picks.p1);
+            renderCompactIdSublist(elements.p2Picks, state.draft.picks.p2);
             
             const { currentPlayer } = state.draft;
             elements.p1DraftStatus.textContent = currentPlayer === "p1" ? "Drafting" : "Waiting";
@@ -1906,13 +2015,9 @@
 
         function updateDraftInstructions() {
             let phaseText = "", actionDesc = "";
-            const { phase, step, currentPlayer, action, actionCount, egoBans } = state.draft;
+            const { phase, step, currentPlayer, action, actionCount, egoBans, hovered } = state.draft;
             
-            // Reset draft selection containers to their default state
-            elements.p1DraftSelection.className = 'roster-selection';
-            elements.p1DraftSelection.innerHTML = '<div class="empty-roster"></div>';
-            elements.p2DraftSelection.className = 'roster-selection';
-            elements.p2DraftSelection.innerHTML = '<div class="empty-roster"></div>';
+            elements.draftPoolContainer.innerHTML = '';
 
             switch(phase) {
                 case "roster": 
@@ -1922,23 +2027,13 @@
                 case "egoBan":
                     const bansLeft = EGO_BAN_COUNT - (egoBans[currentPlayer] ? egoBans[currentPlayer].length : 0);
                     phaseText = `EGO Ban Phase - ${state.participants[currentPlayer].name}'s turn`;
-                    actionDesc = `Select ${bansLeft} more EGO(s) to ban from the global pool.`;
+                    actionDesc = `Select and confirm ${bansLeft} more EGO(s) to ban.`;
                     break;
                 case "ban": 
-                    phaseText = `Ban Phase 1 - Step ${step + 1}/8`; 
-                    actionDesc = `${state.participants[currentPlayer].name} to ban 1 ID from opponent's roster`; 
-                    break;
-                case "pick": 
-                    phaseText = `Pick Phase 1 - Step ${step + 1}/7`; 
-                    actionDesc = `${state.participants[currentPlayer].name} to pick ${actionCount} ID(s)`; 
-                    break;
-                case "midBan": 
-                    phaseText = `Mid-Ban Phase - Step ${step + 1}/6`; 
-                    actionDesc = `${state.participants[currentPlayer].name} to ban 1 ID from opponent's remaining roster`; 
-                    break;
-                case "pick2": 
-                    phaseText = `Pick Phase 2 - Step ${step + 1}/7`; 
-                    actionDesc = `${state.participants[currentPlayer].name} to pick ${actionCount} ID(s)`; 
+                case "pick":
+                    const logicText = state.draft.draftLogic === '1-2-2' ? `Phase ${phase === 'pick' ? 1 : 1}` : '';
+                    phaseText = `${action.charAt(0).toUpperCase() + action.slice(1)} ${logicText}`;
+                    actionDesc = `${state.participants[currentPlayer].name} to ${action} ${actionCount} ID(s)`; 
                     break;
                 case "complete":
                     phaseText = "Draft Completed!";
@@ -1948,38 +2043,41 @@
                     phaseText = "Waiting for draft to start...";
             }
 
-            if (['ban', 'pick', 'midBan', 'pick2'].includes(phase)) {
+            if (['ban', 'pick'].includes(phase)) {
                 const opponent = currentPlayer === 'p1' ? 'p2' : 'p1';
                 const isBanAction = action.includes('ban');
+                const targetPlayer = isBanAction ? opponent : currentPlayer;
 
-                const availableIdList = isBanAction ? state.draft.available[opponent] : state.draft.available[currentPlayer];
+                const availableIdList = state.draft.available[targetPlayer];
                 let availableObjects = availableIdList.map(id => state.masterIDList.find(item => item && item.id === id)).filter(Boolean);
                 
-                availableObjects = filterIDs(availableObjects, state.draftFilters);
+                availableObjects = filterIDs(availableObjects, state.draftFilters, true);
                 
-                const selectionContainer = currentPlayer === 'p1' ? elements.p1DraftSelection : elements.p2DraftSelection;
-                const clickHandler = (state.userRole === currentPlayer || state.userRole === 'ref') ? (id) => selectDraftID(currentPlayer, id) : null;
+                const clickHandler = (state.userRole === currentPlayer || state.userRole === 'ref') ? (id) => hoverDraftID(id) : null;
                 
-                let selectionSet;
-                if (isBanAction) {
-                    selectionSet = state.roster[currentPlayer];
-                } else {
-                    selectionSet = availableIdList;
-                }
-                
-                renderGroupedView(selectionContainer, availableObjects, { selectionSet, clickHandler });
+                const poolEl = document.createElement('div');
+                poolEl.className = 'sinner-grouped-roster';
+                poolEl.style.maxHeight = '60vh';
+                elements.draftPoolContainer.appendChild(poolEl);
+
+                renderGroupedView(poolEl, availableObjects, { 
+                    clickHandler, 
+                    hoverId: hovered[currentPlayer],
+                    notInRosterSet: isBanAction ? state.roster[currentPlayer] : null
+                });
+
+                elements.confirmSelectionId.disabled = !hovered[currentPlayer];
             }
             
             elements.currentPhase.textContent = phaseText;
             elements.draftActionDescription.textContent = actionDesc;
-            elements.nextPhase.disabled = state.userRole !== 'ref' || phase === 'complete';
             elements.completeDraft.disabled = state.userRole !== 'ref' || phase === 'complete';
         }
 
         function renderCompletedView() {
             const renderFullIdList = (container, idList) => {
                 const idObjects = idList.map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
-                renderIDList(container, idObjects, null, null);
+                renderIDList(container, idObjects, {});
             };
 
             const renderCompactIdList = (container, idList) => {
@@ -2016,7 +2114,6 @@
         }
         
         function renderRosterBuilder() {
-            // --- Render Sinner Navigation (Left Panel) ---
             const sinnerNav = elements.builderSinnerNav;
             sinnerNav.innerHTML = '';
             const sinnerOrder = ["Yi Sang", "Faust", "Don Quixote", "Ryōshū", "Meursault", "Hong Lu", "Heathcliff", "Ishmael", "Rodion", "Sinclair", "Outis", "Gregor"];
@@ -2030,18 +2127,18 @@
                 }
                 btn.addEventListener('click', () => {
                     state.builderSelectedSinner = sinnerName;
-                    renderRosterBuilder(); // Re-render the whole builder view
+                    renderRosterBuilder();
                 });
                 sinnerNav.appendChild(btn);
             });
 
-            // --- Render ID Pool (Center Panel) ---
             const sinnerIDs = state.idsBySinner[state.builderSelectedSinner];
             const filteredSinnerIDs = filterIDs(sinnerIDs, state.filters);
-            renderIDList(elements.builderIdPool, filteredSinnerIDs, state.builderRoster, toggleBuilderIdSelection);
+            renderIDList(elements.builderIdPool, filteredSinnerIDs, {
+                selectionSet: state.builderRoster, 
+                clickHandler: toggleBuilderIdSelection
+            });
 
-
-            // --- Render Selected Roster (Right Panel) ---
             const sortedSelectedRoster = [...state.builderRoster].sort((a, b) => {
                 const indexA = state.masterIDList.findIndex(item => item.id === a);
                 const indexB = state.masterIDList.findIndex(item => item.id === b);
@@ -2066,32 +2163,49 @@
             }
         }
 
+        function updateTimerUI() {
+            const { timer } = state.draft;
+            elements.refTimerControl.classList.toggle('hidden', !timer.enabled || state.userRole !== 'ref');
+            elements.phaseTimer.classList.toggle('hidden', !timer.enabled);
+
+            if (!timer.enabled || !timer.running) {
+                elements.phaseTimer.textContent = "--:--";
+                if(state.timerInterval) clearInterval(state.timerInterval);
+                state.timerInterval = null;
+                return;
+            }
+
+            if (!state.timerInterval) {
+                state.timerInterval = setInterval(updateTimerUI, 1000);
+            }
+
+            const remaining = Math.max(0, Math.round((timer.endTime - Date.now()) / 1000));
+            const minutes = Math.floor(remaining / 60);
+            const seconds = remaining % 60;
+            elements.phaseTimer.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
 
         // ======================
         // CLIENT ACTIONS & EVENT HANDLERS
         // ======================
         function toggleIDSelection(player, id) {
-            if (state.participants[player].ready) {
-                showNotification("Cannot change roster while ready.");
-                return;
-            }
             sendMessage({ type: 'rosterSelect', lobbyCode: state.lobbyCode, player, id });
         }
 
         function setPlayerRoster(player, roster) {
-            if (state.participants[player].ready) {
-                showNotification("Cannot change roster while ready.");
-                return;
-            }
             sendMessage({ type: 'rosterSet', lobbyCode: state.lobbyCode, player, roster });
         }
 
-        function selectEgoToBan(egoId) {
-             sendMessage({ type: 'egoBan', lobbyCode: state.lobbyCode, egoId });
+        function hoverEgoToBan(egoId) {
+            sendMessage({ type: 'draftHover', lobbyCode: state.lobbyCode, payload: { id: egoId, type: 'ego' } });
         }
         
-        function selectDraftID(player, id) {
-            sendMessage({ type: 'draftSelect', lobbyCode: state.lobbyCode, payload: { player, id } });
+        function hoverDraftID(id) {
+            sendMessage({ type: 'draftHover', lobbyCode: state.lobbyCode, payload: { id, type: 'id' } });
+        }
+
+        function confirmSelection(type) {
+             sendMessage({ type: 'draftConfirm', lobbyCode: state.lobbyCode, payload: { type } });
         }
 
         function toggleBuilderIdSelection(id) {
@@ -2105,7 +2219,6 @@
                     showNotification(`You can only select ${ROSTER_SIZE} IDs.`);
                 }
             }
-            // Re-render the builder to update selections and side panel
             renderRosterBuilder();
         }
 
@@ -2113,18 +2226,16 @@
         // STATE HANDLERS
         // ======================
         function handleLobbyCreated(message) {
-            handleLobbyJoined(message); // Re-use join logic for creation
+            handleLobbyJoined(message);
         }
         
         function handleLobbyJoined(message) {
-            elements.rejoinOverlay.style.display = 'none'; // Hide overlay on successful join/rejoin
+            elements.rejoinOverlay.style.display = 'none';
 
-            // FIX: Use message.code for lobby creation and message.lobbyCode for joins/rejoins
             state.lobbyCode = message.lobbyCode || message.code;
             state.userRole = message.role;
             state.rejoinToken = message.rejoinToken;
 
-            // Store session in localStorage for automatic rejoin
             if (state.rejoinToken) {
                 localStorage.setItem('limbusDraftSession', JSON.stringify({
                     lobbyCode: state.lobbyCode,
@@ -2138,9 +2249,10 @@
         }
         
         function handleStateUpdate(message) {
-            state.participants = message.state.participants;
-            state.roster = message.state.roster;
-            state.draft = message.state.draft;
+            Object.assign(state.participants, message.state.participants);
+            Object.assign(state.roster, message.state.roster);
+            Object.assign(state.draft, message.state.draft);
+            
             elements.lobbyCodeDisplay.textContent = state.lobbyCode;
             updateAllUIsFromState();
         }
@@ -2185,13 +2297,20 @@
 
         function setupEventListeners() {
             // Main Page
-            elements.createLobbyBtn.addEventListener('click', () => sendMessage({ type: 'createLobby', name: elements.playerNameInput.value.trim() }));
+            elements.createLobbyBtn.addEventListener('click', () => {
+                const options = {
+                    name: elements.playerNameInput.value.trim(),
+                    draftLogic: elements.draftLogicSelect.value,
+                    timerEnabled: elements.timerToggle.value === 'true'
+                };
+                sendMessage({ type: 'createLobby', options });
+            });
             elements.joinLobbyBtn.addEventListener('click', () => {
                 elements.lobbyAccessForm.style.display = 'block';
                 elements.joinLobbyBtn.style.display = 'none';
             });
             elements.goToBuilder.addEventListener('click', () => {
-                state.builderSelectedSinner = "Yi Sang"; // Reset to default
+                state.builderSelectedSinner = "Yi Sang";
                 switchView('rosterBuilderPage');
                 renderRosterBuilder();
             });
@@ -2208,7 +2327,6 @@
                 sendMessage({ type: 'joinLobby', lobbyCode, role: selectedRole, name: elements.playerNameInput.value.trim() });
             });
             
-            // Back buttons / Session clearing
             const clearSessionAndReload = () => {
                 localStorage.removeItem('limbusDraftSession');
                 window.location.reload();
@@ -2279,8 +2397,10 @@
             // Draft controls
             elements.startEgoBan.addEventListener('click', () => sendMessage({ type: 'draftControl', lobbyCode: state.lobbyCode, action: 'startEgoBan' }));
             elements.confirmEgoBans.addEventListener('click', () => sendMessage({ type: 'draftControl', lobbyCode: state.lobbyCode, action: 'confirmEgoBans' }));
-            elements.nextPhase.addEventListener('click', () => sendMessage({ type: 'draftControl', lobbyCode: state.lobbyCode, action: 'nextPhase' }));
             elements.completeDraft.addEventListener('click', () => sendMessage({ type: 'draftControl', lobbyCode: state.lobbyCode, action: 'complete' }));
+            elements.confirmSelectionId.addEventListener('click', () => confirmSelection('id'));
+            elements.confirmSelectionEgo.addEventListener('click', () => confirmSelection('ego'));
+            elements.refTimerControl.addEventListener('click', () => sendMessage({ type: 'timerControl', lobbyCode: state.lobbyCode, action: 'togglePause' }));
         }
 
         function createFilterBarHTML(options = {}) {
@@ -2345,6 +2465,8 @@
                 lobbyCodeInput: document.getElementById('lobby-code'),
                 roleOptions: document.querySelectorAll('.role-option'),
                 playerNameInput: document.getElementById('player-name'),
+                draftLogicSelect: document.getElementById('draft-logic-select'),
+                timerToggle: document.getElementById('timer-toggle'),
 
                 // Shared
                 backToMainLobby: document.getElementById('back-to-main-lobby'),
@@ -2356,6 +2478,7 @@
                 lobbyCodeDisplay: document.getElementById('lobby-code-display'),
                 participantsList: document.getElementById('participants-list'),
                 phaseTimer: document.getElementById('phase-timer'),
+                refTimerControl: document.getElementById('ref-timer-control'),
                 draftStatusPanel: document.getElementById('draft-status-panel'),
                 currentPhase: document.getElementById('current-phase'),
                 draftActionDescription: document.getElementById('draft-action-description'),
@@ -2392,21 +2515,23 @@
                 egoSearchInput: document.getElementById('ego-search-input'),
                 egoBanContainer: document.getElementById('ego-ban-container'),
                 confirmEgoBans: document.getElementById('confirm-ego-bans'),
+                confirmSelectionEgo: document.getElementById('confirm-selection-ego'),
                 opponentRosterDisplay: document.getElementById('opponent-roster-display'),
                 opponentRosterTitle: document.getElementById('opponent-roster-title'),
                 opponentRosterList: document.getElementById('opponent-roster-list'),
                 currentPlayerEgoBans: document.getElementById('current-player-ego-bans'),
                 egoBanCounter: document.getElementById('ego-ban-counter'),
+                p1EgoBansPreview: document.getElementById('p1-ego-bans-preview'),
 
                 // ID Draft Phase
                 idDraftPhase: document.getElementById('id-draft-phase'),
                 draftBannedEgosList: document.getElementById('draft-banned-egos-list'),
-                nextPhase: document.getElementById('next-phase'),
                 completeDraft: document.getElementById('complete-draft'),
                 p1DraftPanel: document.getElementById('p1-draft-panel'), p2DraftPanel: document.getElementById('p2-draft-panel'),
                 p1DraftName: document.getElementById('p1-draft-name'), p2DraftName: document.getElementById('p2-draft-name'),
                 p1DraftStatus: document.getElementById('p1-draft-status'), p2DraftStatus: document.getElementById('p2-draft-status'),
-                p1DraftSelection: document.getElementById('p1-draft-selection'), p2DraftSelection: document.getElementById('p2-draft-selection'),
+                draftPoolContainer: document.getElementById('draft-pool-container'),
+                confirmSelectionId: document.getElementById('confirm-selection-id'),
                 p1IdBans: document.getElementById('p1-id-bans'), p2IdBans: document.getElementById('p2-id-bans'),
                 p1Picks: document.getElementById('p1-picks'), p2Picks: document.getElementById('p2-picks'),
 
@@ -2669,7 +2794,6 @@ Garden of Thorns Gregor - WAW - Lust - Orange`;
             
             cacheDOMElements();
 
-            // Inject filter bars and set up listeners
             document.getElementById('global-filter-bar-roster').innerHTML = createFilterBarHTML({ showSinnerFilter: true });
             document.getElementById('global-filter-bar-builder').innerHTML = createFilterBarHTML({ showSinnerFilter: false });
             document.getElementById('global-filter-bar-draft').innerHTML = createFilterBarHTML({ showSinnerFilter: true });
@@ -2680,7 +2804,6 @@ Garden of Thorns Gregor - WAW - Lust - Orange`;
             state.masterIDList = parseIDCSV(idCsvData);
             state.masterEGOList = parseEGOData(egoData);
 
-            // Pre-sort IDs by sinner for the new roster builder
             const sinnerOrder = ["Yi Sang", "Faust", "Don Quixote", "Ryōshū", "Meursault", "Hong Lu", "Heathcliff", "Ishmael", "Rodion", "Sinclair", "Outis", "Gregor"];
             state.idsBySinner = {};
             sinnerOrder.forEach(sinnerName => {
