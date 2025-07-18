@@ -28,11 +28,14 @@ const DRAFT_LOGIC = {
     '1-2-2': {
         ban1Steps: 8,
         pick1: [{ p: 'p1', c: 1 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 1 }],
-        midBanSteps: 8, // FIX: Was 6, should be 8 for 4 bans each
+        midBanSteps: 6, // Changed from 8 to 6
         pick2: [{ p: 'p2', c: 1 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 1 }]
     },
-    '2-3-2': {
-        pick: [{ p: 'p1', c: 2 }, { p: 'p2', c: 3 }, { p: 'p1', c: 2 }, { p: 'p2', c: 3 }, { p: 'p1', c: 2 }]
+    '2-3-2': { // Overhauled to be a full draft format
+        ban1Steps: 8,
+        pick1: [{ p: 'p1', c: 2 }, { p: 'p2', c: 3 }, { p: 'p1', c: 2 }, { p: 'p2', c: 3 }, { p: 'p1', c: 2 }],
+        midBanSteps: 6,
+        pick2: [{ p: 'p2', c: 2 }, { p: 'p1', c: 3 }, { p: 'p2', c: 2 }, { p: 'p1', c: 3 }, { p: 'p2', c: 2 }]
     }
 };
 
@@ -360,18 +363,12 @@ function advancePhase(lobbyData) {
                 draft.available.p1 = [...lobbyData.roster.p1];
                 draft.available.p2 = [...lobbyData.roster.p2];
                 
-                draft.phase = draft.draftLogic === '1-2-2' ? "ban" : "pick";
+                draft.phase = "ban";
                 draft.step = 0;
-                if (draft.draftLogic === '1-2-2') {
-                    draft.currentPlayer = "p1";
-                    draft.action = "ban";
-                    draft.actionCount = 1;
-                } else {
-                    const next = logic.pick[0];
-                    draft.currentPlayer = next.p;
-                    draft.action = "pick";
-                    draft.actionCount = next.c;
-                }
+                draft.currentPlayer = "p1";
+                draft.action = "ban";
+                draft.actionCount = 1;
+
             }
             break;
         case "ban":
@@ -390,7 +387,7 @@ function advancePhase(lobbyData) {
             }
             break;
         case "pick":
-            const currentPickSeq = draft.draftLogic === '1-2-2' ? (draft.action === 'pick2' ? logic.pick2 : logic.pick1) : logic.pick;
+            const currentPickSeq = draft.action === 'pick2' ? logic.pick2 : logic.pick1;
             
             if (draft.step < currentPickSeq.length - 1) {
                 draft.step++;
@@ -398,7 +395,7 @@ function advancePhase(lobbyData) {
                 draft.currentPlayer = next.p;
                 draft.actionCount = next.c;
             } else {
-                if (draft.draftLogic === '1-2-2' && draft.action !== 'pick2') {
+                if (draft.action !== 'pick2') {
                     draft.phase = "ban";
                     draft.action = "midBan";
                     draft.step = 0;
@@ -440,7 +437,7 @@ async function handleDraftConfirm(lobbyRef, lobbyData, ws) {
             console.log(`[Draft Confirm] Player ${currentPlayer} has no actions left, but tried to confirm.`);
             return;
         }
-        const listToUpdate = draft.action === 'ban' ? draft.idBans[currentPlayer] : draft.picks[currentPlayer];
+        const listToUpdate = draft.phase === 'ban' ? draft.idBans[currentPlayer] : draft.picks[currentPlayer];
         listToUpdate.push(selectedId);
         
         let p1Index = draft.available.p1.indexOf(selectedId);
