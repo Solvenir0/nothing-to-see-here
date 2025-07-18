@@ -302,6 +302,13 @@ input:focus, select:focus {
     color: white !important;
 }
 
+/* FIX: Allow the ready button to look active even when disabled for unlocking */
+.btn-ready:disabled {
+    background: var(--ready) !important;
+    opacity: 0.8;
+}
+
+
 .status-ready {
     background: var(--ready) !important;
 }
