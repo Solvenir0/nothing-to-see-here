@@ -435,6 +435,10 @@ async function handleDraftConfirm(lobbyRef, lobbyData, ws) {
             playerBans.push(selectedId); // Ban
         }
     } else if (['ban', 'pick'].includes(draft.phase)) {
+        if (draft.actionCount <= 0) {
+            console.log(`[Draft Confirm] Player ${currentPlayer} has no actions left, but tried to confirm.`);
+            return;
+        }
         const listToUpdate = draft.action === 'ban' ? draft.idBans[currentPlayer] : draft.picks[currentPlayer];
         listToUpdate.push(selectedId);
         
