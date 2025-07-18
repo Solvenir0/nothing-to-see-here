@@ -20,6 +20,19 @@
  
     <div class="notification" id="notification">Player joined the lobby!</div>
 
+    <!-- Coin Flip Modal -->
+    <div id="coin-flip-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h2>Coin Flip</h2>
+            <div class="coin" id="coin-icon"><i class="fas fa-coins"></i></div>
+            <p id="coin-flip-status">Referee is starting the coin flip...</p>
+            <div id="turn-choice-buttons" class="hidden">
+                <button class="btn btn-primary" id="go-first-btn">Go First</button>
+                <button class="btn btn-secondary" id="go-second-btn">Go Second</button>
+            </div>
+        </div>
+    </div>
+
     <div class="container">
         <div id="main-page">
             <header>
@@ -132,7 +145,7 @@
                 <!-- Roster Selection Phase -->
                 <div id="roster-phase" class="phase-section">
                     <h2>Roster Selection Phase</h2>
-                    <p>Each player must select 42 IDs. When both are ready, the Referee can start the EGO Ban phase.</p>
+                    <p>Each player must select 42 IDs. When both are ready, the Referee can start the coin flip.</p>
                     <div class="filter-bar" id="global-filter-bar-roster">
                         <!-- Filters are now globally defined and rendered by JS -->
                     </div>
@@ -173,7 +186,7 @@
                         </div>
                     </div>
                     <div class="ref-actions" style="text-align: center; margin-top: 20px;">
-                        <button class="btn btn-primary btn-large" id="start-ego-ban" disabled><i class="fas fa-ban"></i> Start EGO Bans</button>
+                        <button class="btn btn-primary btn-large" id="start-coin-flip" disabled><i class="fas fa-coins"></i> Start Coin Flip</button>
                     </div>
                 </div>
 
