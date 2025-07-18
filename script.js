@@ -1,3 +1,6 @@
+// =================================================================================
+// FILE: script.js
+// =================================================================================
 // ======================
 // CONSTANTS & CONFIG
 // ======================
@@ -274,13 +277,10 @@ function createIdElement(idData, options = {}) {
     idElement.className = `id-item rarity-${idData.rarity}`;
     if (isSelected) idElement.classList.add('selected');
     if (isHovered) idElement.classList.add('hovered');
-    // The 'not-in-roster' highlight system for shared/enemy IDs was removed as per user request.
-    // A new system using a 'shared-icon' is used instead for shared IDs.
 
     idElement.dataset.id = idData.id;
     let html = `<div class="id-icon" style="background-image: url('/uploads/${idData.imageFile}')"></div><div class="id-name">${idData.name}</div>`;
     if (isShared) {
-        // Add the shared icon as per user request
         html += '<div class="shared-icon"><i class="fas fa-link"></i></div>';
     }
     idElement.innerHTML = html;
@@ -585,16 +585,17 @@ function renderBannedEgosDisplay() {
 }
 
 function updateDraftUI() {
-    const renderCompactIdSublist = (container, idList) => {
-        const sortedIdList = sortIdsByMasterList(idList);
-        const idObjects = sortedIdList.map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
+    // FIX: Render picks/bans chronologically (most recent first) instead of sorted.
+    const renderCompactIdListChronological = (container, idList) => {
+        // This function renders IDs in the order provided, without sorting.
+        const idObjects = idList.map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
         renderIDList(container, idObjects, {});
     };
     
-    renderCompactIdSublist(elements.p1IdBans, state.draft.idBans.p1);
-    renderCompactIdSublist(elements.p2IdBans, state.draft.idBans.p2);
-    renderCompactIdSublist(elements.p1Picks, state.draft.picks.p1);
-    renderCompactIdSublist(elements.p2Picks, state.draft.picks.p2);
+    renderCompactIdListChronological(elements.p1IdBans, [...state.draft.idBans.p1].reverse());
+    renderCompactIdListChronological(elements.p2IdBans, [...state.draft.idBans.p2].reverse());
+    renderCompactIdListChronological(elements.p1Picks, [...state.draft.picks.p1].reverse());
+    renderCompactIdListChronological(elements.p2Picks, [...state.draft.picks.p2].reverse());
     
     const { currentPlayer } = state.draft;
     elements.p1DraftStatus.textContent = currentPlayer === "p1" ? "Drafting" : "Waiting";
@@ -678,7 +679,8 @@ function updateDraftInstructions() {
         poolEl.style.maxHeight = '60vh';
         elements.draftPoolContainer.appendChild(poolEl);
 
-        const sharedIds = isBanAction ? state.roster[targetPlayer].filter(id => state.roster[currentPlayer].includes(id)) : [];
+        // FIX: Make shared ID calculation universal for all draft phases
+        const sharedIds = state.roster.p1.filter(id => state.roster.p2.includes(id));
 
         renderGroupedView(poolEl, availableObjects, { 
             clickHandler, 
@@ -724,6 +726,7 @@ function handleCoinFlipUI() {
 function renderCompletedView() {
     const renderCompactIdList = (container, idList) => {
         container.innerHTML = '';
+        // The final view remains sorted for clarity
         const sortedIdList = sortIdsByMasterList(idList);
         const idObjects = sortedIdList.map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
         const fragment = document.createDocumentFragment();
