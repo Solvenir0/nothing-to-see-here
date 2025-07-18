@@ -604,11 +604,22 @@ function updateDraftInstructions() {
             phaseText = `EGO Ban Phase - ${state.participants[currentPlayer].name}'s turn`;
             actionDesc = `Select and confirm ${bansLeft} more EGO(s) to ban.`;
             break;
-        case "ban": 
+        case "ban":
         case "pick":
-            const logicText = state.draft.draftLogic === '1-2-2' ? `Phase ${phase === 'pick' ? 1 : 1}` : '';
-            phaseText = `${action.charAt(0).toUpperCase() + action.slice(1)} ${logicText}`;
-            actionDesc = `${state.participants[currentPlayer].name} to ${action} ${actionCount} ID(s)`; 
+            let displayAction = action;
+            if (action === 'midBan') displayAction = 'Mid Ban';
+            if (action === 'pick2') displayAction = 'Pick';
+
+            let phaseNum = '';
+            if (state.draft.draftLogic === '1-2-2') {
+                if (action === 'ban' || action === 'pick') phaseNum = ' - Phase 1';
+                if (action === 'midBan' || action === 'pick2') phaseNum = ' - Phase 2';
+            }
+            
+            phaseText = `${displayAction.charAt(0).toUpperCase() + displayAction.slice(1)}${phaseNum}`;
+            
+            let actionVerb = (phase === 'ban') ? 'ban' : 'pick';
+            actionDesc = `${state.participants[currentPlayer].name} to ${actionVerb} ${actionCount} ID(s)`;
             break;
         case "complete":
             phaseText = "Draft Completed!";
@@ -619,14 +630,25 @@ function updateDraftInstructions() {
     }
 
     if (['ban', 'pick'].includes(phase)) {
+        console.log(`%c[Draft Render] Phase: ${phase}, Action: ${action}, CurrentPlayer: ${currentPlayer}`, "color: yellow; font-weight: bold;");
         const opponent = currentPlayer === 'p1' ? 'p2' : 'p1';
         const isBanAction = action.includes('ban');
         const targetPlayer = isBanAction ? opponent : currentPlayer;
+        console.log(`[Draft Render] Target pool is for player: ${targetPlayer}`);
 
         const availableIdList = state.draft.available[targetPlayer];
+        console.log(`[Draft Render] Raw available ID list for ${targetPlayer}:`, availableIdList ? [...availableIdList] : 'undefined');
+
+        if (!availableIdList) {
+            console.error(`[Draft Render] ERROR: availableIdList for ${targetPlayer} is undefined!`);
+            return;
+        }
+
         let availableObjects = availableIdList.map(id => state.masterIDList.find(item => item && item.id === id)).filter(Boolean);
+        console.log(`[Draft Render] Mapped objects (before filter): ${availableObjects.length}`);
         
         availableObjects = filterIDs(availableObjects, state.draftFilters, true);
+        console.log(`[Draft Render] Mapped objects (after filter): ${availableObjects.length}`);
         
         const clickHandler = (state.userRole === currentPlayer || state.userRole === 'ref') ? (id) => hoverDraftID(id) : null;
         
