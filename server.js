@@ -1,87 +1,57 @@
 // =================================================================================
-// FILE: script.js
+// FILE: server.js
 // =================================================================================
-// ======================
-// CONSTANTS & CONFIG
-// ======================
+const express = require('express');
+const http = require('http');
+const path = require('path');
+const WebSocket = require('ws');
+const { Firestore } = require('@google-cloud/firestore');
+const crypto = require('crypto');
+
+const firestore = new Firestore();
+const app = express();
+const server = http.createServer(app);
+
+app.use(express.static(path.join(__dirname)));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.get('/_ah/health', (req, res) => res.status(200).send('OK'));
+
+const wss = new WebSocket.Server({ server });
+
 const ROSTER_SIZE = 42;
 const EGO_BAN_COUNT = 5;
-
-// ======================
-// APPLICATION STATE
-// ======================
-const state = {
-    currentView: "main",
-    lobbyCode: "",
-    userId: generateUserId(),
-    userRole: "",
-    rejoinToken: null,
-    participants: {
-        p1: { name: "Player 1", status: "disconnected", ready: false },
-        p2: { name: "Player 2", status: "disconnected", ready: false },
-        ref: { name: "Referee", status: "disconnected" }
-    },
-    roster: { p1: [], p2: [] },
-    builderRoster: [],
-    masterIDList: [],
-    masterEGOList: [],
-    idsBySinner: null,
-    builderSelectedSinner: "Yi Sang",
-    draft: {
-        phase: "roster",
-        step: 0,
-        currentPlayer: "",
-        action: "",
-        actionCount: 0,
-        available: { p1: [], p2: [] },
-        idBans: { p1: [], p2: [] },
-        egoBans: { p1: [], p2: [] },
-        picks: { p1: [], p2: [] },
-        hovered: { p1: null, p2: null },
-        draftLogic: '1-2-2',
-        coinFlipWinner: null,
-        turnOrderDecided: false,
-        timer: {
-            enabled: false,
-            running: false,
-            endTime: 0,
-        }
-    },
-    filters: { sinner: "", sinAffinity: "", keyword: "", rosterSearch: "" },
-    draftFilters: { sinner: "", sinAffinity: "", keyword: "", rosterSearch: "" },
-    egoSearch: "",
-    timerInterval: null,
-    socket: null,
+const TIMERS = {
+    roster: 90,
+    egoBan: 75, // 15 * 5
+    pick: 15,
 };
 
-let elements = {};
+// --- DRAFT LOGIC SEQUENCES ---
+const DRAFT_LOGIC = {
+    '1-2-2': {
+        ban1Steps: 8,
+        pick1: [{ p: 'p1', c: 1 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 1 }],
+        midBanSteps: 6,
+        pick2: [{ p: 'p2', c: 1 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 1 }]
+    },
+    '2-3-2': {
+        ban1Steps: 8,
+        pick1: [{ p: 'p1', c: 2 }, { p: 'p2', c: 3 }, { p: 'p1', c: 2 }, { p: 'p2', c: 3 }, { p: 'p1', c: 2 }],
+        midBanSteps: 6,
+        pick2: [{ p: 'p2', c: 2 }, { p: 'p1', c: 3 }, { p: 'p2', c: 2 }, { p: 'p1', c: 3 }, { p: 'p2', c: 2 }]
+    }
+};
 
-// ======================
-// UTILITY & CORE
-// ======================
-function generateUserId() {
-    return 'user-' + Math.random().toString(36).substr(2, 9);
-}
-
-function showNotification(text, isError = false) {
-    elements.notification.textContent = text;
-    elements.notification.style.background = isError ? 'var(--disconnected)' : 'var(--primary)';
-    elements.notification.classList.add('show');
-    setTimeout(() => { elements.notification.classList.remove('show'); }, 3000);
-}
+const lobbyTimers = {}; // Store { lobbyCode: { timeoutId, unpauseFn } }
 
 function createSlug(name) {
     if (!name) return '';
-    let slug = name.toLowerCase();
-    slug = slug.replace(/ryōshū/g, 'ryshu').replace(/öufi/g, 'ufi');
-    slug = slug.replace(/e\.g\.o::/g, 'ego-');
-    slug = slug.replace(/ & /g, ' ').replace(/[.'"]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/[^\w-]+/g, '');
-    return slug;
+    return name.toLowerCase()
+        .replace(/ryōshū/g, 'ryshu').replace(/öufi/g, 'ufi')
+        .replace(/e\.g\.o::/g, 'ego-')
+        .replace(/ & /g, ' ').replace(/[.'"]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/[^\w-]+/g, '');
 }
 
-// ======================
-// DATA HANDLING
-// ======================
 function parseIDCSV(csv) {
     const lines = csv.split('\n').filter(line => line.trim() !== '');
     if (lines.length < 2) return [];
@@ -99,1134 +69,690 @@ function parseIDCSV(csv) {
             if (value.startsWith('"') && value.endsWith('"')) value = value.slice(1, -1);
             obj[header] = value;
         });
-
         const name = obj.Name;
-        const sinnerMatch = name.match(/(Yi Sang|Faust|Don Quixote|Ryōshū|Meursault|Hong Lu|Heathcliff|Ishmael|Rodion|Sinclair|Outis|Gregor)/);
-        
-        result.push({
+        result.push({ 
             id: createSlug(name), 
             name: name,
-            keywords: obj.Keywords ? obj.Keywords.split(',').map(k => k.trim()) : [],
-            sinAffinities: obj.SinAffinities ? obj.SinAffinities.split(',').map(s => s.trim()) : [],
             rarity: obj.Rarity,
-            imageFile: `${createSlug(name)}.webp`, 
-            sinner: sinnerMatch ? sinnerMatch[0] : "Unknown",
         });
     }
     return result;
 }
 
-function parseEGOData(data) {
-    const lines = data.trim().split('\n');
-    const egoList = [];
-    const bgColorMap = { 
-        'Yellow': 'var(--sin-sloth-bg)', 'Blue': 'var(--sin-gloom-bg)', 'Red': 'var(--sin-wrath-bg)',
-        'Indigo': 'var(--sin-pride-bg)', 'Purple': 'var(--sin-envy-bg)', 'Orange': 'var(--sin-lust-bg)',
-        'Green': 'var(--sin-gluttony-bg)'
+const idCsvData = `Name,Keywords,SinAffinities,Rarity
+"LCB Sinner Yi Sang","Sinking","Gloom,Envy,Sloth","0"
+"Seven Association South Section 6 Yi Sang","Rupture","Gloom,Gluttony,Sloth","00"
+"Molar Office Fixer Yi Sang","Discard,Tremor","Lust,Sloth,Wrath","00"
+"The Pequod First Mate Yi Sang","Bleed,Poise","Pride,Envy,Gluttony","00"
+"Dieci Association South Section 4 Yi Sang","Aggro,Discard,Sinking","Gluttony,Lust,Sloth","00"
+"LCE E.G.O::Lantern Yi Sang","Aggro,Rupture","Sloth,Envy,Gluttony","00"
+"Blade Lineage Salsu Yi Sang","Poise","Pride,Envy,Sloth","000"
+"Effloresced E.G.O::Spicebush Yi Sang","Sinking,Tremor","Gluttony,Sloth,Pride","000"
+"W Corp. L3 Cleanup Agent Yi Sang","Charge,Rupture","Sloth,Gluttony,Gloom","000"
+"The Ring Pointillist Student Yi Sang","Bleed,Random","Gloom,Lust,Sloth","000"
+"Lobotomy E.G.O::Solemn Lament Yi Sang","Ammo,Sinking","Pride,Gloom,Sloth","000"
+"Liu Association South Section 3 Yi Sang","Burn","Sloth,Wrath,Envy","000"
+"N Corp. E.G.O::Fell Bullet Yi Sang","Bleed,Poise","Wrath,Lust,Pride","000"
+"LCB Sinner Faust","","Pride,Sloth,Gluttony","0"
+"W Corp. L2 Cleanup Agent Faust","Charge","Envy,Gloom,Wrath","00"
+"Lobotomy Corp. Remnant Faust","Poise,Rupture","Sloth,Gloom,Envy","000"
+"Zwei Association South Section 4 Faust","Aggro","Envy,Gloom,Lust","00"
+"Wuthering Heights Butler Faust","Sinking","Gloom,Lust,Wrath","00"
+"The One Who Grips Faust","Bleed","Envy,Lust,Pride","000"
+"Seven Association South Section 4 Faust","Rupture","Envy,Gloom,Gluttony","000"
+"Lobotomy E.G.O::Regret Faust","Tremor","Sloth,Pride,Wrath","000"
+"Blade Lineage Salsu Faust","Bleed,Poise","Sloth,Pride,Gloom","000"
+"MultiCrack Office Rep Faust","Charge","Lust,Envy,Gluttony","000"
+"LCE E.G.O::Ardor Blossom Star Faust","Burn","Sloth,Pride,Wrath","000"
+"Heishou Pack - Mao Branch Adept Faust","Rupture","Sloth,Pride,Gluttony","000"
+"LCB Sinner Don Quixote","Bleed","Lust,Envy,Gluttony","0"
+"Shi Association South Section 5 Director Don Quixote","Poise","Wrath,Envy,Lust","00"
+"N Corp. Mittelhammer Don Quixote","Bleed,Tremor","Lust,Gluttony,Wrath","00"
+"Lobotomy E.G.O::Lantern Don Quixote","Aggro,Rupture","Gluttony,Lust,Gloom","00"
+"Blade Lineage Salsu Don Quixote","Poise","Pride,Envy,Sloth","00"
+"W Corp. L3 Cleanup Agent Don Quixote","Charge,Rupture","Sloth,Gloom,Envy","000"
+"Cinq Association South Section 5 Director Don Quixote","","Lust,Gloom,Pride","000"
+"The Middle Little Sister Don Quixote","Bleed","Wrath,Envy,Pride","000"
+"T Corp. Class 3 Collection Staff Don Quixote","Aggro,Tremor","Gluttony,Pride,Sloth","000"
+"The Manager of La Manchaland Don Quixote","Bleed","Sloth,Wrath,Lust","000"
+"Cinq Association East Section 3 Don Quixote","Burn,Poise","Gluttony,Wrath,Pride","000"
+"Lobotomy E.G.O::In the Name of Love and Hate Don Quixote","Rupture,Sinking","Wrath,Envy,Envy","000"
+"LCB Sinner Ryōshū","Poise","Gluttony,Lust,Pride","0"
+"Seven Association South Section 6 Ryōshū","Rupture","Sloth,Pride,Gluttony","00"
+"LCCB Assistant Manager Ryōshū","Ammo,Poise,Rupture,Tremor","Lust,Gluttony,Pride","00"
+"Liu Association South Section 4 Ryōshū","Burn","Gluttony,Wrath,Lust","00"
+"District 20 Yurodivy Ryōshū","Tremor","Lust,Sloth,Gluttony","00"
+"Kurokumo Clan Wakashu Ryōshū","Bleed","Gluttony,Pride,Lust","000"
+"R.B. Chef de Cuisine Ryōshū","Bleed","Wrath,Envy,Lust","000"
+"W Corp. L3 Cleanup Agent Ryōshū","Charge","Lust,Pride,Envy","000"
+"Edgar Family Chief Butler Ryōshū","Poise","Lust,Pride,Wrath","000"
+"Lobotomy E.G.O::Red Eyes & Penitence Ryōshū","Bleed","Envy,Gloom,Lust","000"
+"Heishou Pack - Mao Branch Ryōshū","Rupture","Lust,Gluttony,Pride","00"
+"LCB Sinner Meursault","Tremor","Sloth,Pride,Gloom","0"
+"Liu Association South Section 6 Meursault","Burn","Lust,Sloth,Wrath","00"
+"Rosespanner Workshop Fixer Meursault","Charge,Tremor","Gloom,Pride,Sloth","00"
+"The Middle Little Brother Meursault","Bleed","Sloth,Envy,Wrath","00"
+"Dead Rabbits Boss Meursault","Rupture","Lust,Wrath,Gluttony","00"
+"W Corp. L2 Cleanup Agent Meursault","Charge,Rupture","Envy,Gluttony,Pride","000"
+"N Corp. Großhammer Meursault","Aggro,Bleed","Sloth,Wrath,Pride","000"
+"R Corp. 4th Pack Rhino Meursault","Bleed,Charge","Envy,Gloom,Lust","000"
+"Blade Lineage Mentor Meursault","Poise","Pride,Pride,Wrath","000"
+"Dieci Association South Section 4 Director Meursault","Discard,Sinking","Gluttony,Sloth,Gloom","000"
+"Cinq Association West Section 3 Meursault","Poise,Rupture","Pride,Gluttony,Gloom","000"
+"The Thumb East Capo IIII Meursault","Ammo,Burn,Tremor","Sloth,Lust,Wrath","000"
+"LCB Sinner Hong Lu","Rupture,Sinking","Pride,Sloth,Lust","0"
+"Kurokumo Clan Wakashu Hong Lu","Bleed","Lust,Pride,Sloth","00"
+"Liu Association South Section 5 Hong Lu","Burn","Gloom,Lust,Wrath","00"
+"W Corp. L2 Cleanup Agent Hong Lu","Charge,Rupture","Pride,Wrath,Gluttony","00"
+"Hook Office Fixer Hong Lu","Bleed","Wrath,Lust,Pride","00"
+"Fanghunt Office Fixer Hong Lu","Rupture","Gluttony,Pride,Wrath","00"
+"Tingtang Gang Gangleader Hong Lu","Bleed","Envy,Lust,Gluttony","000"
+"K Corp. Class 3 Excision Staff Hong Lu","Aggro,Rupture","Pride,Gluttony,Sloth","000"
+"Dieci Association South Section 4 Hong Lu","Discard,Sinking","Wrath,Gloom,Sloth","000"
+"District 20 Yurodivy Hong Lu","Tremor","Gloom,Sloth,Gluttony","000"
+"Full-Stop Office Rep Hong Lu","Ammo,Poise","Sloth,Gloom,Pride","000"
+"R Corp. 4th Pack Reindeer Hong Lu","Charge,Sinking","Gluttony,Envy,Wrath","000"
+"LCB Sinner Heathcliff","Tremor","Envy,Wrath,Lust","0"
+"Shi Association South Section 5 Heathcliff","Poise","Lust,Wrath,Envy","00"
+"N Corp. Kleinhammer Heathcliff","Bleed","Envy,Gloom,Lust","00"
+"Seven Association South Section 4 Heathcliff","Rupture","Wrath,Envy,Gluttony","00"
+"MultiCrack Office Fixer Heathcliff","Charge","Wrath,Envy,Gloom","00"
+"R Corp. 4th Pack Rabbit Heathcliff","Ammo,Bleed,Rupture","Wrath,Gluttony,Envy","000"
+"Lobotomy E.G.O::Sunshower Heathcliff","Rupture,Sinking,Tremor","Envy,Gloom,Sloth","000"
+"The Pequod Harpooneer Heathcliff","Aggro,Bleed,Poise","Pride,Envy,Envy","000"
+"Öufi Association South Section 3 Heathcliff","Tremor","Envy,Gloom,Pride","000"
+"Wild Hunt Heathcliff","Sinking","Wrath,Envy,Gloom","000"
+"Full-Stop Office Fixer Heathcliff","Ammo,Poise","Gloom,Envy,Pride","000"
+"Kurokumo Clan Wakashu Heathcliff","Bleed","Wrath,Pride,Lust","000"
+"LCB Sinner Ishmael","Tremor","Wrath,Gluttony,Gloom","0"
+"Shi Association South Section 5 Ishmael","Poise","Envy,Lust,Wrath","00"
+"LCCB Assistant Manager Ishmael","Aggro,Rupture,Tremor","Gluttony,Gloom,Pride","00"
+"Lobotomy E.G.O::Sloshing Ishmael","Aggro,Rupture,Tremor","Gloom,Wrath,Gluttony","00"
+"Edgar Family Butler Ishmael","Poise,Sinking","Sloth,Gluttony,Gloom","00"
+"R Corp. 4th Pack Reindeer Ishmael","Charge,Sinking","Gloom,Envy,Wrath","000"
+"Liu Association South Section 4 Ishmael","Burn","Lust,Wrath,Envy","000"
+"Molar Boatworks Fixer Ishmael","Sinking,Tremor","Pride,Sloth,Gloom","000"
+"The Pequod Captain Ishmael","Aggro,Bleed,Burn","Envy,Pride,Wrath","000"
+"Zwei Association West Section 3 Ishmael","Aggro,Tremor","Pride,Envy,Gluttony","000"
+"Kurokumo Clan Captain Ishmael","Bleed","Envy,Pride,Lust","000"
+"Family Hierarch Candidate Ishmael","Poise,Rupture","Gloom,Gluttony,Envy","000"
+"LCB Sinner Rodion","Bleed","Gluttony,Pride,Wrath","0"
+"LCCB Assistant Manager Rodion","","Pride,Gluttony,Envy","00"
+"N Corp. Mittelhammer Rodion","Bleed","Pride,Lust,Wrath","00"
+"Zwei Association South Section 5 Rodion","Aggro,Poise","Wrath,Sloth,Gloom","00"
+"T Corp. Class 2 Collection Staff Rodion","Tremor","Envy,Wrath,Sloth","00"
+"Kurokumo Clan Wakashu Rodion","Bleed,Poise","Gluttony,Lust,Pride","000"
+"Rosespanner Workshop Rep Rodion","Charge,Tremor","Pride,Gloom,Envy","000"
+"Dieci Association South Section 4 Rodion","Aggro,Discard,Sinking","Gloom,Envy,Sloth","000"
+"Liu Association South Section 4 Director Rodion","Burn","Pride,Wrath,Lust","000"
+"Devyat' Association North Section 3 Rodion","Rupture","Lust,Wrath,Gluttony","000"
+"The Princess of La Manchaland Rodion","Bleed,Rupture","Pride,Envy,Lust","000"
+"Heishou Pack - Si Branch Rodion","Poise,Rupture","Envy,Gluttony,Gloom","000"
+"Lobotomy E.G.O::The Sword Sharpened with Tears Rodion","Sinking","Gloom,Envy,Pride","000"
+"LCB Sinner Sinclair","Rupture","Pride,Wrath,Envy","0"
+"Zwei Association South Section 6 Sinclair","Aggro,Tremor","Gloom,Wrath,Sloth","00"
+"Los Mariachis Jefe Sinclair","Poise,Sinking","Sloth,Envy,Gloom","00"
+"Lobotomy E.G.O::Red Sheet Sinclair","Rupture","Gluttony,Pride,Lust","00"
+"Molar Boatworks Fixer Sinclair","Tremor","Gloom,Envy,Gluttony","00"
+"Zwei Association West Section 3 Sinclair","Aggro,Tremor","Lust,Gloom,Sloth","00"
+"Blade Lineage Salsu Sinclair","Bleed,Poise","Gluttony,Wrath,Pride","000"
+"The One Who Shall Grip Sinclair","Bleed,Burn","Gloom,Lust,Wrath","000"
+"Cinq Association South Section 4 Director Sinclair","Poise","Gluttony,Pride,Lust","000"
+"Dawn Office Fixer Sinclair","Bleed","Gloom,Envy,Wrath","000"
+"Devyat' Association North Section 3 Sinclair","Rupture","Lust,Gluttony,Wrath","000"
+"The Middle Little Brother Sinclair","Aggro,Bleed","Lust,Gluttony,Wrath","000"
+"The Thumb East Soldato II Sinclair","Ammo,Burn,Tremor","Lust,Sloth,Wrath","000"
+"LCB Sinner Outis","Rupture","Sloth,Pride,Gloom","0"
+"Blade Lineage Salsu Outis","Poise","Wrath,Lust,Pride","00"
+"G Corp. Head Manager Outis","Sinking","Sloth,Gluttony,Gloom","00"
+"Cinq Association South Section 4 Outis","Aggro,Poise","Pride,Gloom,Lust","00"
+"The Ring Pointillist Student Outis","Bleed,Random","Lust,Wrath,Gluttony","00"
+"Seven Association South Section 6 Director Outis","Rupture","Gluttony,Sloth,Lust","000"
+"Molar Office Fixer Outis","Discard,Tremor","Wrath,Lust,Sloth","000"
+"Lobotomy E.G.O::Magic Bullet Outis","Burn","Wrath,Pride,Pride","000"
+"Wuthering Heights Chief Butler Outis","Sinking","Pride,Gloom,Lust","000"
+"W Corp. L3 Cleanup Captain Outis","Charge,Rupture","Pride,Envy,Gloom","000"
+"The Barber of La Manchaland Outis","Bleed","Gluttony,Lust,Wrath","000"
+"Heishou Pack - Mao Branch Outis","Rupture","Sloth,Gluttony,Gloom","000"
+"LCB Sinner Gregor","Rupture","Gloom,Gluttony,Sloth","0"
+"Liu Association South Section 6 Gregor","Burn","Wrath,Lust,Sloth","00"
+"R.B. Sous-chef Gregor","Bleed","Lust,Gluttony,Envy","00"
+"Rosespanner Workshop Fixer Gregor","Rupture,Tremor","Gluttony,Envy,Gloom","00"
+"Kurokumo Clan Captain Gregor","Bleed","Sloth,Lust,Gloom","00"
+"G Corp. Manager Corporal Gregor","Rupture","Gluttony,Sloth,Lust","000"
+"Zwei Association South Section 4 Gregor","Aggro","Sloth,Gluttony,Gloom","000"
+"Twinhook Pirates First Mate Gregor","Ammo,Bleed,Poise","Sloth,Pride,Gloom","000"
+"Edgar Family Heir Gregor","Sinking","Envy,Pride,Lust","000"
+"The Priest of La Manchaland Gregor","Aggro,Bleed,Rupture","Gluttony,Pride,Lust","000"
+"Firefist Office Survivor Gregor","Burn","Lust,Wrath,Wrath","000"
+"Heishou Pack - Si Branch Gregor","Poise,Rupture","Pride,Gluttony,Envy","000"
+`;
+const masterIDList = parseIDCSV(idCsvData);
+const allIds = masterIDList.map(item => item.id);
+
+
+async function generateUniqueLobbyCode() {
+    let code;
+    let docExists;
+    do {
+        code = Math.random().toString(36).substring(2, 8).toUpperCase();
+        const doc = await firestore.collection('lobbies').doc(code).get();
+        docExists = doc.exists;
+    } while (docExists);
+    return code;
+}
+
+function createNewLobbyState(options = {}) {
+    const { draftLogic = '1-2-2', timerEnabled = false } = options;
+    return {
+        participants: {
+            p1: { name: "Player 1", status: "disconnected", ready: false, rejoinToken: null },
+            p2: { name: "Player 2", status: "disconnected", ready: false, rejoinToken: null },
+            ref: { name: "Referee", status: "disconnected", rejoinToken: null }
+        },
+        roster: { p1: [], p2: [] },
+        draft: {
+            phase: "roster",
+            step: 0,
+            currentPlayer: "",
+            action: "",
+            actionCount: 0,
+            available: { p1: [], p2: [] },
+            idBans: { p1: [], p2: [] },
+            egoBans: { p1: [], p2: [] },
+            picks: { p1: [], p2: [] },
+            hovered: { p1: null, p2: null },
+            draftLogic,
+            coinFlipWinner: null,
+            playerOrder: ['p1', 'p2'],
+            timer: {
+                enabled: timerEnabled,
+                running: false,
+                paused: false,
+                endTime: 0,
+                pauseTime: 0,
+            }
+        }
     };
+}
+
+async function broadcastState(lobbyCode) {
+    const lobbyRef = firestore.collection('lobbies').doc(lobbyCode);
+    const lobbyDoc = await lobbyRef.get();
+    if (!lobbyDoc.exists) return;
+
+    const lobbyData = lobbyDoc.data();
+    const message = JSON.stringify({ type: 'stateUpdate', state: lobbyData });
+
+    wss.clients.forEach(client => {
+        if (client.lobbyCode === lobbyCode && client.readyState === WebSocket.OPEN) {
+            client.send(message);
+        }
+    });
+}
+
+async function handleTimer(lobbyCode) {
+    const lobbyRef = firestore.collection('lobbies').doc(lobbyCode);
+    let doc = await lobbyRef.get();
+    if (!doc.exists) return;
+    let lobbyData = doc.data();
+
+    const { hovered, currentPlayer, phase, action } = lobbyData.draft;
+    const hoveredId = hovered[currentPlayer];
+
+    console.log(`Timer expired for ${lobbyCode}. Phase: ${phase}, Player: ${currentPlayer}, Hovered: ${hoveredId}`);
     
-    lines.forEach(line => {
-        if (!line.includes(' - ')) return;
-        const parts = line.split(' - ');
-        if (parts.length < 4) return;
+    if (hoveredId) {
+        await handleDraftConfirm(lobbyRef, lobbyData, null);
+    } else {
+        // Random selection logic needs EGO list, which is client-side.
+        // For now, we just advance the phase as if the player did nothing.
+        console.log("Timer expired with no hover. Advancing phase.");
+        lobbyData = advancePhase(lobbyData);
+        await lobbyRef.update({ draft: lobbyData.draft });
+        await setTimerForLobby(lobbyCode, lobbyData);
+        await broadcastState(lobbyCode);
+    }
+}
 
-        const nameAndSinner = parts[0];
-        const rarity = parts[1].trim();
-        const sin = parts[2].trim();
-        const color = parts[3].trim();
+async function setTimerForLobby(lobbyCode, lobbyData) {
+    if (lobbyTimers[lobbyCode] && lobbyTimers[lobbyCode].timeoutId) {
+        clearTimeout(lobbyTimers[lobbyCode].timeoutId);
+    }
+    
+    const { draft } = lobbyData;
+    if (!draft.timer.enabled || draft.phase === 'complete' || draft.timer.paused) {
+        draft.timer.running = false;
+        await firestore.collection('lobbies').doc(lobbyCode).update({ 'draft.timer.running': false });
+        return;
+    }
 
-        const sinners = ["Yi Sang", "Faust", "Don Quixote", "Ryōshū", "Meursault", "Hong Lu", "Heathcliff", "Ishmael", "Rodion", "Sinclair", "Outis", "Gregor"];
-        let sinner = "Unknown";
-        let name = nameAndSinner;
+    let duration = 0;
+    if (draft.phase === 'roster') {
+        duration = TIMERS.roster;
+    } else if (draft.phase === 'egoBan') {
+        const bansMade = draft.egoBans[draft.currentPlayer].length;
+        if (bansMade < EGO_BAN_COUNT) {
+             duration = TIMERS.egoBan - (bansMade * TIMERS.pick);
+        }
+    } else if (draft.phase === 'pick' || draft.phase === 'ban') {
+        duration = TIMERS.pick * draft.actionCount;
+    }
 
-        for (const s of sinners) {
-            if (nameAndSinner.includes(s)) {
-                sinner = s;
-                name = nameAndSinner.replace(s, '').trim();
+    if (duration > 0) {
+        draft.timer.running = true;
+        draft.timer.endTime = Date.now() + duration * 1000;
+
+        const timeoutId = setTimeout(() => handleTimer(lobbyCode), duration * 1000);
+        lobbyTimers[lobbyCode] = { timeoutId };
+        
+        await firestore.collection('lobbies').doc(lobbyCode).update({ 
+            'draft.timer.running': true,
+            'draft.timer.endTime': draft.timer.endTime,
+        });
+    } else {
+         draft.timer.running = false;
+         await firestore.collection('lobbies').doc(lobbyCode).update({ 'draft.timer.running': false });
+    }
+}
+
+function advancePhase(lobbyData) {
+    const { draft } = lobbyData;
+    const logic = DRAFT_LOGIC[draft.draftLogic];
+    const [firstPlayer, secondPlayer] = draft.playerOrder;
+
+
+    const getPlayer = (p) => (p === 'p1' ? firstPlayer : secondPlayer);
+
+    switch (draft.phase) {
+        case "egoBan":
+            if (draft.currentPlayer === firstPlayer && draft.egoBans[firstPlayer].length === EGO_BAN_COUNT) {
+                draft.currentPlayer = secondPlayer;
+            } else if (draft.currentPlayer === secondPlayer && draft.egoBans[secondPlayer].length === EGO_BAN_COUNT) {
+                draft.available.p1 = [...lobbyData.roster.p1];
+                draft.available.p2 = [...lobbyData.roster.p2];
+                
+                draft.phase = "ban";
+                draft.step = 0;
+                draft.currentPlayer = firstPlayer;
+                draft.action = "ban";
+                draft.actionCount = 1;
+
+            }
+            break;
+        case "ban":
+            const banSteps = draft.action === 'midBan' ? logic.midBanSteps : logic.ban1Steps;
+            if (draft.step < banSteps - 1) {
+                draft.step++;
+                draft.currentPlayer = draft.currentPlayer === firstPlayer ? secondPlayer : firstPlayer;
+                draft.actionCount = 1;
+            } else {
+                draft.phase = "pick";
+                draft.step = 0;
+                const next = draft.action === 'midBan' ? logic.pick2[0] : logic.pick1[0];
+                draft.action = draft.action === 'midBan' ? 'pick2' : 'pick';
+                draft.currentPlayer = getPlayer(next.p);
+                draft.actionCount = next.c;
+            }
+            break;
+        case "pick":
+            const currentPickSeq = draft.action === 'pick2' ? logic.pick2 : logic.pick1;
+            
+            if (draft.step < currentPickSeq.length - 1) {
+                draft.step++;
+                const next = currentPickSeq[draft.step];
+                draft.currentPlayer = getPlayer(next.p);
+                draft.actionCount = next.c;
+            } else {
+                if (draft.action !== 'pick2') {
+                    // FIX: More robustly determine the next player for the mid-ban phase.
+                    const lastPickSequence = logic.pick1;
+                    const lastPickerDesignation = lastPickSequence[lastPickSequence.length - 1].p;
+                    const lastPicker = getPlayer(lastPickerDesignation);
+                    
+                    draft.phase = "ban";
+                    draft.action = "midBan";
+                    draft.step = 0;
+                    // The player who DIDN'T pick last starts the next ban phase.
+                    draft.currentPlayer = lastPicker === firstPlayer ? secondPlayer : firstPlayer;
+                    draft.actionCount = 1;
+                } else {
+                    draft.phase = "complete";
+                    draft.currentPlayer = "";
+                }
+            }
+            break;
+    }
+    return lobbyData;
+}
+
+async function handleDraftConfirm(lobbyRef, lobbyData, ws) {
+    const { draft } = lobbyData;
+    const { currentPlayer, hovered } = draft;
+    const selectedId = hovered[currentPlayer];
+
+    if (!selectedId) return;
+    
+    if (ws) {
+        const actingPlayer = draft.currentPlayer;
+        if (ws.userRole !== actingPlayer && ws.userRole !== 'ref') return;
+    }
+
+    if (draft.phase === 'egoBan') {
+        const playerBans = draft.egoBans[currentPlayer];
+        const banIndex = playerBans.indexOf(selectedId);
+        
+        if (banIndex > -1) {
+            playerBans.splice(banIndex, 1); // Un-ban
+        } else if (playerBans.length < EGO_BAN_COUNT) {
+            playerBans.push(selectedId); // Ban
+        }
+    } else if (['ban', 'pick'].includes(draft.phase)) {
+        if (draft.actionCount <= 0) {
+            console.log(`[Draft Confirm] Player ${currentPlayer} has no actions left, but tried to confirm.`);
+            return;
+        }
+        const listToUpdate = draft.phase === 'ban' ? draft.idBans[currentPlayer] : draft.picks[currentPlayer];
+        listToUpdate.push(selectedId);
+        
+        let p1Index = draft.available.p1.indexOf(selectedId);
+        if(p1Index > -1) draft.available.p1.splice(p1Index, 1);
+        let p2Index = draft.available.p2.indexOf(selectedId);
+        if(p2Index > -1) draft.available.p2.splice(p2Index, 1);
+        
+        draft.actionCount--;
+    }
+
+    draft.hovered[currentPlayer] = null;
+
+    if (draft.actionCount <= 0) {
+        lobbyData = advancePhase(lobbyData);
+    }
+
+    await lobbyRef.update({ draft: lobbyData.draft });
+    await setTimerForLobby(lobbyRef.id, lobbyData);
+    await broadcastState(lobbyRef.id);
+}
+
+// --- MAIN WEBSOCKET LOGIC ---
+wss.on('connection', (ws) => {
+    console.log('Client connected');
+
+    ws.on('message', async (message) => {
+        let incomingData;
+        try { incomingData = JSON.parse(message); } 
+        catch (e) { console.error('Invalid JSON:', message); return; }
+
+        const { lobbyCode, role, player, id, action, payload, name, roster, options, choice } = incomingData;
+        const lobbyRef = lobbyCode ? firestore.collection('lobbies').doc(lobbyCode.toUpperCase()) : null;
+
+        switch (incomingData.type) {
+            case 'createLobby': {
+                const newLobbyCode = await generateUniqueLobbyCode();
+                const newLobbyState = createNewLobbyState(options);
+                ws.lobbyCode = newLobbyCode;
+                ws.userRole = 'ref';
+                const rejoinToken = crypto.randomUUID();
+                if (options.name) newLobbyState.participants.ref.name = options.name;
+                newLobbyState.participants.ref.status = "connected";
+                newLobbyState.participants.ref.rejoinToken = rejoinToken;
+                await firestore.collection('lobbies').doc(newLobbyCode).set(newLobbyState);
+                ws.send(JSON.stringify({ type: 'lobbyCreated', code: newLobbyCode, role: 'ref', rejoinToken, state: newLobbyState }));
+                await setTimerForLobby(newLobbyCode, newLobbyState);
+                await broadcastState(newLobbyCode);
+                break;
+            }
+
+            case 'joinLobby': {
+                if (!lobbyRef) return;
+                const doc = await lobbyRef.get();
+                if (!doc.exists) return ws.send(JSON.stringify({ type: 'error', message: 'Lobby not found.' }));
+                
+                const lobbyData = doc.data();
+                const participant = lobbyData.participants[role];
+
+                if (participant && (participant.status === 'connected' || participant.rejoinToken)) {
+                    return ws.send(JSON.stringify({ type: 'error', message: `Role ${role.toUpperCase()} is taken or reserved. Try rejoining if this is you.` }));
+                }
+                
+                ws.lobbyCode = lobbyCode.toUpperCase();
+                ws.userRole = role;
+                const rejoinToken = crypto.randomUUID();
+
+                const updates = {
+                    [`participants.${role}.status`]: 'connected',
+                    [`participants.${role}.rejoinToken`]: rejoinToken
+                };
+                if (name) updates[`participants.${role}.name`] = name;
+                
+                await lobbyRef.update(updates);
+                
+                const updatedDoc = await lobbyRef.get();
+                ws.send(JSON.stringify({ 
+                    type: 'lobbyJoined', 
+                    lobbyCode: ws.lobbyCode, 
+                    role, 
+                    rejoinToken,
+                    state: updatedDoc.data() 
+                }));
+                broadcastState(ws.lobbyCode);
+                break;
+            }
+
+            case 'rejoinLobby': {
+                if (!lobbyRef || !role || !incomingData.rejoinToken) return;
+                
+                const doc = await lobbyRef.get();
+                if (!doc.exists) {
+                    return ws.send(JSON.stringify({ type: 'error', message: 'Lobby not found. Clearing session.' }));
+                }
+
+                const lobbyData = doc.data();
+                const participant = lobbyData.participants[role];
+
+                if (participant && participant.rejoinToken === incomingData.rejoinToken) {
+                    ws.lobbyCode = lobbyCode.toUpperCase();
+                    ws.userRole = role;
+
+                    await lobbyRef.update({
+                        [`participants.${role}.status`]: 'connected'
+                    });
+
+                    const updatedDoc = await lobbyRef.get();
+                    ws.send(JSON.stringify({
+                        type: 'lobbyJoined',
+                        lobbyCode: ws.lobbyCode,
+                        role,
+                        rejoinToken: incomingData.rejoinToken,
+                        state: updatedDoc.data()
+                    }));
+                    broadcastState(ws.lobbyCode);
+                } else {
+                    ws.send(JSON.stringify({ type: 'error', message: 'Failed to rejoin. The session might be invalid.' }));
+                }
+                break;
+            }
+
+            case 'rosterSelect': {
+                if (!lobbyRef) return;
+                const doc = await lobbyRef.get();
+                if (!doc.exists) return;
+                let lobbyData = doc.data();
+                if (lobbyData.participants[player].ready) return;
+                const currentRoster = lobbyData.roster[player];
+                const index = currentRoster.indexOf(id);
+                if (index === -1) { if (currentRoster.length < ROSTER_SIZE) currentRoster.push(id); } 
+                else { currentRoster.splice(index, 1); }
+                await lobbyRef.update({ [`roster.${player}`]: currentRoster });
+                broadcastState(lobbyCode.toUpperCase());
+                break;
+            }
+            
+            case 'rosterSet': {
+                if (!lobbyRef) return;
+                const doc = await lobbyRef.get();
+                if (!doc.exists) return;
+                let lobbyData = doc.data();
+                if (lobbyData.participants[player].ready) return;
+                if (Array.isArray(roster) && roster.length === ROSTER_SIZE) {
+                    await lobbyRef.update({ [`roster.${player}`]: roster });
+                    broadcastState(lobbyCode.toUpperCase());
+                }
+                break;
+            }
+
+            case 'rosterRandomize': {
+                if (!lobbyRef) return;
+                const doc = await lobbyRef.get();
+                if (!doc.exists) return;
+                let lobbyData = doc.data();
+                if (lobbyData.participants[player].ready) return;
+                const shuffled = [...allIds].sort(() => 0.5 - Math.random());
+                const newRoster = shuffled.slice(0, ROSTER_SIZE);
+                await lobbyRef.update({ [`roster.${player}`]: newRoster });
+                broadcastState(lobbyCode.toUpperCase());
+                break;
+            }
+
+            case 'updateReady': {
+                if (!lobbyRef) return;
+                const doc = await lobbyRef.get();
+                if (!doc.exists) return;
+                let lobbyData = doc.data();
+                const currentReadyState = lobbyData.participants[player].ready;
+                if (!currentReadyState && lobbyData.roster[player].length !== ROSTER_SIZE) return;
+                await lobbyRef.update({ [`participants.${player}.ready`]: !currentReadyState });
+                broadcastState(lobbyCode.toUpperCase());
+                break;
+            }
+
+            case 'startCoinFlip': {
+                if (!lobbyRef || ws.userRole !== 'ref') return;
+                const doc = await lobbyRef.get();
+                if (!doc.exists) return;
+                let lobbyData = doc.data();
+                lobbyData.draft.phase = 'coinFlip';
+                lobbyData.draft.coinFlipWinner = Math.random() < 0.5 ? 'p1' : 'p2';
+                await lobbyRef.update({ draft: lobbyData.draft });
+                broadcastState(lobbyCode.toUpperCase());
+                break;
+            }
+
+            case 'setTurnOrder': {
+                if (!lobbyRef) return;
+                const doc = await lobbyRef.get();
+                if (!doc.exists) return;
+                let lobbyData = doc.data();
+                const { draft } = lobbyData;
+
+                if (ws.userRole !== draft.coinFlipWinner && ws.userRole !== 'ref') return;
+
+                if (choice === 'second') {
+                    if (draft.coinFlipWinner === 'p1') draft.playerOrder = ['p2', 'p1'];
+                    else draft.playerOrder = ['p1', 'p2'];
+                } else { // 'first'
+                    if (draft.coinFlipWinner === 'p2') draft.playerOrder = ['p2', 'p1'];
+                    else draft.playerOrder = ['p1', 'p2'];
+                }
+                
+                draft.phase = 'egoBan';
+                draft.currentPlayer = draft.playerOrder[0];
+
+                await lobbyRef.update({ draft: draft });
+                await setTimerForLobby(lobbyCode.toUpperCase(), lobbyData);
+                broadcastState(lobbyCode.toUpperCase());
+                break;
+            }
+
+            case 'draftHover': {
+                if (!lobbyRef) return;
+                const doc = await lobbyRef.get();
+                if (!doc.exists) return;
+                const { id: hoveredId } = payload;
+                const { draft } = doc.data();
+                const { currentPlayer } = draft;
+                if (ws.userRole !== currentPlayer && ws.userRole !== 'ref') return;
+
+                if (draft.hovered[currentPlayer] === hoveredId) {
+                    await lobbyRef.update({ [`draft.hovered.${currentPlayer}`]: null });
+                } else {
+                    await lobbyRef.update({ [`draft.hovered.${currentPlayer}`]: hoveredId });
+                }
+                broadcastState(lobbyCode.toUpperCase());
+                break;
+            }
+
+            case 'draftConfirm': {
+                if (!lobbyRef) return;
+                const doc = await lobbyRef.get();
+                if (!doc.exists) return;
+                await handleDraftConfirm(lobbyRef, doc.data(), ws);
+                break;
+            }
+
+            case 'draftControl': {
+                if (!lobbyRef) return;
+                const doc = await lobbyRef.get();
+                if (!doc.exists) return;
+                let lobbyData = doc.data();
+
+                if (action === 'confirmEgoBans') {
+                     const { currentPlayer } = lobbyData.draft;
+                     if (lobbyData.draft.egoBans[currentPlayer].length === EGO_BAN_COUNT) {
+                        lobbyData = advancePhase(lobbyData);
+                     }
+                } else if (action === 'complete') {
+                    lobbyData.draft.phase = "complete";
+                }
+                
+                await lobbyRef.update({ draft: lobbyData.draft });
+                await setTimerForLobby(lobbyCode.toUpperCase(), lobbyData);
+                broadcastState(lobbyCode.toUpperCase());
+                break;
+            }
+
+            case 'timerControl': {
+                if (!lobbyRef || ws.userRole !== 'ref') return;
+                const doc = await lobbyRef.get();
+                if (!doc.exists) return;
+                let lobbyData = doc.data();
+                const { timer } = lobbyData.draft;
+                
+                if (timer.paused) { // unpausing
+                    timer.paused = false;
+                    timer.running = true;
+                    timer.endTime = Date.now() + timer.pauseTime;
+                    await lobbyRef.update({ 'draft.timer': timer });
+                    await setTimerForLobby(lobbyCode.toUpperCase(), lobbyData);
+                } else { // pausing
+                    if (lobbyTimers[lobbyCode.toUpperCase()]) clearTimeout(lobbyTimers[lobbyCode.toUpperCase()].timeoutId);
+                    timer.paused = true;
+                    timer.running = false;
+                    timer.pauseTime = timer.endTime - Date.now();
+                    await lobbyRef.update({ 'draft.timer': timer });
+                }
+                broadcastState(lobbyCode.toUpperCase());
                 break;
             }
         }
-        
-        egoList.push({
-            id: createSlug(`${name} ${sinner}`),
-            name: `${name} (${sinner})`, sinner, rarity, sin, color,
-            cssColor: bgColorMap[color] || 'rgba(128, 128, 128, 0.7)'
-        });
     });
-    return egoList;
-}
 
-// ======================
-// ROSTER CODE SYSTEM
-// ======================
-function generateRosterCode() {
-    if (state.builderRoster.length !== ROSTER_SIZE) return null;
-    try {
-        const indices = state.builderRoster.map(slug => {
-            const index = state.masterIDList.findIndex(id => id.id === slug);
-            return index > -1 ? index : 255; // Use 255 as an error/not found marker
-        });
-        const uint8Array = new Uint8Array(indices);
-        const binaryString = String.fromCharCode.apply(null, uint8Array);
-        return btoa(binaryString);
-    } catch (e) {
-        console.error("Error generating roster code:", e);
-        return null;
-    }
-}
-
-function loadRosterFromCode(code) {
-    try {
-        const binaryString = atob(code);
-        if (binaryString.length !== ROSTER_SIZE) {
-            showNotification("Invalid roster code: incorrect length.", true);
-            return null;
-        }
-        const uint8Array = new Uint8Array(binaryString.split('').map(c => c.charCodeAt(0)));
-        const rosterSlugs = Array.from(uint8Array).map(index => {
-            return (index < state.masterIDList.length) ? state.masterIDList[index].id : null;
-        }).filter(Boolean);
-
-        if (rosterSlugs.length !== ROSTER_SIZE) {
-            showNotification("Invalid roster code: contains invalid ID data.", true);
-            return null;
-        }
-        return rosterSlugs;
-    } catch (e) {
-        console.error("Error decoding roster code:", e);
-        showNotification("Invalid roster code format.", true);
-        return null;
-    }
-}
-
-// ======================
-// SOCKET COMMUNICATION
-// ======================
-function connectWebSocket() {
-    const loc = window.location;
-    const wsProtocol = loc.protocol === 'https:' ? 'wss:' : 'ws:';
-    const remoteUrl = `${wsProtocol}//${loc.host}/`;
-    state.socket = new WebSocket(remoteUrl);
-
-    elements.connectionStatus.className = 'connection-status connecting';
-    elements.connectionStatus.innerHTML = '<i class="fas fa-plug"></i> <span>Connecting...</span>';
-
-    state.socket.onopen = () => {
-        elements.connectionStatus.className = 'connection-status connected';
-        elements.connectionStatus.innerHTML = '<i class="fas fa-plug"></i> <span>Connected</span>';
-        
-        const session = JSON.parse(localStorage.getItem('limbusDraftSession'));
-        if (session && session.lobbyCode && session.userRole && session.rejoinToken) {
-            console.log('Found session, attempting to rejoin:', session);
-            elements.rejoinOverlay.style.display = 'flex';
-            sendMessage({ 
-                type: 'rejoinLobby', 
-                lobbyCode: session.lobbyCode,
-                role: session.userRole,
-                rejoinToken: session.rejoinToken
-            });
-        }
-    };
-    state.socket.onmessage = (event) => handleServerMessage(JSON.parse(event.data));
-    state.socket.onclose = () => {
-        elements.connectionStatus.className = 'connection-status';
-        elements.connectionStatus.innerHTML = '<i class="fas fa-plug"></i> <span>Disconnected</span>';
-        if (state.timerInterval) clearInterval(state.timerInterval);
-    };
-    state.socket.onerror = (error) => console.error('WebSocket error:', error);
-}
-
-function sendMessage(message) {
-    if (state.socket && state.socket.readyState === WebSocket.OPEN) {
-        state.socket.send(JSON.stringify(message));
-    }
-}
-
-function handleServerMessage(message) {
-    console.log("Received from server:", message);
-    switch (message.type) {
-        case 'lobbyCreated': handleLobbyCreated(message); break;
-        case 'lobbyJoined': handleLobbyJoined(message); break;
-        case 'stateUpdate': handleStateUpdate(message); break;
-        case 'notification': showNotification(message.text); break;
-        case 'error':
-            showNotification(`Error: ${message.message}`, true);
-            if (message.message.includes('rejoin') || message.message.includes('Clearing session')) {
-                localStorage.removeItem('limbusDraftSession');
-                elements.rejoinOverlay.style.display = 'none';
+    ws.on('close', async () => {
+        console.log('Client disconnected');
+        const { lobbyCode, userRole } = ws;
+        if (lobbyCode && userRole) {
+            const lobbyRef = firestore.collection('lobbies').doc(lobbyCode);
+            const doc = await lobbyRef.get();
+            if (doc.exists) {
+                await lobbyRef.update({
+                    [`participants.${userRole}.status`]: 'disconnected',
+                    [`participants.${userRole}.ready`]: false,
+                });
+                broadcastState(lobbyCode);
             }
-            break;
-    }
-}
-
-// ======================
-// UI RENDERING & DOM MANIPULATION
-// ======================
-function sortIdsByMasterList(idList) {
-    if (!Array.isArray(idList)) return [];
-    return idList.slice().sort((a, b) => {
-        const indexA = state.masterIDList.findIndex(item => item.id === a);
-        const indexB = state.masterIDList.findIndex(item => item.id === b);
-        return indexA - indexB;
-    });
-}
-
-function createIdElement(idData, options = {}) {
-    const { isSelected, isHovered, clickHandler, isNotInRoster, isShared } = options;
-    const idElement = document.createElement('div');
-    idElement.className = `id-item rarity-${idData.rarity}`;
-    if (isSelected) idElement.classList.add('selected');
-    if (isHovered) idElement.classList.add('hovered');
-
-    idElement.dataset.id = idData.id;
-    let html = `<div class="id-icon" style="background-image: url('/uploads/${idData.imageFile}')"></div><div class="id-name">${idData.name}</div>`;
-    if (isShared) {
-        html += '<div class="shared-icon"><i class="fas fa-link"></i></div>';
-    }
-    idElement.innerHTML = html;
-    
-    if (clickHandler) {
-        idElement.addEventListener('click', () => clickHandler(idData.id));
-    }
-    return idElement;
-}
-
-function createEgoElement(egoData, options = {}) {
-    const { clickHandler, isHovered } = options;
-    const egoElement = document.createElement('div');
-    const allBans = [...state.draft.egoBans.p1, ...state.draft.egoBans.p2];
-    const isBanned = allBans.includes(egoData.id);
-    
-    egoElement.className = 'ego-item';
-    if (isBanned) egoElement.classList.add('banned');
-    if (isHovered) egoElement.classList.add('hovered');
-
-    egoElement.dataset.id = egoData.id;
-    egoElement.style.borderLeftColor = egoData.cssColor;
-
-    egoElement.innerHTML = `
-        <div class="ego-header"><span class="ego-rarity">${egoData.rarity}</span></div>
-        <div class="ego-name">${egoData.name}</div>`;
-    
-    if (clickHandler && !isBanned) {
-        egoElement.addEventListener('click', () => clickHandler(egoData.id));
-    }
-    return egoElement;
-}
-
-function renderIDList(container, idObjectList, options = {}) {
-    const { selectionSet, clickHandler, hoverId, notInRosterSet, sharedIdSet } = options;
-    container.innerHTML = '';
-    if (!container.classList.contains('compact-id-list')) {
-        container.className = 'roster-selection';
-    }
-    if (!Array.isArray(idObjectList) || idObjectList.length === 0) {
-        if(!container.classList.contains('compact-id-list')) {
-           container.innerHTML = '<div class="empty-roster" style="padding: 10px; text-align: center;">No items to display</div>';
-        }
-        return;
-    }
-    
-    const fragment = document.createDocumentFragment();
-    idObjectList.forEach(idData => {
-        if (!idData) return;
-        const isSelected = selectionSet ? selectionSet.includes(idData.id) : false;
-        const isHovered = hoverId ? hoverId === idData.id : false;
-        const isNotInRoster = notInRosterSet ? !notInRosterSet.includes(idData.id) : false;
-        const isShared = sharedIdSet ? sharedIdSet.includes(idData.id) : false;
-        const element = createIdElement(idData, { 
-            isSelected, 
-            isHovered,
-            isNotInRoster,
-            isShared,
-            clickHandler: clickHandler ? () => clickHandler(idData.id) : null 
-        });
-        fragment.appendChild(element);
-    });
-    container.appendChild(fragment);
-}
-
-function renderGroupedView(container, idObjectList, options = {}) {
-    const { clickHandler, selectionSet, hoverId, notInRosterSet, sharedIdSet } = options;
-
-    container.innerHTML = '';
-    container.className = 'sinner-grouped-roster';
-
-    if (!Array.isArray(idObjectList) || idObjectList.length === 0) {
-        container.innerHTML = '<div class="empty-roster" style="padding: 10px; text-align: center;">No items to display.</div>';
-        return;
-    }
-
-    const groupedBySinner = {};
-    const sinnerOrder = ["Yi Sang", "Faust", "Don Quixote", "Ryōshū", "Meursault", "Hong Lu", "Heathcliff", "Ishmael", "Rodion", "Sinclair", "Outis", "Gregor"];
-
-    idObjectList.forEach(id => {
-        if (!id) return;
-        if (!groupedBySinner[id.sinner]) {
-            groupedBySinner[id.sinner] = [];
-        }
-        groupedBySinner[id.sinner].push(id);
-    });
-
-    const fragment = document.createDocumentFragment();
-    let isFirstRenderedGroup = true;
-
-    sinnerOrder.forEach(sinnerName => {
-        if (groupedBySinner[sinnerName] && groupedBySinner[sinnerName].length > 0) {
-            const sinnerRow = document.createElement('div');
-            sinnerRow.className = 'sinner-row';
-
-            if (!isFirstRenderedGroup) {
-                const sinnerHeader = document.createElement('div');
-                sinnerHeader.className = 'sinner-header';
-                sinnerRow.appendChild(sinnerHeader);
-            }
-            isFirstRenderedGroup = false;
-
-            const idContainer = document.createElement('div');
-            idContainer.className = 'sinner-id-container';
-
-            const sortedIds = groupedBySinner[sinnerName].sort((a,b) => {
-                const indexA = state.masterIDList.findIndex(item => item.id === a.id);
-                const indexB = state.masterIDList.findIndex(item => item.id === b.id);
-                return indexA - indexB;
-            });
-
-            sortedIds.forEach(idData => {
-                const isSelected = selectionSet ? selectionSet.includes(idData.id) : false;
-                const isHovered = hoverId ? hoverId === idData.id : false;
-                const isNotInRoster = notInRosterSet ? !notInRosterSet.includes(idData.id) : false;
-                const isShared = sharedIdSet ? sharedIdSet.includes(idData.id) : false;
-                const idElement = createIdElement(idData, { isSelected, isHovered, isNotInRoster, isShared, clickHandler });
-                idContainer.appendChild(idElement);
-            });
-            sinnerRow.appendChild(idContainer);
-            fragment.appendChild(sinnerRow);
         }
     });
-
-    container.appendChild(fragment);
-}
-
-function switchView(view) {
-    state.currentView = view;
-    ['mainPage', 'lobbyView', 'completedView', 'rosterBuilderPage'].forEach(page => {
-        elements[page].style.display = 'none';
-    });
-    if(elements[view]) elements[view].style.display = 'block';
-}
-
-function updateAllUIsFromState() {
-    const { draft } = state;
-    const { phase } = draft;
-
-    // FIX: Always evaluate draft status panel visibility before any early returns.
-    elements.draftStatusPanel.classList.toggle('hidden', phase === 'roster' || phase === 'complete');
-
-    if (phase === 'complete') {
-        switchView('completedView');
-        renderCompletedView();
-        return;
-    }
-    if (state.lobbyCode) switchView('lobbyView');
-    else if (state.currentView !== 'rosterBuilderPage') switchView('mainPage');
-
-
-    elements.rosterPhase.classList.toggle('hidden', phase !== 'roster');
-    elements.egoBanPhase.classList.toggle('hidden', phase !== 'egoBan');
-    elements.idDraftPhase.classList.toggle('hidden', !['ban', 'pick'].includes(phase));
-    elements.coinFlipModal.classList.toggle('hidden', phase !== 'coinFlip');
-
-    if (phase === 'coinFlip') {
-        handleCoinFlipUI();
-    }
-
-    elements.participantsList.innerHTML = '';
-    ['p1', 'p2', 'ref'].forEach(role => {
-        const p = state.participants[role];
-        const displayName = state.userRole === role ? `${p.name} (You)` : p.name;
-        const el = document.createElement('div');
-        el.className = `participant ${state.userRole === role ? 'current-user' : ''}`;
-        const icon = role === 'ref' ? 'fa-star' : 'fa-user';
-        let statusIcon = '<i class="fas fa-times-circle" style="color:var(--disconnected);"></i>';
-        if (p.status === 'connected') {
-            statusIcon = (role !== 'ref' && p.ready) ? ` <i class="fas fa-check-circle" style="color:var(--ready);"></i>` : ` <i class="fas fa-dot-circle" style="color:var(--connected);"></i>`;
-        }
-        el.innerHTML = `<i class="fas ${icon}"></i> ${displayName} ${statusIcon}`;
-        elements.participantsList.appendChild(el);
-    });
-
-    ['p1', 'p2'].forEach(player => {
-        elements[`${player}NameDisplay`].textContent = state.participants[player].name;
-        elements[`${player}Counter`].textContent = state.roster[player].length;
-        const isReady = state.participants[player].ready;
-        elements[`${player}Ready`].innerHTML = isReady ? '<i class="fas fa-times"></i> Unready' : `<i class="fas fa-check"></i> Ready`;
-        elements[`${player}Ready`].classList.toggle('btn-ready', isReady);
-        elements[`${player}Status`].textContent = isReady ? 'Ready' : 'Selecting';
-        elements[`${player}Status`].className = `player-status ${isReady ? 'status-ready' : 'status-waiting'}`;
-        elements[`${player}Panel`].classList.toggle('locked', isReady);
-    });
-    
-    filterAndRenderRosterSelection();
-    
-    if (phase === 'egoBan') renderEgoBanPhase();
-    if (['ban', 'pick'].includes(phase)) updateDraftUI();
-    
-    updateDraftInstructions();
-    checkPhaseReadiness();
-    updateTimerUI();
-}
-
-function filterAndRenderRosterSelection() {
-    const filteredList = filterIDs(state.masterIDList, state.filters);
-    renderIDList(elements.p1Roster, filteredList, {
-        selectionSet: state.roster.p1, 
-        clickHandler: (id) => toggleIDSelection('p1', id)
-    });
-    renderIDList(elements.p2Roster, filteredList, {
-        selectionSet: state.roster.p2, 
-        clickHandler: (id) => toggleIDSelection('p2', id)
-    });
-}
-
-function filterIDs(sourceList, filterObject, draftPhase = false) {
-    const searchTerm = filterObject.rosterSearch.toLowerCase();
-    return sourceList.filter(fullData => {
-        if (!fullData) return false;
-        if (draftPhase && (fullData.rarity === '0' || fullData.name.toLowerCase().includes('lcb sinner'))) return false;
-        if (filterObject.sinner && fullData.sinner !== filterObject.sinner) return false;
-        if (filterObject.sinAffinity && !fullData.sinAffinities.includes(filterObject.sinAffinity)) return false;
-        if (filterObject.keyword && !fullData.keywords.includes(filterObject.keyword)) return false;
-        if (searchTerm && !fullData.name.toLowerCase().includes(searchTerm)) return false;
-        return true;
-    });
-}
-
-function renderEgoBanPhase() {
-    const { currentPlayer, hovered } = state.draft;
-    const opponent = currentPlayer === 'p1' ? 'p2' : 'p1';
-    
-    elements.egoBanTitle.textContent = `EGO Ban Phase - ${state.participants[currentPlayer].name}'s Turn`;
-
-    const clickHandler = (state.userRole === currentPlayer || state.userRole === 'ref') ? hoverEgoToBan : null;
-    
-    const searchTerm = state.egoSearch.toLowerCase();
-    const filteredEgos = state.masterEGOList.filter(ego => 
-        ego.rarity !== 'ZAYIN' && (!searchTerm || ego.name.toLowerCase().includes(searchTerm))
-    );
-
-    const container = elements.egoBanContainer;
-    container.innerHTML = '';
-    const fragment = document.createDocumentFragment();
-    filteredEgos.forEach(ego => {
-        fragment.appendChild(createEgoElement(ego, { 
-            clickHandler, 
-            isHovered: hovered[currentPlayer] === ego.id 
-        }));
-    });
-    container.appendChild(fragment);
-
-    const currentPlayerBans = state.draft.egoBans[currentPlayer] || [];
-    const bansContainer = elements.currentPlayerEgoBans;
-    bansContainer.innerHTML = '';
-    const bannedEgoObjects = currentPlayerBans.map(id => state.masterEGOList.find(ego => ego.id === id)).filter(Boolean);
-    
-    bannedEgoObjects.forEach(ego => {
-        const item = document.createElement('div');
-        item.className = 'banned-ego-item';
-        item.style.borderLeft = `3px solid ${ego.cssColor}`;
-        item.innerHTML = `<span class="rarity">[${ego.rarity}]</span> <span class="name" style="text-decoration: none;">${ego.name}</span>`;
-        bansContainer.appendChild(item);
-    });
-    elements.egoBanCounter.textContent = currentPlayerBans.length;
-
-    elements.opponentRosterTitle.textContent = `${state.participants[opponent].name}'s Roster`;
-    const opponentRosterObjects = state.roster[opponent].map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
-    renderGroupedView(elements.opponentRosterList, opponentRosterObjects, {});
-
-    const canConfirm = (state.userRole === 'ref' || state.userRole === currentPlayer) && currentPlayerBans.length === EGO_BAN_COUNT;
-    elements.confirmEgoBans.disabled = !canConfirm;
-    elements.confirmSelectionEgo.disabled = !hovered[currentPlayer];
-
-    const p1BansPreview = elements.p1EgoBansPreview;
-    if (currentPlayer === 'p2' && state.draft.egoBans.p1.length === EGO_BAN_COUNT) {
-        p1BansPreview.classList.remove('hidden');
-        const p1BannedObjects = state.draft.egoBans.p1.map(id => state.masterEGOList.find(e => e.id === id)).filter(Boolean);
-        const listEl = p1BansPreview.querySelector('.banned-egos-list');
-        listEl.innerHTML = '';
-        p1BannedObjects.forEach(ego => {
-            const item = document.createElement('div');
-            item.className = 'banned-ego-item';
-            item.style.backgroundColor = ego.cssColor;
-            item.innerHTML = `<span class="rarity">[${ego.rarity}]</span> <span class="name">${ego.name}</span>`;
-            listEl.appendChild(item);
-        });
-    } else {
-        p1BansPreview.classList.add('hidden');
-    }
-}
-
-function renderBannedEgosDisplay() {
-    const allBans = [...state.draft.egoBans.p1, ...state.draft.egoBans.p2];
-    const bannedEgoObjects = allBans.map(id => state.masterEGOList.find(ego => ego.id === id)).filter(Boolean);
-    
-    const renderList = (container) => {
-        container.innerHTML = '';
-        bannedEgoObjects.forEach(ego => {
-            const item = document.createElement('div');
-            item.className = 'banned-ego-item';
-            item.style.backgroundColor = ego.cssColor;
-            item.innerHTML = `<span class="rarity">[${ego.rarity}]</span> <span class="name">${ego.name}</span>`;
-            container.appendChild(item);
-        });
-    };
-
-    renderList(elements.draftBannedEgosList);
-    renderList(elements.finalBannedEgosList);
-}
-
-function updateDraftUI() {
-    // FIX: Render picks/bans chronologically (most recent first) instead of sorted.
-    const renderCompactIdListChronological = (container, idList) => {
-        // This function renders IDs in the order provided, without sorting.
-        const idObjects = idList.map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
-        renderIDList(container, idObjects, {});
-    };
-    
-    renderCompactIdListChronological(elements.p1IdBans, [...state.draft.idBans.p1].reverse());
-    renderCompactIdListChronological(elements.p2IdBans, [...state.draft.idBans.p2].reverse());
-    renderCompactIdListChronological(elements.p1Picks, [...state.draft.picks.p1].reverse());
-    renderCompactIdListChronological(elements.p2Picks, [...state.draft.picks.p2].reverse());
-    
-    const { currentPlayer } = state.draft;
-    elements.p1DraftStatus.textContent = currentPlayer === "p1" ? "Drafting" : "Waiting";
-    elements.p2DraftStatus.textContent = currentPlayer === "p2" ? "Drafting" : "Waiting";
-    elements.p1DraftStatus.className = `player-status ${currentPlayer === "p1" ? "status-drafting" : "status-waiting"}`;
-    elements.p2DraftStatus.className = `player-status ${currentPlayer === "p2" ? "status-drafting" : "status-waiting"}`;
-    
-    elements.p1DraftColumn.classList.toggle('draft-active', currentPlayer === 'p1');
-    elements.p2DraftColumn.classList.toggle('draft-active', currentPlayer === 'p2');
-    elements.draftInteractionHub.classList.toggle('draft-active', !!currentPlayer);
-
-
-    renderBannedEgosDisplay();
-}
-
-function updateDraftInstructions() {
-    let phaseText = "", actionDesc = "";
-    const { phase, step, currentPlayer, action, actionCount, egoBans, hovered } = state.draft;
-    
-    elements.draftPoolContainer.innerHTML = '';
-
-    switch(phase) {
-        case "roster": 
-            phaseText = "Roster Selection";
-            actionDesc = "Players select 42 IDs. Referee starts the draft when both are ready.";
-            break;
-        case "coinFlip":
-            phaseText = "Coin Flip";
-            actionDesc = "Winner of the coin flip will decide who goes first.";
-            break;
-        case "egoBan":
-            const bansLeft = EGO_BAN_COUNT - (egoBans[currentPlayer] ? egoBans[currentPlayer].length : 0);
-            phaseText = `EGO Ban Phase - ${state.participants[currentPlayer].name}'s turn`;
-            actionDesc = `Select and confirm ${bansLeft} more EGO(s) to ban.`;
-            break;
-        case "ban":
-        case "pick":
-            let displayAction = action;
-            if (action === 'midBan') displayAction = 'Mid Ban';
-            if (action === 'pick2') displayAction = 'Pick';
-
-            let phaseNum = '';
-            if (state.draft.draftLogic === '1-2-2') {
-                if (action === 'ban' || action === 'pick') phaseNum = ' - Phase 1';
-                if (action === 'midBan' || action === 'pick2') phaseNum = ' - Phase 2';
-            }
-            
-            phaseText = `${displayAction.charAt(0).toUpperCase() + displayAction.slice(1)}${phaseNum}`;
-            
-            let actionVerb = (phase === 'ban') ? 'ban' : 'pick';
-            actionDesc = `${state.participants[currentPlayer].name} to ${actionVerb} ${actionCount} ID(s)`;
-            break;
-        case "complete":
-            phaseText = "Draft Completed!";
-            actionDesc = "All picks and bans are finalized.";
-            break;
-        default:
-            phaseText = "Waiting for draft to start...";
-    }
-
-    if (['ban', 'pick'].includes(phase)) {
-        const opponent = currentPlayer === 'p1' ? 'p2' : 'p1';
-        const isBanAction = action.includes('ban');
-        const targetPlayer = isBanAction ? opponent : currentPlayer;
-
-        const availableIdList = state.draft.available[targetPlayer];
-
-        if (!availableIdList) {
-            console.error(`[Draft Render] ERROR: availableIdList for ${targetPlayer} is undefined!`);
-            return;
-        }
-
-        let availableObjects = availableIdList.map(id => state.masterIDList.find(item => item && item.id === id)).filter(Boolean);
-        
-        availableObjects = filterIDs(availableObjects, state.draftFilters, true);
-        
-        const clickHandler = (state.userRole === currentPlayer || state.userRole === 'ref') ? (id) => hoverDraftID(id) : null;
-        
-        const poolEl = document.createElement('div');
-        poolEl.className = 'sinner-grouped-roster';
-        poolEl.style.maxHeight = '60vh';
-        elements.draftPoolContainer.appendChild(poolEl);
-
-        // FIX: Make shared ID calculation universal for all draft phases
-        const sharedIds = state.roster.p1.filter(id => state.roster.p2.includes(id));
-
-        renderGroupedView(poolEl, availableObjects, { 
-            clickHandler, 
-            hoverId: hovered[currentPlayer],
-            notInRosterSet: isBanAction ? state.roster[currentPlayer] : null,
-            sharedIdSet: sharedIds
-        });
-
-        elements.confirmSelectionId.disabled = !hovered[currentPlayer] || state.draft.actionCount <= 0;
-    }
-    
-    elements.currentPhase.textContent = phaseText;
-    elements.draftActionDescription.textContent = actionDesc;
-    elements.completeDraft.disabled = state.userRole !== 'ref' || phase === 'complete';
-}
-
-function handleCoinFlipUI() {
-    const { coinFlipWinner } = state.draft;
-    const winnerName = coinFlipWinner ? state.participants[coinFlipWinner].name : '';
-
-    if (!coinFlipWinner) {
-        elements.coinIcon.classList.add('flipping');
-        elements.coinFlipStatus.textContent = 'Flipping coin...';
-        elements.turnChoiceButtons.classList.add('hidden');
-    } else {
-        elements.coinIcon.classList.remove('flipping');
-        elements.coinFlipStatus.textContent = `${winnerName} wins the toss!`;
-        
-        const canChoose = state.userRole === coinFlipWinner || state.userRole === 'ref';
-
-        if (canChoose) {
-            elements.turnChoiceButtons.classList.remove('hidden');
-            if (state.userRole === 'ref' && state.userRole !== coinFlipWinner) {
-                 elements.coinFlipStatus.innerHTML = `${winnerName} wins the toss!<br><small>Waiting for them to choose (or you can choose for them).</small>`;
-            }
-        } else {
-            elements.turnChoiceButtons.classList.add('hidden');
-            elements.coinFlipStatus.textContent += `\nWaiting for the turn order to be decided...`;
-        }
-    }
-}
-
-function renderCompletedView() {
-    const renderCompactIdList = (container, idList) => {
-        container.innerHTML = '';
-        // The final view remains sorted for clarity
-        const sortedIdList = sortIdsByMasterList(idList);
-        const idObjects = sortedIdList.map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
-        const fragment = document.createDocumentFragment();
-        idObjects.forEach(idData => {
-            const element = createIdElement(idData, {});
-            fragment.appendChild(element);
-        });
-        container.appendChild(fragment);
-    };
-
-    elements.finalP1Name.textContent = `${state.participants.p1.name}'s Roster`;
-    elements.finalP2Name.textContent = `${state.participants.p2.name}'s Roster`;
-
-    renderCompactIdList(elements.finalP1Picks, state.draft.picks.p1);
-    renderCompactIdList(elements.finalP2Picks, state.draft.picks.p2);
-
-    renderCompactIdList(elements.finalP1Bans, state.draft.idBans.p2); 
-    renderCompactIdList(elements.finalP2Bans, state.draft.idBans.p1);
-    
-    renderBannedEgosDisplay();
-}
-
-function checkPhaseReadiness() {
-    if (state.draft.phase === 'roster') {
-        const p1Ready = state.participants.p1.ready && state.roster.p1.length === ROSTER_SIZE;
-        const p2Ready = state.participants.p2.ready && state.roster.p2.length === ROSTER_SIZE;
-        if (state.userRole === 'ref') {
-            elements.startCoinFlip.disabled = !(p1Ready && p2Ready);
-        }
-    }
-}
-
-function renderRosterBuilder() {
-    const sinnerNav = elements.builderSinnerNav;
-    sinnerNav.innerHTML = '';
-    const sinnerOrder = ["Yi Sang", "Faust", "Don Quixote", "Ryōshū", "Meursault", "Hong Lu", "Heathcliff", "Ishmael", "Rodion", "Sinclair", "Outis", "Gregor"];
-    
-    sinnerOrder.forEach(sinnerName => {
-        const btn = document.createElement('button');
-        btn.className = 'btn sinner-nav-btn';
-        btn.textContent = sinnerName;
-        if (sinnerName === state.builderSelectedSinner) {
-            btn.classList.add('selected');
-        }
-        btn.addEventListener('click', () => {
-            state.builderSelectedSinner = sinnerName;
-            renderRosterBuilder();
-        });
-        sinnerNav.appendChild(btn);
-    });
-
-    const sinnerIDs = state.idsBySinner[state.builderSelectedSinner];
-    const filteredSinnerIDs = filterIDs(sinnerIDs, state.filters);
-    renderIDList(elements.builderIdPool, filteredSinnerIDs, {
-        selectionSet: state.builderRoster, 
-        clickHandler: toggleBuilderIdSelection
-    });
-
-    const sortedSelectedRoster = [...state.builderRoster].sort((a, b) => {
-        const indexA = state.masterIDList.findIndex(item => item.id === a);
-        const indexB = state.masterIDList.findIndex(item => item.id === b);
-        return indexA - indexB;
-    });
-    const selectedObjects = sortedSelectedRoster.map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
-    
-    renderGroupedView(elements.builderSelectedRoster, selectedObjects, { 
-        selectionSet: state.builderRoster, 
-        clickHandler: toggleBuilderIdSelection 
-    });
-
-    elements.builderCounter.textContent = state.builderRoster.length;
-    
-    if(state.builderRoster.length === ROSTER_SIZE) {
-        const code = generateRosterCode();
-        elements.builderRosterCodeDisplay.textContent = code || "Error generating code.";
-        elements.builderCopyCode.disabled = !code;
-    } else {
-        elements.builderRosterCodeDisplay.textContent = `Select ${ROSTER_SIZE - state.builderRoster.length} more IDs to generate a code.`;
-        elements.builderCopyCode.disabled = true;
-    }
-}
-
-function updateTimerUI() {
-    const { timer } = state.draft;
-    elements.refTimerControl.classList.toggle('hidden', !timer.enabled || state.userRole !== 'ref');
-    elements.phaseTimer.classList.toggle('hidden', !timer.enabled);
-
-    if (!timer.enabled || !timer.running) {
-        elements.phaseTimer.textContent = "--:--";
-        if(state.timerInterval) clearInterval(state.timerInterval);
-        state.timerInterval = null;
-        return;
-    }
-
-    if (!state.timerInterval) {
-        state.timerInterval = setInterval(updateTimerUI, 1000);
-    }
-
-    const remaining = Math.max(0, Math.round((timer.endTime - Date.now()) / 1000));
-    const minutes = Math.floor(remaining / 60);
-    const seconds = remaining % 60;
-    elements.phaseTimer.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-}
-
-// ======================
-// CLIENT ACTIONS & EVENT HANDLERS
-// ======================
-function toggleIDSelection(player, id) {
-    sendMessage({ type: 'rosterSelect', lobbyCode: state.lobbyCode, player, id });
-}
-
-function setPlayerRoster(player, roster) {
-    sendMessage({ type: 'rosterSet', lobbyCode: state.lobbyCode, player, roster });
-}
-
-function hoverEgoToBan(egoId) {
-    sendMessage({ type: 'draftHover', lobbyCode: state.lobbyCode, payload: { id: egoId, type: 'ego' } });
-}
-
-function hoverDraftID(id) {
-    sendMessage({ type: 'draftHover', lobbyCode: state.lobbyCode, payload: { id, type: 'id' } });
-}
-
-function confirmSelection(type) {
-     sendMessage({ type: 'draftConfirm', lobbyCode: state.lobbyCode, payload: { type } });
-}
-
-function toggleBuilderIdSelection(id) {
-    const index = state.builderRoster.indexOf(id);
-    if (index > -1) {
-        state.builderRoster.splice(index, 1);
-    } else {
-        if (state.builderRoster.length < ROSTER_SIZE) {
-            state.builderRoster.push(id);
-        } else {
-            showNotification(`You can only select ${ROSTER_SIZE} IDs.`);
-        }
-    }
-    renderRosterBuilder();
-}
-
-// ======================
-// STATE HANDLERS
-// ======================
-function handleLobbyCreated(message) {
-    handleLobbyJoined(message);
-}
-
-function handleLobbyJoined(message) {
-    elements.rejoinOverlay.style.display = 'none';
-
-    state.lobbyCode = message.lobbyCode || message.code;
-    state.userRole = message.role;
-    state.rejoinToken = message.rejoinToken;
-
-    if (state.rejoinToken) {
-        localStorage.setItem('limbusDraftSession', JSON.stringify({
-            lobbyCode: state.lobbyCode,
-            userRole: state.userRole,
-            rejoinToken: state.rejoinToken
-        }));
-    }
-
-    handleStateUpdate(message);
-    showNotification(`Joined lobby as ${state.participants[state.userRole].name}`);
-}
-
-function handleStateUpdate(message) {
-    Object.assign(state.participants, message.state.participants);
-    Object.assign(state.roster, message.state.roster);
-    Object.assign(state.draft, message.state.draft);
-    
-    elements.lobbyCodeDisplay.textContent = state.lobbyCode;
-    updateAllUIsFromState();
-}
-
-// ======================
-// INITIALIZATION
-// ======================
-function setupFilterBar(barId, filterStateObject) {
-    const bar = document.getElementById(barId);
-    if (!bar) return;
-
-    const update = () => {
-        if (state.currentView === 'lobbyView') {
-            if (state.draft.phase === 'roster') filterAndRenderRosterSelection();
-            else updateDraftInstructions();
-        } else if (state.currentView === 'rosterBuilderPage') {
-            renderRosterBuilder();
-        }
-    };
-
-    bar.addEventListener('input', (e) => {
-        if (e.target.classList.contains('roster-search-input')) {
-            filterStateObject.rosterSearch = e.target.value;
-            update();
-        }
-    });
-    bar.addEventListener('change', (e) => {
-        const filterType = e.target.dataset.filter;
-        if (filterType) {
-            filterStateObject[filterType] = e.target.value;
-            update();
-        }
-    });
-    bar.addEventListener('click', (e) => {
-        if (e.target.closest('.reset-filters-btn')) {
-            Object.keys(filterStateObject).forEach(key => filterStateObject[key] = "");
-            bar.querySelectorAll('input, select').forEach(el => el.value = "");
-            update();
-        }
-    });
-}
-
-function setupEventListeners() {
-    // Main Page
-    elements.createLobbyBtn.addEventListener('click', () => {
-        const options = {
-            name: elements.playerNameInput.value.trim(),
-            draftLogic: elements.draftLogicSelect.value,
-            timerEnabled: elements.timerToggle.value === 'true'
-        };
-        sendMessage({ type: 'createLobby', options });
-    });
-    elements.joinLobbyBtn.addEventListener('click', () => {
-        elements.lobbyAccessForm.style.display = 'block';
-        elements.joinLobbyBtn.style.display = 'none';
-    });
-    elements.goToBuilder.addEventListener('click', () => {
-        state.builderSelectedSinner = "Yi Sang";
-        switchView('rosterBuilderPage');
-        renderRosterBuilder();
-    });
-    elements.roleOptions.forEach(option => {
-        option.addEventListener('click', () => {
-            elements.roleOptions.forEach(opt => opt.classList.remove('selected'));
-            option.classList.add('selected');
-        });
-    });
-    elements.enterLobbyBtn.addEventListener('click', () => {
-        const lobbyCode = elements.lobbyCodeInput.value.trim().toUpperCase();
-        const selectedRole = document.querySelector('.role-option.selected')?.dataset.role;
-        if (!lobbyCode || !selectedRole) return showNotification('Enter code and select a role.', true);
-        sendMessage({ type: 'joinLobby', lobbyCode, role: selectedRole, name: elements.playerNameInput.value.trim() });
-    });
-    
-    const clearSessionAndReload = () => {
-        localStorage.removeItem('limbusDraftSession');
-        window.location.reload();
-    };
-    elements.backToMainLobby.addEventListener('click', clearSessionAndReload);
-    elements.restartDraft.addEventListener('click', clearSessionAndReload);
-    elements.backToMainBuilder.addEventListener('click', () => {
-        state.lobbyCode = ''; 
-        switchView('mainPage');
-    });
-    
-    // Lobby Roster Controls
-    ['p1', 'p2'].forEach(player => {
-        elements[`${player}Random`].addEventListener('click', () => (state.userRole === player || state.userRole === 'ref') && sendMessage({ type: 'rosterRandomize', lobbyCode: state.lobbyCode, player }));
-        elements[`${player}Clear`].addEventListener('click', () => (state.userRole === player || state.userRole === 'ref') && sendMessage({ type: 'rosterClear', lobbyCode: state.lobbyCode, player }));
-        elements[`${player}Ready`].addEventListener('click', () => {
-            if (state.userRole === player || state.userRole === 'ref') {
-                 if (state.roster[player].length !== ROSTER_SIZE && !state.participants[player].ready) return showNotification(`Must select ${ROSTER_SIZE} IDs.`, true);
-                sendMessage({ type: 'updateReady', lobbyCode: state.lobbyCode, player });
-            }
-        });
-        elements[`${player}RosterLoad`].addEventListener('click', () => {
-            if (state.userRole === player || state.userRole === 'ref') {
-                const code = elements[`${player}RosterCodeInput`].value.trim();
-                const roster = loadRosterFromCode(code);
-                if (roster) {
-                    setPlayerRoster(player, roster);
-                    showNotification("Roster loaded successfully!");
-                }
-            }
-        });
-    });
-    
-    // Roster Builder Controls
-    elements.builderRandom.addEventListener('click', () => {
-        const shuffled = [...state.masterIDList].sort(() => 0.5 - Math.random());
-        state.builderRoster = shuffled.slice(0, ROSTER_SIZE).map(id => id.id);
-        renderRosterBuilder();
-    });
-    elements.builderClear.addEventListener('click', () => {
-        state.builderRoster = [];
-        renderRosterBuilder();
-    });
-    elements.builderCopyCode.addEventListener('click', () => {
-        const code = elements.builderRosterCodeDisplay.textContent;
-        navigator.clipboard.writeText(code).then(() => {
-            showNotification("Roster code copied to clipboard!");
-        }, () => {
-            showNotification("Failed to copy code.", true);
-        });
-    });
-    elements.builderLoadCode.addEventListener('click', () => {
-        const code = elements.builderLoadCodeInput.value.trim();
-        const roster = loadRosterFromCode(code);
-        if (roster) {
-            state.builderRoster = roster;
-            renderRosterBuilder();
-            showNotification("Roster loaded successfully!");
-        }
-    });
-
-    // EGO Search
-    elements.egoSearchInput.addEventListener('input', (e) => {
-        state.egoSearch = e.target.value;
-        renderEgoBanPhase();
-    });
-
-    // Draft controls
-    elements.startCoinFlip.addEventListener('click', () => sendMessage({ type: 'startCoinFlip', lobbyCode: state.lobbyCode }));
-    elements.goFirstBtn.addEventListener('click', () => sendMessage({ type: 'setTurnOrder', lobbyCode: state.lobbyCode, choice: 'first' }));
-    elements.goSecondBtn.addEventListener('click', () => sendMessage({ type: 'setTurnOrder', lobbyCode: state.lobbyCode, choice: 'second' }));
-    elements.confirmEgoBans.addEventListener('click', () => sendMessage({ type: 'draftControl', lobbyCode: state.lobbyCode, action: 'confirmEgoBans' }));
-    elements.completeDraft.addEventListener('click', () => sendMessage({ type: 'draftControl', lobbyCode: state.lobbyCode, action: 'complete' }));
-    elements.confirmSelectionId.addEventListener('click', () => confirmSelection('id'));
-    elements.confirmSelectionEgo.addEventListener('click', () => confirmSelection('ego'));
-    elements.refTimerControl.addEventListener('click', () => sendMessage({ type: 'timerControl', lobbyCode: state.lobbyCode, action: 'togglePause' }));
-}
-
-function createFilterBarHTML(options = {}) {
-    const { showSinnerFilter = true } = options;
-    const sinnerFilterHTML = `
-        <div class="filter-group">
-            <label class="filter-label">Filter by Sinner:</label>
-            <select class="sinner-filter" data-filter="sinner">
-                <option value="">All Sinners</option>
-                <option value="Yi Sang">Yi Sang</option><option value="Faust">Faust</option><option value="Don Quixote">Don Quixote</option>
-                <option value="Ryōshū">Ryōshū</option><option value="Meursault">Meursault</option><option value="Hong Lu">Hong Lu</option>
-                <option value="Heathcliff">Heathcliff</option><option value="Ishmael">Ishmael</option><option value="Rodion">Rodion</option>
-                <option value="Sinclair">Sinclair</option><option value="Outis">Outis</option><option value="Gregor">Gregor</option>
-            </select>
-        </div>
-    `;
-
-    return `
-        <div class="filter-group">
-            <label class="filter-label">Search by Name:</label>
-            <input type="text" class="roster-search-input" placeholder="e.g. LCB Sinner...">
-        </div>
-        ${showSinnerFilter ? sinnerFilterHTML : ''}
-        <div class="filter-group">
-            <label class="filter-label">Filter by Sin Affinity:</label>
-            <select class="sinAffinity-filter" data-filter="sinAffinity">
-                <option value="">All Affinities</option>
-                <option value="Gloom">Gloom</option><option value="Lust">Lust</option><option value="Sloth">Sloth</option>
-                <option value="Wrath">Wrath</option><option value="Gluttony">Gluttony</option><option value="Envy">Envy</option><option value="Pride">Pride</option>
-            </select>
-        </div>
-        <div class="filter-group">
-            <label class="filter-label">Filter by Keyword:</label>
-            <select class="keyword-filter" data-filter="keyword">
-                <option value="">All Keywords</option>
-                <option value="Sinking">Sinking</option><option value="Rupture">Rupture</option><option value="Discard">Discard</option>
-                <option value="Tremor">Tremor</option><option value="Bleed">Bleed</option><option value="Poise">Poise</option>
-                <option value="Aggro">Aggro</option><option value="Charge">Charge</option><option value="Burn">Burn</option><option value="Ammo">Ammo</option>
-            </select>
-        </div>
-        <div class="filter-buttons">
-            <button class="btn reset-filters-btn"><i class="fas fa-sync"></i> Reset</button>
-        </div>
-    `;
-}
-
-function cacheDOMElements() {
-     elements = {
-        // Pages
-        mainPage: document.getElementById('main-page'),
-        lobbyView: document.getElementById('lobby-view'),
-        rosterBuilderPage: document.getElementById('roster-builder-page'),
-        completedView: document.getElementById('completed-view'),
-        rejoinOverlay: document.getElementById('rejoin-overlay'),
-
-        // Main Page
-        lobbyAccessForm: document.getElementById('lobby-access-form'),
-        createLobbyBtn: document.getElementById('create-lobby'),
-        joinLobbyBtn: document.getElementById('join-lobby'),
-        goToBuilder: document.getElementById('go-to-builder'),
-        enterLobbyBtn: document.getElementById('enter-lobby'),
-        lobbyCodeInput: document.getElementById('lobby-code'),
-        roleOptions: document.querySelectorAll('.role-option'),
-        playerNameInput: document.getElementById('player-name'),
-        draftLogicSelect: document.getElementById('draft-logic-select'),
-        timerToggle: document.getElementById('timer-toggle'),
-
-        // Shared
-        backToMainLobby: document.getElementById('back-to-main-lobby'),
-        backToMainBuilder: document.getElementById('back-to-main-builder'),
-        connectionStatus: document.getElementById('connection-status'),
-        notification: document.getElementById('notification'),
-        
-        // Lobby
-        lobbyCodeDisplay: document.getElementById('lobby-code-display'),
-        participantsList: document.getElementById('participants-list'),
-        phaseTimer: document.getElementById('phase-timer'),
-        refTimerControl: document.getElementById('ref-timer-control'),
-        draftStatusPanel: document.getElementById('draft-status-panel'),
-        currentPhase: document.getElementById('current-phase'),
-        draftActionDescription: document.getElementById('draft-action-description'),
-        
-        // Roster Phase (Lobby)
-        rosterPhase: document.getElementById('roster-phase'),
-        p1Panel: document.getElementById('p1-panel'), p2Panel: document.getElementById('p2-panel'),
-        p1Roster: document.getElementById('p1-roster'), p2Roster: document.getElementById('p2-roster'),
-        p1Counter: document.getElementById('p1-counter'), p2Counter: document.getElementById('p2-counter'),
-        p1Random: document.getElementById('p1-random'), p2Random: document.getElementById('p2-random'),
-        p1Clear: document.getElementById('p1-clear'), p2Clear: document.getElementById('p2-clear'),
-        p1Ready: document.getElementById('p1-ready'), p2Ready: document.getElementById('p2-ready'),
-        p1Status: document.getElementById('p1-status'), p2Status: document.getElementById('p2-status'),
-        p1NameDisplay: document.getElementById('p1-name-display'), p2NameDisplay: document.getElementById('p2-name-display'),
-        p1RosterCodeInput: document.getElementById('p1-roster-code-input'), p2RosterCodeInput: document.getElementById('p2-roster-code-input'),
-        p1RosterLoad: document.getElementById('p1-roster-load'), p2RosterLoad: document.getElementById('p2-roster-load'),
-        startCoinFlip: document.getElementById('start-coin-flip'),
-
-        // Roster Builder
-        builderSinnerNav: document.getElementById('builder-sinner-nav'),
-        builderIdPool: document.getElementById('builder-id-pool'),
-        builderSelectedRoster: document.getElementById('builder-selected-roster'),
-        builderCounter: document.getElementById('builder-counter'),
-        builderRandom: document.getElementById('builder-random'),
-        builderClear: document.getElementById('builder-clear'),
-        builderRosterCodeDisplay: document.getElementById('builder-roster-code-display'),
-        builderCopyCode: document.getElementById('builder-copy-code'),
-        builderLoadCodeInput: document.getElementById('builder-load-code-input'),
-        builderLoadCode: document.getElementById('builder-load-code'),
-
-        // EGO Ban Phase
-        egoBanPhase: document.getElementById('ego-ban-phase'),
-        egoBanTitle: document.getElementById('ego-ban-title'),
-        egoSearchInput: document.getElementById('ego-search-input'),
-        egoBanContainer: document.getElementById('ego-ban-container'),
-        confirmEgoBans: document.getElementById('confirm-ego-bans'),
-        confirmSelectionEgo: document.getElementById('confirm-selection-ego'),
-        opponentRosterDisplay: document.getElementById('opponent-roster-display'),
-        opponentRosterTitle: document.getElementById('opponent-roster-title'),
-        opponentRosterList: document.getElementById('opponent-roster-list'),
-        currentPlayerEgoBans: document.getElementById('current-player-ego-bans'),
-        egoBanCounter: document.getElementById('ego-ban-counter'),
-        p1EgoBansPreview: document.getElementById('p1-ego-bans-preview'),
-
-        // ID Draft Phase
-        idDraftPhase: document.getElementById('id-draft-phase'),
-        draftBannedEgosList: document.getElementById('draft-banned-egos-list'),
-        completeDraft: document.getElementById('complete-draft'),
-        p1DraftColumn: document.getElementById('p1-draft-column'), 
-        p2DraftColumn: document.getElementById('p2-draft-column'),
-        draftInteractionHub: document.getElementById('draft-interaction-hub'),
-        p1DraftName: document.getElementById('p1-draft-name'), p2DraftName: document.getElementById('p2-draft-name'),
-        p1DraftStatus: document.getElementById('p1-draft-status'), p2DraftStatus: document.getElementById('p2-draft-status'),
-        draftPoolContainer: document.getElementById('draft-pool-container'),
-        confirmSelectionId: document.getElementById('confirm-selection-id'),
-        p1IdBans: document.getElementById('p1-id-bans'), p2IdBans: document.getElementById('p2-id-bans'),
-        p1Picks: document.getElementById('p1-picks'), p2Picks: document.getElementById('p2-picks'),
-
-        // Completed View
-        finalBannedEgosList: document.getElementById('final-banned-egos-list'),
-        restartDraft: document.getElementById('restart-draft'), 
-        finalP1Name: document.getElementById('final-p1-name'), finalP2Name: document.getElementById('final-p2-name'),
-        finalP1Picks: document.getElementById('final-p1-picks'),
-        finalP2Picks: document.getElementById('final-p2-picks'),
-        finalP1Bans: document.getElementById('final-p1-bans'),   
-        finalP2Bans: document.getElementById('final-p2-bans'),
-
-        // Coin Flip Modal
-        coinFlipModal: document.getElementById('coin-flip-modal'),
-        coinIcon: document.getElementById('coin-icon'),
-        coinFlipStatus: document.getElementById('coin-flip-status'),
-        turnChoiceButtons: document.getElementById('turn-choice-buttons'),
-        goFirstBtn: document.getElementById('go-first-btn'),
-        goSecondBtn: document.getElementById('go-second-btn'),
-    };
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-    // Data is now in data.js, which is loaded before this script
-    
-    cacheDOMElements();
-
-    document.getElementById('global-filter-bar-roster').innerHTML = createFilterBarHTML({ showSinnerFilter: true });
-    document.getElementById('global-filter-bar-builder').innerHTML = createFilterBarHTML({ showSinnerFilter: false });
-    document.getElementById('global-filter-bar-draft').innerHTML = createFilterBarHTML({ showSinnerFilter: true });
-    setupFilterBar('global-filter-bar-roster', state.filters);
-    setupFilterBar('global-filter-bar-builder', state.filters);
-    setupFilterBar('global-filter-bar-draft', state.draftFilters);
-
-    state.masterIDList = parseIDCSV(idCsvData);
-    state.masterEGOList = parseEGOData(egoData);
-
-    const sinnerOrder = ["Yi Sang", "Faust", "Don Quixote", "Ryōshū", "Meursault", "Hong Lu", "Heathcliff", "Ishmael", "Rodion", "Sinclair", "Outis", "Gregor"];
-    state.idsBySinner = {};
-    sinnerOrder.forEach(sinnerName => {
-        state.idsBySinner[sinnerName] = state.masterIDList.filter(id => id.sinner === sinnerName);
-    });
-
-    setupEventListeners();
-    connectWebSocket();
-    switchView('mainPage');
 });
+
+const PORT = process.env.PORT || 8080;
+server.listen(PORT, () => console.log(`Server is listening on port ${PORT}`));
