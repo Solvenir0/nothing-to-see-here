@@ -420,6 +420,9 @@ function updateAllUIsFromState() {
     const { draft } = state;
     const { phase } = draft;
 
+    // FIX: Always evaluate draft status panel visibility before any early returns.
+    elements.draftStatusPanel.classList.toggle('hidden', phase === 'roster' || phase === 'complete');
+
     if (phase === 'complete') {
         switchView('completedView');
         renderCompletedView();
@@ -433,8 +436,6 @@ function updateAllUIsFromState() {
     elements.egoBanPhase.classList.toggle('hidden', phase !== 'egoBan');
     elements.idDraftPhase.classList.toggle('hidden', !['ban', 'pick'].includes(phase));
     elements.coinFlipModal.classList.toggle('hidden', phase !== 'coinFlip');
-    elements.draftStatusPanel.classList.toggle('hidden', phase === 'roster' || phase === 'complete');
-
 
     if (phase === 'coinFlip') {
         handleCoinFlipUI();
