@@ -1186,17 +1186,17 @@ input:focus, select:focus {
     border: 1px solid var(--border);
     border-top: 3px solid var(--accent);
     border-radius: 12px;
-    padding: 20px;
+    padding: 25px;
     width: auto;
-    min-width: 320px;
-    max-width: 380px;
+    min-width: 350px;
+    max-width: 420px;
     box-shadow: 0 8px 25px rgba(0,0,0,0.5);
     text-align: left;
     transition: all 0.3s ease;
 }
 
 #draft-status-panel #current-phase {
-    font-size: 1.4rem;
+    font-size: 1.6rem;
     margin: 0 0 8px 0;
     padding: 0;
     border: none;
@@ -1205,7 +1205,7 @@ input:focus, select:focus {
 }
 
 #draft-status-panel #draft-action-description {
-    font-size: 1.0rem;
+    font-size: 1.1rem;
     color: #ddd;
     min-height: 0;
     margin: 0;
@@ -1285,4 +1285,3 @@ input:focus, select:focus {
     .connection-status { top: 5px; right: 5px; font-size: 0.8rem; padding: 5px 10px; }
     #draft-status-panel { bottom: 10px; right: 10px; max-width: 250px; }
 }
-*/
