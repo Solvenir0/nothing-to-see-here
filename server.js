@@ -34,14 +34,14 @@ const DRAFT_LOGIC = {
         pick1: [{ p: 'p1', c: 1 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 1 }],
         midBanSteps: 6,
         pick2: [{ p: 'p2', c: 1 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 1 }],
-        pick_s2: [{ p: 'p1', c: 1 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 1 }] // 6 picks per player
+        pick_s2: [{ p: 'p1', c: 1 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 1 }]
     },
     '2-3-2': {
         ban1Steps: 8,
         pick1: [{ p: 'p1', c: 2 }, { p: 'p2', c: 3 }, { p: 'p1', c: 2 }, { p: 'p2', c: 3 }, { p: 'p1', c: 2 }],
         midBanSteps: 6,
         pick2: [{ p: 'p2', c: 2 }, { p: 'p1', c: 3 }, { p: 'p2', c: 2 }, { p: 'p1', c: 3 }, { p: 'p2', c: 2 }],
-        pick_s2: [{ p: 'p1', c: 1 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 1 }] // 6 picks per player
+        pick_s2: [{ p: 'p1', c: 1 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 1 }]
     }
 };
 
@@ -361,11 +361,11 @@ function advancePhase(lobbyData) {
     const [firstPlayer, secondPlayer] = draft.playerOrder;
     const getPlayer = (p) => (p === 'p1' ? firstPlayer : secondPlayer);
 
-    switch (draft.phase) { // Switch on the current phase
+    switch (draft.phase) {
         case "egoBan":
             if (draft.currentPlayer === firstPlayer) {
                 draft.currentPlayer = secondPlayer;
-            } else {
+            } else { // Current player is the second player
                 draft.phase = "ban";
                 draft.action = "ban";
                 draft.step = 0;
@@ -482,7 +482,8 @@ function handleDraftConfirm(lobbyCode, lobbyData, ws) {
 
         let listToUpdate;
         if (phase.includes('ban')) {
-            listToUpdate = draft.idBans[currentPlayer];
+            const opponent = currentPlayer === 'p1' ? 'p2' : 'p1';
+            listToUpdate = draft.idBans[opponent];
         } else if (phase === 'pick_s2') {
             listToUpdate = draft.picks_s2[currentPlayer];
         } else {
