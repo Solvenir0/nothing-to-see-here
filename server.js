@@ -5,10 +5,11 @@ const express = require('express');
 const http = require('http');
 const path = require('path');
 const WebSocket = require('ws');
-const { Firestore } = require('@google-cloud/firestore');
 const crypto = require('crypto');
 
-const firestore = new Firestore();
+// In-memory storage for lobbies instead of Firestore
+const lobbies = {};
+
 const app = express();
 const server = http.createServer(app);
 
@@ -233,14 +234,11 @@ const masterIDList = parseIDCSV(idCsvData);
 const allIds = masterIDList.map(item => item.id);
 
 
-async function generateUniqueLobbyCode() {
+function generateUniqueLobbyCode() {
     let code;
-    let docExists;
     do {
         code = Math.random().toString(36).substring(2, 8).toUpperCase();
-        const doc = await firestore.collection('lobbies').doc(code).get();
-        docExists = doc.exists;
-    } while (docExists);
+    } while (lobbies[code]);
     return code;
 }
 
@@ -284,12 +282,10 @@ function createNewLobbyState(options = {}) {
     };
 }
 
-async function broadcastState(lobbyCode) {
-    const lobbyRef = firestore.collection('lobbies').doc(lobbyCode);
-    const lobbyDoc = await lobbyRef.get();
-    if (!lobbyDoc.exists) return;
+function broadcastState(lobbyCode) {
+    const lobbyData = lobbies[lobbyCode];
+    if (!lobbyData) return;
 
-    const lobbyData = lobbyDoc.data();
     const message = JSON.stringify({ type: 'stateUpdate', state: lobbyData });
 
     wss.clients.forEach(client => {
@@ -299,34 +295,33 @@ async function broadcastState(lobbyCode) {
     });
 }
 
-async function updateLobbyActivity(lobbyRef) {
-    return lobbyRef.update({ lastActivity: new Date().toISOString() });
-}
-
-
-async function handleTimer(lobbyCode) {
-    const lobbyRef = firestore.collection('lobbies').doc(lobbyCode);
-    let doc = await lobbyRef.get();
-    if (!doc.exists) return;
-    let lobbyData = doc.data();
-
-    const { hovered, currentPlayer, phase, action } = lobbyData.draft;
-    const hoveredId = hovered[currentPlayer];
-
-    console.log(`Timer expired for ${lobbyCode}. Phase: ${phase}, Player: ${currentPlayer}, Hovered: ${hoveredId}`);
-    
-    if (hoveredId) {
-        await handleDraftConfirm(lobbyRef, lobbyData, null);
-    } else {
-        console.log("Timer expired with no hover. Advancing phase.");
-        lobbyData = advancePhase(lobbyData);
-        await lobbyRef.update({ draft: lobbyData.draft });
-        await setTimerForLobby(lobbyCode, lobbyData);
-        await broadcastState(lobbyCode);
+function updateLobbyActivity(lobbyCode) {
+    if (lobbies[lobbyCode]) {
+        lobbies[lobbyCode].lastActivity = new Date().toISOString();
     }
 }
 
-async function setTimerForLobby(lobbyCode, lobbyData) {
+
+function handleTimer(lobbyCode) {
+    let lobbyData = lobbies[lobbyCode];
+    if (!lobbyData) return;
+
+    const { hovered, currentPlayer } = lobbyData.draft;
+    const hoveredId = hovered[currentPlayer];
+
+    console.log(`Timer expired for ${lobbyCode}. Player: ${currentPlayer}, Hovered: ${hoveredId}`);
+    
+    if (hoveredId) {
+        handleDraftConfirm(lobbyCode, lobbyData, null);
+    } else {
+        console.log("Timer expired with no hover. Advancing phase.");
+        lobbyData = advancePhase(lobbyData);
+        setTimerForLobby(lobbyCode, lobbyData);
+        broadcastState(lobbyCode);
+    }
+}
+
+function setTimerForLobby(lobbyCode, lobbyData) {
     if (lobbyTimers[lobbyCode] && lobbyTimers[lobbyCode].timeoutId) {
         clearTimeout(lobbyTimers[lobbyCode].timeoutId);
     }
@@ -334,7 +329,6 @@ async function setTimerForLobby(lobbyCode, lobbyData) {
     const { draft } = lobbyData;
     if (!draft.timer.enabled || draft.phase === 'complete' || draft.timer.paused) {
         draft.timer.running = false;
-        await firestore.collection('lobbies').doc(lobbyCode).update({ 'draft.timer.running': false });
         return;
     }
 
@@ -356,14 +350,8 @@ async function setTimerForLobby(lobbyCode, lobbyData) {
 
         const timeoutId = setTimeout(() => handleTimer(lobbyCode), duration * 1000);
         lobbyTimers[lobbyCode] = { timeoutId };
-        
-        await firestore.collection('lobbies').doc(lobbyCode).update({ 
-            'draft.timer.running': true,
-            'draft.timer.endTime': draft.timer.endTime,
-        });
     } else {
          draft.timer.running = false;
-         await firestore.collection('lobbies').doc(lobbyCode).update({ 'draft.timer.running': false });
     }
 }
 
@@ -472,7 +460,7 @@ function advancePhase(lobbyData) {
     return lobbyData;
 }
 
-async function handleDraftConfirm(lobbyRef, lobbyData, ws) {
+function handleDraftConfirm(lobbyCode, lobbyData, ws) {
     const { draft } = lobbyData;
     const { currentPlayer, hovered, action } = draft;
     const selectedId = hovered[currentPlayer];
@@ -523,27 +511,27 @@ async function handleDraftConfirm(lobbyRef, lobbyData, ws) {
         lobbyData = advancePhase(lobbyData);
     }
 
-    await lobbyRef.update({ draft: lobbyData.draft });
-    await updateLobbyActivity(lobbyRef);
-    await setTimerForLobby(lobbyRef.id, lobbyData);
-    await broadcastState(lobbyRef.id);
+    updateLobbyActivity(lobbyCode);
+    setTimerForLobby(lobbyCode, lobbyData);
+    broadcastState(lobbyCode);
 }
 
 // --- MAIN WEBSOCKET LOGIC ---
 wss.on('connection', (ws) => {
     console.log('Client connected');
 
-    ws.on('message', async (message) => {
+    ws.on('message', (message) => {
         let incomingData;
         try { incomingData = JSON.parse(message); } 
         catch (e) { console.error('Invalid JSON:', message); return; }
 
-        const { lobbyCode, role, player, id, action, payload, name, roster, options, choice } = incomingData;
-        const lobbyRef = lobbyCode ? firestore.collection('lobbies').doc(lobbyCode.toUpperCase()) : null;
+        const { lobbyCode: rawLobbyCode, role, player, id, action, payload, name, roster, options, choice } = incomingData;
+        const lobbyCode = rawLobbyCode ? rawLobbyCode.toUpperCase() : null;
+        let lobbyData = lobbyCode ? lobbies[lobbyCode] : null;
 
         switch (incomingData.type) {
             case 'createLobby': {
-                const newLobbyCode = await generateUniqueLobbyCode();
+                const newLobbyCode = generateUniqueLobbyCode();
                 const newLobbyState = createNewLobbyState(options);
                 ws.lobbyCode = newLobbyCode;
                 ws.userRole = 'ref';
@@ -552,120 +540,91 @@ wss.on('connection', (ws) => {
                 newLobbyState.participants.ref.status = "connected";
                 newLobbyState.participants.ref.rejoinToken = rejoinToken;
                 
-                await firestore.collection('lobbies').doc(newLobbyCode).set(newLobbyState);
+                lobbies[newLobbyCode] = newLobbyState;
                 
                 ws.send(JSON.stringify({ type: 'lobbyCreated', code: newLobbyCode, role: 'ref', rejoinToken, state: newLobbyState }));
-                await setTimerForLobby(newLobbyCode, newLobbyState);
-                await broadcastState(newLobbyCode);
+                setTimerForLobby(newLobbyCode, newLobbyState);
+                broadcastState(newLobbyCode);
                 break;
             }
 
             case 'getPublicLobbies': {
                 const validPhases = ['roster', 'coinFlip', 'egoBan', 'ban', 'pick', 'midBan', 'pick2', 'pick_s2'];
-                const snapshot = await firestore.collection('lobbies')
-                    .where('draft.isPublic', '==', true)
-                    .where('draft.phase', 'in', validPhases)
-                    .orderBy('createdAt', 'desc')
-                    .limit(50)
-                    .get();
+                const publicLobbies = Object.entries(lobbies)
+                    .filter(([, lobby]) => lobby.draft.isPublic && validPhases.includes(lobby.draft.phase))
+                    .map(([code, lobby]) => ({
+                        code,
+                        hostName: lobby.hostName,
+                        participants: lobby.participants,
+                        draftLogic: lobby.draft.draftLogic,
+                    }))
+                    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+                    .slice(0, 50);
 
-                if (snapshot.empty) {
-                    ws.send(JSON.stringify({ type: 'publicLobbiesList', lobbies: [] }));
-                    return;
-                }
-
-                const lobbies = snapshot.docs.map(doc => {
-                    const data = doc.data();
-                    return {
-                        code: doc.id,
-                        hostName: data.hostName,
-                        participants: data.participants,
-                        draftLogic: data.draft.draftLogic,
-                    };
-                });
-                ws.send(JSON.stringify({ type: 'publicLobbiesList', lobbies }));
+                ws.send(JSON.stringify({ type: 'publicLobbiesList', lobbies: publicLobbies }));
                 break;
             }
             
             case 'getLobbyInfo': {
-                if (!lobbyRef) return;
-                const doc = await lobbyRef.get();
-                if (!doc.exists) return ws.send(JSON.stringify({ type: 'error', message: 'Lobby not found.' }));
-                const data = doc.data();
+                if (!lobbyData) return ws.send(JSON.stringify({ type: 'error', message: 'Lobby not found.' }));
                 ws.send(JSON.stringify({
                     type: 'lobbyInfo',
                     lobby: {
-                        code: doc.id,
-                        participants: data.participants,
+                        code: lobbyCode,
+                        participants: lobbyData.participants,
                     }
                 }));
                 break;
             }
 
             case 'joinLobby': {
-                if (!lobbyRef) return;
-                const doc = await lobbyRef.get();
-                if (!doc.exists) return ws.send(JSON.stringify({ type: 'error', message: 'Lobby not found.' }));
+                if (!lobbyData) return ws.send(JSON.stringify({ type: 'error', message: 'Lobby not found.' }));
                 
-                const lobbyData = doc.data();
                 const participant = lobbyData.participants[role];
 
                 if (participant && (participant.status === 'connected' || participant.rejoinToken)) {
                     return ws.send(JSON.stringify({ type: 'error', message: `Role ${role.toUpperCase()} is taken or reserved. Try rejoining if this is you.` }));
                 }
                 
-                ws.lobbyCode = lobbyCode.toUpperCase();
+                ws.lobbyCode = lobbyCode;
                 ws.userRole = role;
                 const rejoinToken = crypto.randomUUID();
 
-                const updates = {
-                    [`participants.${role}.status`]: 'connected',
-                    [`participants.${role}.rejoinToken`]: rejoinToken,
-                    lastActivity: new Date().toISOString(),
-                };
-                if (name) updates[`participants.${role}.name`] = name;
+                lobbyData.participants[role].status = 'connected';
+                lobbyData.participants[role].rejoinToken = rejoinToken;
+                if (name) lobbyData.participants[role].name = name;
                 
-                await lobbyRef.update(updates);
+                updateLobbyActivity(lobbyCode);
                 
-                const updatedDoc = await lobbyRef.get();
                 ws.send(JSON.stringify({ 
                     type: 'lobbyJoined', 
                     lobbyCode: ws.lobbyCode, 
                     role, 
                     rejoinToken,
-                    state: updatedDoc.data() 
+                    state: lobbyData 
                 }));
                 broadcastState(ws.lobbyCode);
                 break;
             }
 
             case 'rejoinLobby': {
-                if (!lobbyRef || !role || !incomingData.rejoinToken) return;
+                if (!lobbyData || !role || !incomingData.rejoinToken) return;
                 
-                const doc = await lobbyRef.get();
-                if (!doc.exists) {
-                    return ws.send(JSON.stringify({ type: 'error', message: 'Lobby not found. Clearing session.' }));
-                }
-
-                const lobbyData = doc.data();
                 const participant = lobbyData.participants[role];
 
                 if (participant && participant.rejoinToken === incomingData.rejoinToken) {
-                    ws.lobbyCode = lobbyCode.toUpperCase();
+                    ws.lobbyCode = lobbyCode;
                     ws.userRole = role;
 
-                    await lobbyRef.update({
-                        [`participants.${role}.status`]: 'connected',
-                        lastActivity: new Date().toISOString(),
-                    });
-
-                    const updatedDoc = await lobbyRef.get();
+                    lobbyData.participants[role].status = 'connected';
+                    updateLobbyActivity(lobbyCode);
+                    
                     ws.send(JSON.stringify({
                         type: 'lobbyJoined',
                         lobbyCode: ws.lobbyCode,
                         role,
                         rejoinToken: incomingData.rejoinToken,
-                        state: updatedDoc.data()
+                        state: lobbyData
                     }));
                     broadcastState(ws.lobbyCode);
                 } else {
@@ -675,80 +634,59 @@ wss.on('connection', (ws) => {
             }
 
             case 'rosterSelect': {
-                if (!lobbyRef) return;
-                const doc = await lobbyRef.get();
-                if (!doc.exists) return;
-                let lobbyData = doc.data();
+                if (!lobbyData) return;
                 if (lobbyData.participants[player].ready) return;
                 const currentRoster = lobbyData.roster[player];
                 const index = currentRoster.indexOf(id);
                 if (index === -1) { if (currentRoster.length < ROSTER_SIZE) currentRoster.push(id); } 
                 else { currentRoster.splice(index, 1); }
-                await lobbyRef.update({ [`roster.${player}`]: currentRoster });
-                await updateLobbyActivity(lobbyRef);
-                broadcastState(lobbyCode.toUpperCase());
+                updateLobbyActivity(lobbyCode);
+                broadcastState(lobbyCode);
                 break;
             }
             
             case 'rosterSet': {
-                if (!lobbyRef) return;
-                const doc = await lobbyRef.get();
-                if (!doc.exists) return;
-                let lobbyData = doc.data();
+                if (!lobbyData) return;
                 if (lobbyData.participants[player].ready) return;
                 if (Array.isArray(roster) && roster.length === ROSTER_SIZE) {
-                    await lobbyRef.update({ [`roster.${player}`]: roster });
-                    await updateLobbyActivity(lobbyRef);
-                    broadcastState(lobbyCode.toUpperCase());
+                    lobbyData.roster[player] = roster;
+                    updateLobbyActivity(lobbyCode);
+                    broadcastState(lobbyCode);
                 }
                 break;
             }
 
             case 'rosterRandomize': {
-                if (!lobbyRef) return;
-                const doc = await lobbyRef.get();
-                if (!doc.exists) return;
-                let lobbyData = doc.data();
+                if (!lobbyData) return;
                 if (lobbyData.participants[player].ready) return;
                 const shuffled = [...allIds].sort(() => 0.5 - Math.random());
-                const newRoster = shuffled.slice(0, ROSTER_SIZE);
-                await lobbyRef.update({ [`roster.${player}`]: newRoster });
-                await updateLobbyActivity(lobbyRef);
-                broadcastState(lobbyCode.toUpperCase());
+                lobbyData.roster[player] = shuffled.slice(0, ROSTER_SIZE);
+                updateLobbyActivity(lobbyCode);
+                broadcastState(lobbyCode);
                 break;
             }
 
             case 'updateReady': {
-                if (!lobbyRef) return;
-                const doc = await lobbyRef.get();
-                if (!doc.exists) return;
-                let lobbyData = doc.data();
+                if (!lobbyData) return;
                 const currentReadyState = lobbyData.participants[player].ready;
                 if (!currentReadyState && lobbyData.roster[player].length !== ROSTER_SIZE) return;
-                await lobbyRef.update({ [`participants.${player}.ready`]: !currentReadyState });
-                await updateLobbyActivity(lobbyRef);
-                broadcastState(lobbyCode.toUpperCase());
+                lobbyData.participants[player].ready = !currentReadyState;
+                updateLobbyActivity(lobbyCode);
+                broadcastState(lobbyCode);
                 break;
             }
 
             case 'startCoinFlip': {
-                if (!lobbyRef || ws.userRole !== 'ref') return;
-                const doc = await lobbyRef.get();
-                if (!doc.exists) return;
-                let lobbyData = doc.data();
+                if (!lobbyData || ws.userRole !== 'ref') return;
                 lobbyData.draft.phase = 'coinFlip';
                 lobbyData.draft.coinFlipWinner = Math.random() < 0.5 ? 'p1' : 'p2';
-                await lobbyRef.update({ draft: lobbyData.draft });
-                await updateLobbyActivity(lobbyRef);
-                broadcastState(lobbyCode.toUpperCase());
+                updateLobbyActivity(lobbyCode);
+                broadcastState(lobbyCode);
                 break;
             }
 
             case 'setTurnOrder': {
-                if (!lobbyRef) return;
-                const doc = await lobbyRef.get();
-                if (!doc.exists) return;
-                let lobbyData = doc.data();
+                if (!lobbyData) return;
                 const { draft } = lobbyData;
 
                 if (ws.userRole !== draft.coinFlipWinner && ws.userRole !== 'ref') return;
@@ -765,45 +703,37 @@ wss.on('connection', (ws) => {
                 draft.action = 'egoBan';
                 draft.currentPlayer = draft.playerOrder[0];
 
-                await lobbyRef.update({ draft: draft });
-                await updateLobbyActivity(lobbyRef);
-                await setTimerForLobby(lobbyCode.toUpperCase(), lobbyData);
-                broadcastState(lobbyCode.toUpperCase());
+                updateLobbyActivity(lobbyCode);
+                setTimerForLobby(lobbyCode, lobbyData);
+                broadcastState(lobbyCode);
                 break;
             }
 
             case 'draftHover': {
-                if (!lobbyRef) return;
-                const doc = await lobbyRef.get();
-                if (!doc.exists) return;
+                if (!lobbyData) return;
                 const { id: hoveredId } = payload;
-                const { draft } = doc.data();
+                const { draft } = lobbyData;
                 const { currentPlayer } = draft;
                 if (ws.userRole !== currentPlayer && ws.userRole !== 'ref') return;
 
                 if (draft.hovered[currentPlayer] === hoveredId) {
-                    await lobbyRef.update({ [`draft.hovered.${currentPlayer}`]: null });
+                    draft.hovered[currentPlayer] = null;
                 } else {
-                    await lobbyRef.update({ [`draft.hovered.${currentPlayer}`]: hoveredId });
+                    draft.hovered[currentPlayer] = hoveredId;
                 }
-                await updateLobbyActivity(lobbyRef);
-                broadcastState(lobbyCode.toUpperCase());
+                updateLobbyActivity(lobbyCode);
+                broadcastState(lobbyCode);
                 break;
             }
 
             case 'draftConfirm': {
-                if (!lobbyRef) return;
-                const doc = await lobbyRef.get();
-                if (!doc.exists) return;
-                await handleDraftConfirm(lobbyRef, doc.data(), ws);
+                if (!lobbyData) return;
+                handleDraftConfirm(lobbyCode, lobbyData, ws);
                 break;
             }
 
             case 'draftControl': {
-                if (!lobbyRef) return;
-                const doc = await lobbyRef.get();
-                if (!doc.exists) return;
-                let lobbyData = doc.data();
+                if (!lobbyData) return;
 
                 if (action === 'confirmEgoBans') {
                      const { currentPlayer } = lobbyData.draft;
@@ -814,57 +744,47 @@ wss.on('connection', (ws) => {
                     lobbyData.draft.phase = "complete";
                 }
                 
-                await lobbyRef.update({ draft: lobbyData.draft });
-                await updateLobbyActivity(lobbyRef);
-                await setTimerForLobby(lobbyCode.toUpperCase(), lobbyData);
-                broadcastState(lobbyCode.toUpperCase());
+                updateLobbyActivity(lobbyCode);
+                setTimerForLobby(lobbyCode, lobbyData);
+                broadcastState(lobbyCode);
                 break;
             }
 
             case 'timerControl': {
-                if (!lobbyRef || ws.userRole !== 'ref') return;
-                const doc = await lobbyRef.get();
-                if (!doc.exists) return;
-                let lobbyData = doc.data();
+                if (!lobbyData || ws.userRole !== 'ref') return;
                 const { timer } = lobbyData.draft;
                 
                 if (timer.paused) { // unpausing
                     timer.paused = false;
                     timer.running = true;
                     timer.endTime = Date.now() + timer.pauseTime;
-                    await lobbyRef.update({ 'draft.timer': timer });
-                    await setTimerForLobby(lobbyCode.toUpperCase(), lobbyData);
+                    setTimerForLobby(lobbyCode, lobbyData);
                 } else { // pausing
-                    if (lobbyTimers[lobbyCode.toUpperCase()]) clearTimeout(lobbyTimers[lobbyCode.toUpperCase()].timeoutId);
+                    if (lobbyTimers[lobbyCode]) clearTimeout(lobbyTimers[lobbyCode].timeoutId);
                     timer.paused = true;
                     timer.running = false;
                     timer.pauseTime = timer.endTime - Date.now();
-                    await lobbyRef.update({ 'draft.timer': timer });
                 }
-                await updateLobbyActivity(lobbyRef);
-                broadcastState(lobbyCode.toUpperCase());
+                updateLobbyActivity(lobbyCode);
+                broadcastState(lobbyCode);
                 break;
             }
         }
     });
 
-    ws.on('close', async () => {
+    ws.on('close', () => {
         console.log('Client disconnected');
         const { lobbyCode, userRole } = ws;
-        if (lobbyCode && userRole) {
-            const lobbyRef = firestore.collection('lobbies').doc(lobbyCode);
-            const doc = await lobbyRef.get();
-            if (doc.exists) {
-                await lobbyRef.update({
-                    [`participants.${userRole}.status`]: 'disconnected',
-                    [`participants.${userRole}.ready`]: false,
-                    lastActivity: new Date().toISOString(),
-                });
-                broadcastState(lobbyCode);
-            }
+        if (lobbyCode && userRole && lobbies[lobbyCode]) {
+            const lobbyData = lobbies[lobbyCode];
+            lobbyData.participants[userRole].status = 'disconnected';
+            lobbyData.participants[userRole].ready = false;
+            updateLobbyActivity(lobbyCode);
+            broadcastState(lobbyCode);
         }
     });
 });
+
 
 const PORT = process.env.PORT || 8080;
 server.listen(PORT, () => console.log(`Server is listening on port ${PORT}`));
