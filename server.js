@@ -359,25 +359,20 @@ function advancePhase(lobbyData) {
     const { draft } = lobbyData;
     const logic = DRAFT_LOGIC[draft.draftLogic];
     const [firstPlayer, secondPlayer] = draft.playerOrder;
-
-
     const getPlayer = (p) => (p === 'p1' ? firstPlayer : secondPlayer);
 
-    switch (draft.action) {
-        case "": // from EGO Ban
-             draft.available.p1 = [...lobbyData.roster.p1];
-             draft.available.p2 = [...lobbyData.roster.p2];
-             draft.action = "ban";
-             draft.step = 0;
-             draft.currentPlayer = firstPlayer;
-             draft.actionCount = 1;
-             break;
+    switch (draft.phase) { // Switch on the current phase
         case "egoBan":
-            if (draft.currentPlayer === firstPlayer && draft.egoBans[firstPlayer].length === EGO_BAN_COUNT) {
+            if (draft.currentPlayer === firstPlayer) {
                 draft.currentPlayer = secondPlayer;
-            } else if (draft.currentPlayer === secondPlayer && draft.egoBans[secondPlayer].length === EGO_BAN_COUNT) {
-                draft.action = ""; // Transition to ID bans
-                return advancePhase(lobbyData); // Recurse to handle the transition
+            } else {
+                draft.phase = "ban";
+                draft.action = "ban";
+                draft.step = 0;
+                draft.currentPlayer = firstPlayer;
+                draft.actionCount = 1;
+                draft.available.p1 = [...lobbyData.roster.p1];
+                draft.available.p2 = [...lobbyData.roster.p2];
             }
             break;
         case "ban":
@@ -386,6 +381,7 @@ function advancePhase(lobbyData) {
                 draft.currentPlayer = draft.currentPlayer === firstPlayer ? secondPlayer : firstPlayer;
                 draft.actionCount = 1;
             } else {
+                draft.phase = "pick";
                 draft.action = "pick";
                 draft.step = 0;
                 const next = logic.pick1[0];
@@ -400,6 +396,7 @@ function advancePhase(lobbyData) {
                 draft.currentPlayer = getPlayer(next.p);
                 draft.actionCount = next.c;
             } else {
+                draft.phase = "midBan";
                 draft.action = "midBan";
                 draft.step = 0;
                 draft.currentPlayer = firstPlayer;
@@ -412,6 +409,7 @@ function advancePhase(lobbyData) {
                 draft.currentPlayer = draft.currentPlayer === firstPlayer ? secondPlayer : firstPlayer;
                 draft.actionCount = 1;
             } else {
+                draft.phase = "pick2";
                 draft.action = "pick2";
                 draft.step = 0;
                 const next = logic.pick2[0];
@@ -427,6 +425,7 @@ function advancePhase(lobbyData) {
                 draft.actionCount = next.c;
             } else {
                  if (draft.matchType === 'allSections') {
+                    draft.phase = "pick_s2";
                     draft.action = "pick_s2";
                     draft.step = 0;
                     const next = logic.pick_s2[0];
@@ -452,17 +451,12 @@ function advancePhase(lobbyData) {
             }
             break;
     }
-    
-    if (draft.phase !== "complete") {
-        draft.phase = draft.action;
-    }
-    
     return lobbyData;
 }
 
 function handleDraftConfirm(lobbyCode, lobbyData, ws) {
     const { draft } = lobbyData;
-    const { currentPlayer, hovered, action } = draft;
+    const { currentPlayer, hovered, phase } = draft;
     const selectedId = hovered[currentPlayer];
 
     if (!selectedId) return;
@@ -471,25 +465,25 @@ function handleDraftConfirm(lobbyCode, lobbyData, ws) {
         if (ws.userRole !== currentPlayer && ws.userRole !== 'ref') return;
     }
 
-    if (action === 'egoBan') {
+    if (phase === 'egoBan') {
         const playerBans = draft.egoBans[currentPlayer];
         const banIndex = playerBans.indexOf(selectedId);
         
         if (banIndex > -1) {
-            playerBans.splice(banIndex, 1); // Un-ban
+            playerBans.splice(banIndex, 1);
         } else if (playerBans.length < EGO_BAN_COUNT) {
-            playerBans.push(selectedId); // Ban
+            playerBans.push(selectedId);
         }
-    } else if (['ban', 'pick', 'midBan', 'pick2', 'pick_s2'].includes(action)) {
+    } else if (['ban', 'pick', 'midBan', 'pick2', 'pick_s2'].includes(phase)) {
         if (draft.actionCount <= 0) {
             console.log(`[Draft Confirm] Player ${currentPlayer} has no actions left, but tried to confirm.`);
             return;
         }
 
         let listToUpdate;
-        if (action.includes('ban')) {
+        if (phase.includes('ban')) {
             listToUpdate = draft.idBans[currentPlayer];
-        } else if (action === 'pick_s2') {
+        } else if (phase === 'pick_s2') {
             listToUpdate = draft.picks_s2[currentPlayer];
         } else {
             listToUpdate = draft.picks[currentPlayer];
