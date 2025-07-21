@@ -63,6 +63,10 @@
 
     <div class="container">
         <div id="main-page">
+            <div class="top-left-controls">
+                <button id="show-rules-btn" class="btn btn-secondary btn-small"><i class="fas fa-book-open"></i> Rules</button>
+            </div>
+
             <header>
                 <h1><i class="fas fa-dragon"></i> Limbus Company Draft System</h1>
                 <p>Organize and participate in competitive drafting sessions</p>
@@ -119,37 +123,31 @@
                     <button class="btn btn-primary btn-large" id="create-lobby"><i class="fas fa-plus"></i> Create Lobby</button>
                 </div>
                 
-                <div class="action-card">
-                    <div class="action-icon"><i class="fas fa-gavel"></i></div>
-                    <h3 class="action-title">Tournament Rules</h3>
-                    <p class="action-description">Review the official rules and regulations for competitive drafting.</p>
-                    <button class="btn btn-secondary btn-large" id="show-rules-btn"><i class="fas fa-book-open"></i> Read Rules</button>
-                </div>
-            </div>
-            
-            <div id="join-lobby-area" class="card">
-                <h3><i class="fas fa-sign-in-alt"></i> Join a Lobby</h3>
-                <div class="join-tabs">
-                    <button class="join-tab-btn active" data-tab="browse">Browse Public Lobbies</button>
-                    <button class="join-tab-btn" data-tab="code">Join with Code</button>
-                </div>
-            
-                <div id="browse-lobbies-tab" class="join-tab-content active">
-                    <div class="public-lobbies-header">
-                        <h4>Available Public Lobbies</h4>
-                        <button id="refresh-lobbies-btn" class="btn btn-small"><i class="fas fa-sync"></i> Refresh</button>
+                <div class="action-card" id="join-lobby-card">
+                    <div class="action-icon"><i class="fas fa-sign-in-alt"></i></div>
+                    <h3 class="action-title">Join a Lobby</h3>
+                    <div class="join-tabs">
+                        <button class="join-tab-btn active" data-tab="browse">Browse Public Lobbies</button>
+                        <button class="join-tab-btn" data-tab="code">Join with Code</button>
                     </div>
-                    <div id="public-lobbies-list">
-                        <p>Click "Refresh" to find public lobbies.</p>
+                
+                    <div id="browse-lobbies-tab" class="join-tab-content active">
+                        <div class="public-lobbies-header">
+                            <h4>Available Public Lobbies</h4>
+                            <button id="refresh-lobbies-btn" class="btn btn-small"><i class="fas fa-sync"></i> Refresh</button>
+                        </div>
+                        <div id="public-lobbies-list">
+                            <p>Click "Refresh" to find public lobbies.</p>
+                        </div>
                     </div>
-                </div>
-            
-                <div id="code-join-tab" class="join-tab-content">
-                    <div class="form-group">
-                        <label for="lobby-code-input">Lobby Code:</label>
-                        <input type="text" id="lobby-code-input" placeholder="Enter 6-character code" maxlength="6">
+                
+                    <div id="code-join-tab" class="join-tab-content">
+                        <div class="form-group">
+                            <label for="lobby-code-input">Lobby Code:</label>
+                            <input type="text" id="lobby-code-input" placeholder="Enter 6-character code" maxlength="6">
+                        </div>
+                        <button class="btn btn-primary" id="enter-lobby-by-code"><i class="fas fa-play"></i> Find Lobby</button>
                     </div>
-                    <button class="btn btn-primary" id="enter-lobby-by-code"><i class="fas fa-play"></i> Find Lobby</button>
                 </div>
             </div>
         </div>
