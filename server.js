@@ -1,7 +1,8 @@
 // =================================================================================
 // FILE: server.js
-// DESCRIPTION: This is the updated server logic with a definitive fix for the
-// EGO ban phase and other draft flow issues.
+// DESCRIPTION: This version contains a definitive fix for the ID ban phases.
+// The logic in `handleDraftConfirm` is now more explicit to ensure that IDs
+// banned during 'ban' and 'midBan' phases are correctly processed.
 // =================================================================================
 const express = require('express');
 const http = require('http');
@@ -486,7 +487,6 @@ function handleDraftConfirm(lobbyCode, lobbyData, ws) {
         } else if (playerBans.length < EGO_BAN_COUNT) {
             playerBans.push(selectedId);
         }
-        // EGO ban phase does NOT advance here. It advances via draftControl 'confirmEgoBans'
     } else if (['ban', 'pick', 'midBan', 'pick2', 'pick_s2'].includes(phase)) {
         if (draft.actionCount <= 0) {
             console.log(`[Draft Confirm] Player ${currentPlayer} has no actions left, but tried to confirm.`);
@@ -494,16 +494,21 @@ function handleDraftConfirm(lobbyCode, lobbyData, ws) {
         }
 
         let listToUpdate;
-        if (phase.includes('ban')) {
+        const isBanAction = (phase === 'ban' || phase === 'midBan');
+
+        // [FIXED] More explicit logic to prevent mis-routing bans to the picks list.
+        if (isBanAction) {
             const opponent = currentPlayer === 'p1' ? 'p2' : 'p1';
             listToUpdate = draft.idBans[opponent];
+        } else if (phase === 'pick' || phase === 'pick2') {
+            listToUpdate = draft.picks[currentPlayer];
         } else if (phase === 'pick_s2') {
             listToUpdate = draft.picks_s2[currentPlayer];
-        } else {
-            listToUpdate = draft.picks[currentPlayer];
         }
-        
-        listToUpdate.push(selectedId);
+
+        if (listToUpdate) {
+            listToUpdate.push(selectedId);
+        }
         
         let p1Index = draft.available.p1.indexOf(selectedId);
         if(p1Index > -1) draft.available.p1.splice(p1Index, 1);
@@ -512,8 +517,6 @@ function handleDraftConfirm(lobbyCode, lobbyData, ws) {
         
         draft.actionCount--;
 
-        // [FIXED] This check is now correctly placed inside the else-if block,
-        // so it only runs for ID pick/ban phases and not for the EGO ban phase.
         if (draft.actionCount <= 0) {
             lobbyData = advancePhase(lobbyData);
         }
