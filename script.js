@@ -208,6 +208,8 @@ function loadRosterFromCode(code) {
 // ======================
 // SOCKET COMMUNICATION
 // ======================
+let rejoinTimeout;
+
 function connectWebSocket() {
     const loc = window.location;
     const wsProtocol = loc.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -231,6 +233,15 @@ function connectWebSocket() {
                 role: session.userRole,
                 rejoinToken: session.rejoinToken
             });
+
+            // Failsafe timeout for rejoin attempt
+            rejoinTimeout = setTimeout(() => {
+                if (elements.rejoinOverlay.style.display === 'flex') { // Check if still trying to rejoin
+                    elements.rejoinOverlay.style.display = 'none';
+                    localStorage.removeItem('limbusDraftSession');
+                    showNotification("Failed to rejoin lobby. Session cleared.", true);
+                }
+            }, 10000); // 10-second timeout
         }
     };
     state.socket.onmessage = (event) => handleServerMessage(JSON.parse(event.data));
@@ -262,6 +273,7 @@ function handleServerMessage(message) {
             if (message.message.includes('rejoin') || message.message.includes('Clearing session')) {
                 localStorage.removeItem('limbusDraftSession');
                 elements.rejoinOverlay.style.display = 'none';
+                if (rejoinTimeout) clearTimeout(rejoinTimeout);
             }
             break;
     }
@@ -486,13 +498,15 @@ function updateAllUIsFromState() {
 
 function filterAndRenderRosterSelection() {
     const filteredList = filterIDs(state.masterIDList, state.filters);
-    renderIDList(elements.p1Roster, filteredList, {
-        selectionSet: state.roster.p1, 
-        clickHandler: (id) => toggleIDSelection('p1', id)
-    });
-    renderIDList(elements.p2Roster, filteredList, {
-        selectionSet: state.roster.p2, 
-        clickHandler: (id) => toggleIDSelection('p2', id)
+    
+    ['p1', 'p2'].forEach(player => {
+        const container = elements[`${player}Roster`];
+        const scrollTop = container.scrollTop;
+        renderIDList(container, filteredList, {
+            selectionSet: state.roster[player], 
+            clickHandler: (id) => toggleIDSelection(player, id)
+        });
+        container.scrollTop = scrollTop;
     });
 }
 
@@ -523,6 +537,7 @@ function renderEgoBanPhase() {
     );
 
     const container = elements.egoBanContainer;
+    const scrollTop = container.scrollTop;
     container.innerHTML = '';
     const fragment = document.createDocumentFragment();
     filteredEgos.forEach(ego => {
@@ -532,6 +547,7 @@ function renderEgoBanPhase() {
         }));
     });
     container.appendChild(fragment);
+    container.scrollTop = scrollTop;
 
     const currentPlayerBans = state.draft.egoBans[currentPlayer] || [];
     const bansContainer = elements.currentPlayerEgoBans;
@@ -594,8 +610,10 @@ function renderBannedEgosDisplay() {
 
 function updateDraftUI() {
     const renderCompactIdListChronological = (container, idList) => {
+        const scrollTop = container.scrollTop;
         const idObjects = idList.map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
         renderIDList(container, idObjects, {});
+        container.scrollTop = scrollTop;
     };
     
     renderCompactIdListChronological(elements.p1IdBans, [...state.draft.idBans.p1].reverse());
@@ -627,8 +645,12 @@ function updateDraftUI() {
 
 function updateDraftInstructions() {
     let phaseText = "", actionDesc = "";
-    const { phase, step, currentPlayer, action, actionCount, egoBans, hovered } = state.draft;
+    const { phase, currentPlayer, action, actionCount, egoBans, hovered } = state.draft;
     
+    const hub = elements.draftInteractionHub;
+    const existingPool = hub.querySelector('.sinner-grouped-roster');
+    const existingScrollTop = existingPool ? existingPool.scrollTop : 0;
+
     elements.draftPoolContainer.innerHTML = '';
 
     switch(phase) {
@@ -650,15 +672,15 @@ function updateDraftInstructions() {
         case "midBan":
         case "pick2":
         case "pick_s2":
-            let displayAction = action;
-            if (action === 'midBan') displayAction = 'Mid-Draft Ban';
-            if (action === 'pick') displayAction = 'Pick Phase 1';
-            if (action === 'pick2') displayAction = 'Pick Phase 2';
-            if (action === 'pick_s2') displayAction = 'Pick Phase 3 (Sec 2/3)';
+            let displayAction = phase;
+            if (phase === 'midBan') displayAction = 'Mid-Draft Ban';
+            if (phase === 'pick') displayAction = 'Pick Phase 1';
+            if (phase === 'pick2') displayAction = 'Pick Phase 2';
+            if (phase === 'pick_s2') displayAction = 'Pick Phase 3 (Sec 2/3)';
 
             phaseText = `${displayAction.charAt(0).toUpperCase() + displayAction.slice(1)}`;
             
-            let actionVerb = (action.includes('ban')) ? 'ban' : 'pick';
+            let actionVerb = (phase.includes('ban')) ? 'ban' : 'pick';
             actionDesc = `${state.participants[currentPlayer].name} to ${actionVerb} ${actionCount} ID(s)`;
             break;
         case "complete":
@@ -671,7 +693,7 @@ function updateDraftInstructions() {
 
     if (['ban', 'pick', 'midBan', 'pick2', 'pick_s2'].includes(phase)) {
         const opponent = currentPlayer === 'p1' ? 'p2' : 'p1';
-        const isBanAction = action.includes('ban');
+        const isBanAction = phase.includes('ban');
         const targetPlayer = isBanAction ? opponent : currentPlayer;
 
         const availableIdList = state.draft.available[targetPlayer];
@@ -700,6 +722,8 @@ function updateDraftInstructions() {
             notInRosterSet: isBanAction ? state.roster[currentPlayer] : null,
             sharedIdSet: sharedIds
         });
+
+        poolEl.scrollTop = existingScrollTop;
 
         elements.confirmSelectionId.disabled = !hovered[currentPlayer] || state.draft.actionCount <= 0;
     }
@@ -959,6 +983,7 @@ function handleLobbyCreated(message) {
 }
 
 function handleLobbyJoined(message) {
+    if (rejoinTimeout) clearTimeout(rejoinTimeout);
     elements.roleSelectionModal.classList.add('hidden');
     elements.rejoinOverlay.style.display = 'none';
 
@@ -1089,6 +1114,18 @@ function setupEventListeners() {
         }
     });
     
+    const cancelRejoinAction = () => {
+        if (rejoinTimeout) clearTimeout(rejoinTimeout);
+        localStorage.removeItem('limbusDraftSession');
+        elements.rejoinOverlay.style.display = 'none';
+        if (state.socket && state.socket.readyState !== WebSocket.CLOSED) {
+            state.socket.close();
+        }
+        setTimeout(connectWebSocket, 100); // Reconnect with a fresh state
+        showNotification("Rejoin attempt cancelled.");
+    };
+    elements.cancelRejoinBtn.addEventListener('click', cancelRejoinAction);
+
     const clearSessionAndReload = () => {
         localStorage.removeItem('limbusDraftSession');
         window.location.reload();
@@ -1219,6 +1256,7 @@ function cacheDOMElements() {
         rosterBuilderPage: document.getElementById('roster-builder-page'),
         completedView: document.getElementById('completed-view'),
         rejoinOverlay: document.getElementById('rejoin-overlay'),
+        cancelRejoinBtn: document.getElementById('cancel-rejoin-btn'),
 
         // Main Page
         createLobbyBtn: document.getElementById('create-lobby'),
