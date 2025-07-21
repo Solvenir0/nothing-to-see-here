@@ -243,12 +243,15 @@ async function generateUniqueLobbyCode() {
 }
 
 function createNewLobbyState(options = {}) {
-    const { draftLogic = '1-2-2', timerEnabled = false } = options;
+    const { draftLogic = '1-2-2', timerEnabled = false, isPublic = false, name = 'Referee' } = options;
     return {
+        hostName: name,
+        createdAt: new Date().toISOString(),
+        lastActivity: new Date().toISOString(),
         participants: {
             p1: { name: "Player 1", status: "disconnected", ready: false, rejoinToken: null },
             p2: { name: "Player 2", status: "disconnected", ready: false, rejoinToken: null },
-            ref: { name: "Referee", status: "disconnected", rejoinToken: null }
+            ref: { name: name, status: "disconnected", rejoinToken: null }
         },
         roster: { p1: [], p2: [] },
         draft: {
@@ -263,6 +266,7 @@ function createNewLobbyState(options = {}) {
             picks: { p1: [], p2: [] },
             hovered: { p1: null, p2: null },
             draftLogic,
+            isPublic,
             coinFlipWinner: null,
             playerOrder: ['p1', 'p2'],
             timer: {
@@ -291,6 +295,11 @@ async function broadcastState(lobbyCode) {
     });
 }
 
+async function updateLobbyActivity(lobbyRef) {
+    return lobbyRef.update({ lastActivity: new Date().toISOString() });
+}
+
+
 async function handleTimer(lobbyCode) {
     const lobbyRef = firestore.collection('lobbies').doc(lobbyCode);
     let doc = await lobbyRef.get();
@@ -305,8 +314,6 @@ async function handleTimer(lobbyCode) {
     if (hoveredId) {
         await handleDraftConfirm(lobbyRef, lobbyData, null);
     } else {
-        // Random selection logic needs EGO list, which is client-side.
-        // For now, we just advance the phase as if the player did nothing.
         console.log("Timer expired with no hover. Advancing phase.");
         lobbyData = advancePhase(lobbyData);
         await lobbyRef.update({ draft: lobbyData.draft });
@@ -405,7 +412,6 @@ function advancePhase(lobbyData) {
                 draft.actionCount = next.c;
             } else {
                 if (draft.action !== 'pick2') {
-                    // FIX: More robustly determine the next player for the mid-ban phase.
                     const lastPickSequence = logic.pick1;
                     const lastPickerDesignation = lastPickSequence[lastPickSequence.length - 1].p;
                     const lastPicker = getPlayer(lastPickerDesignation);
@@ -413,7 +419,6 @@ function advancePhase(lobbyData) {
                     draft.phase = "ban";
                     draft.action = "midBan";
                     draft.step = 0;
-                    // The player who DIDN'T pick last starts the next ban phase.
                     draft.currentPlayer = lastPicker === firstPlayer ? secondPlayer : firstPlayer;
                     draft.actionCount = 1;
                 } else {
@@ -470,6 +475,7 @@ async function handleDraftConfirm(lobbyRef, lobbyData, ws) {
     }
 
     await lobbyRef.update({ draft: lobbyData.draft });
+    await updateLobbyActivity(lobbyRef);
     await setTimerForLobby(lobbyRef.id, lobbyData);
     await broadcastState(lobbyRef.id);
 }
@@ -493,13 +499,57 @@ wss.on('connection', (ws) => {
                 ws.lobbyCode = newLobbyCode;
                 ws.userRole = 'ref';
                 const rejoinToken = crypto.randomUUID();
-                if (options.name) newLobbyState.participants.ref.name = options.name;
+                
                 newLobbyState.participants.ref.status = "connected";
                 newLobbyState.participants.ref.rejoinToken = rejoinToken;
+                
                 await firestore.collection('lobbies').doc(newLobbyCode).set(newLobbyState);
+                
                 ws.send(JSON.stringify({ type: 'lobbyCreated', code: newLobbyCode, role: 'ref', rejoinToken, state: newLobbyState }));
                 await setTimerForLobby(newLobbyCode, newLobbyState);
                 await broadcastState(newLobbyCode);
+                break;
+            }
+
+            case 'getPublicLobbies': {
+                const snapshot = await firestore.collection('lobbies')
+                    .where('draft.isPublic', '==', true)
+                    .where('draft.phase', '!=', 'complete')
+                    .orderBy('draft.phase', 'asc')
+                    .orderBy('createdAt', 'desc')
+                    .limit(50)
+                    .get();
+
+                if (snapshot.empty) {
+                    ws.send(JSON.stringify({ type: 'publicLobbiesList', lobbies: [] }));
+                    return;
+                }
+
+                const lobbies = snapshot.docs.map(doc => {
+                    const data = doc.data();
+                    return {
+                        code: doc.id,
+                        hostName: data.hostName,
+                        participants: data.participants,
+                        draftLogic: data.draft.draftLogic,
+                    };
+                });
+                ws.send(JSON.stringify({ type: 'publicLobbiesList', lobbies }));
+                break;
+            }
+            
+            case 'getLobbyInfo': {
+                if (!lobbyRef) return;
+                const doc = await lobbyRef.get();
+                if (!doc.exists) return ws.send(JSON.stringify({ type: 'error', message: 'Lobby not found.' }));
+                const data = doc.data();
+                ws.send(JSON.stringify({
+                    type: 'lobbyInfo',
+                    lobby: {
+                        code: doc.id,
+                        participants: data.participants,
+                    }
+                }));
                 break;
             }
 
@@ -521,7 +571,8 @@ wss.on('connection', (ws) => {
 
                 const updates = {
                     [`participants.${role}.status`]: 'connected',
-                    [`participants.${role}.rejoinToken`]: rejoinToken
+                    [`participants.${role}.rejoinToken`]: rejoinToken,
+                    lastActivity: new Date().toISOString(),
                 };
                 if (name) updates[`participants.${role}.name`] = name;
                 
@@ -555,7 +606,8 @@ wss.on('connection', (ws) => {
                     ws.userRole = role;
 
                     await lobbyRef.update({
-                        [`participants.${role}.status`]: 'connected'
+                        [`participants.${role}.status`]: 'connected',
+                        lastActivity: new Date().toISOString(),
                     });
 
                     const updatedDoc = await lobbyRef.get();
@@ -584,6 +636,7 @@ wss.on('connection', (ws) => {
                 if (index === -1) { if (currentRoster.length < ROSTER_SIZE) currentRoster.push(id); } 
                 else { currentRoster.splice(index, 1); }
                 await lobbyRef.update({ [`roster.${player}`]: currentRoster });
+                await updateLobbyActivity(lobbyRef);
                 broadcastState(lobbyCode.toUpperCase());
                 break;
             }
@@ -596,6 +649,7 @@ wss.on('connection', (ws) => {
                 if (lobbyData.participants[player].ready) return;
                 if (Array.isArray(roster) && roster.length === ROSTER_SIZE) {
                     await lobbyRef.update({ [`roster.${player}`]: roster });
+                    await updateLobbyActivity(lobbyRef);
                     broadcastState(lobbyCode.toUpperCase());
                 }
                 break;
@@ -610,6 +664,7 @@ wss.on('connection', (ws) => {
                 const shuffled = [...allIds].sort(() => 0.5 - Math.random());
                 const newRoster = shuffled.slice(0, ROSTER_SIZE);
                 await lobbyRef.update({ [`roster.${player}`]: newRoster });
+                await updateLobbyActivity(lobbyRef);
                 broadcastState(lobbyCode.toUpperCase());
                 break;
             }
@@ -622,6 +677,7 @@ wss.on('connection', (ws) => {
                 const currentReadyState = lobbyData.participants[player].ready;
                 if (!currentReadyState && lobbyData.roster[player].length !== ROSTER_SIZE) return;
                 await lobbyRef.update({ [`participants.${player}.ready`]: !currentReadyState });
+                await updateLobbyActivity(lobbyRef);
                 broadcastState(lobbyCode.toUpperCase());
                 break;
             }
@@ -634,6 +690,7 @@ wss.on('connection', (ws) => {
                 lobbyData.draft.phase = 'coinFlip';
                 lobbyData.draft.coinFlipWinner = Math.random() < 0.5 ? 'p1' : 'p2';
                 await lobbyRef.update({ draft: lobbyData.draft });
+                await updateLobbyActivity(lobbyRef);
                 broadcastState(lobbyCode.toUpperCase());
                 break;
             }
@@ -659,6 +716,7 @@ wss.on('connection', (ws) => {
                 draft.currentPlayer = draft.playerOrder[0];
 
                 await lobbyRef.update({ draft: draft });
+                await updateLobbyActivity(lobbyRef);
                 await setTimerForLobby(lobbyCode.toUpperCase(), lobbyData);
                 broadcastState(lobbyCode.toUpperCase());
                 break;
@@ -678,6 +736,7 @@ wss.on('connection', (ws) => {
                 } else {
                     await lobbyRef.update({ [`draft.hovered.${currentPlayer}`]: hoveredId });
                 }
+                await updateLobbyActivity(lobbyRef);
                 broadcastState(lobbyCode.toUpperCase());
                 break;
             }
@@ -706,6 +765,7 @@ wss.on('connection', (ws) => {
                 }
                 
                 await lobbyRef.update({ draft: lobbyData.draft });
+                await updateLobbyActivity(lobbyRef);
                 await setTimerForLobby(lobbyCode.toUpperCase(), lobbyData);
                 broadcastState(lobbyCode.toUpperCase());
                 break;
@@ -731,6 +791,7 @@ wss.on('connection', (ws) => {
                     timer.pauseTime = timer.endTime - Date.now();
                     await lobbyRef.update({ 'draft.timer': timer });
                 }
+                await updateLobbyActivity(lobbyRef);
                 broadcastState(lobbyCode.toUpperCase());
                 break;
             }
@@ -747,6 +808,7 @@ wss.on('connection', (ws) => {
                 await lobbyRef.update({
                     [`participants.${userRole}.status`]: 'disconnected',
                     [`participants.${userRole}.ready`]: false,
+                    lastActivity: new Date().toISOString(),
                 });
                 broadcastState(lobbyCode);
             }
