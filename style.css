@@ -545,6 +545,11 @@ input:focus, select:focus {
     overflow-y: auto;
 }
 
+.compact-id-list.section2-picks {
+    border: 2px dashed var(--accent);
+    background: rgba(255, 215, 0, 0.05);
+}
+
 .compact-id-list .id-item {
     padding: 0;
     background: transparent;
@@ -748,6 +753,14 @@ input:focus, select:focus {
     color: #ccc;
     border-top: 1px solid var(--border);
     padding-top: 15px;
+}
+.final-player-panel h4 {
+    font-size: 1.1rem;
+    color: var(--accent);
+    margin-top: 15px;
+    margin-bottom: 5px;
+    border-bottom: none;
+    padding-bottom: 0;
 }
 
 .final-picks, .final-bans {
