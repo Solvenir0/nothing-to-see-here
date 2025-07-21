@@ -23,7 +23,7 @@
  
     <div class="notification" id="notification">Player joined the lobby!</div>
 
-    <!-- Coin Flip Modal -->
+    <!-- Modals -->
     <div id="coin-flip-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <h2>Coin Flip</h2>
@@ -35,6 +35,31 @@
             </div>
         </div>
     </div>
+    <div id="rules-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <button id="close-rules-btn" class="close-modal-btn">&times;</button>
+            <h2>Tournament Rules</h2>
+            <div class="rules-content">
+                <p><strong>Section 1: General Conduct</strong></p>
+                <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer nec odio. Praesent libero. Sed cursus ante dapibus diam. Sed nisi. Nulla quis sem at nibh elementum imperdiet.</p>
+                <p><strong>Section 2: Draft Procedure</strong></p>
+                <p>Duis sagittis ipsum. Praesent mauris. Fusce nec tellus sed augue semper porta. Mauris massa. Vestibulum lacinia arcu eget nulla. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos.</p>
+                <p><strong>Section 3: Disconnections and Pauses</strong></p>
+                <p>Curabitur sodales ligula in libero. Sed dignissim lacinia nunc. Curabitur tortor. Pellentesque nibh. Aenean quam. In scelerisque sem at dolor. Maecenas mattis. Sed convallis tristique sem. Proin ut ligula vel nunc egestas porttitor.</p>
+            </div>
+        </div>
+    </div>
+    <div id="role-selection-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <button id="close-role-modal-btn" class="close-modal-btn">&times;</button>
+            <h3>Select Your Role for Lobby <span id="role-modal-lobby-code"></span></h3>
+            <div class="role-options" id="modal-role-options">
+                <!-- Role options will be dynamically enabled/disabled -->
+            </div>
+            <button class="btn btn-primary btn-large" id="confirm-join-btn" style="margin-top: 20px;" disabled>Join Lobby</button>
+        </div>
+    </div>
+
 
     <div class="container">
         <div id="main-page">
@@ -56,23 +81,6 @@
                 <input type="text" id="player-name" placeholder="Enter your name">
             </div>
 
-            <div class="lobby-options">
-                <div class="form-group">
-                    <label for="draft-logic-select">Draft Logic</label>
-                    <select id="draft-logic-select">
-                        <option value="1-2-2" selected>Standard (1-2-2)</option>
-                        <option value="2-3-2">Alternate (2-3-2)</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="timer-toggle">Enable Timer</label>
-                    <select id="timer-toggle">
-                        <option value="false" selected>Off</option>
-                        <option value="true">On</option>
-                    </select>
-                </div>
-            </div>
-            
             <div class="action-container">
                 <div class="action-card">
                     <div class="action-icon"><i class="fas fa-users-cog"></i></div>
@@ -85,32 +93,64 @@
                     <div class="action-icon"><i class="fas fa-plus-circle"></i></div>
                     <h3 class="action-title">Create New Lobby</h3>
                     <p class="action-description">Start a new drafting session as the referee. You'll get a unique lobby code to share with players.</p>
+                    <div class="lobby-options">
+                        <div class="form-group">
+                            <label for="draft-logic-select">Draft Logic</label>
+                            <select id="draft-logic-select">
+                                <option value="1-2-2" selected>Standard (1-2-2)</option>
+                                <option value="2-3-2">Alternate (2-3-2)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="timer-toggle">Enable Timer</label>
+                            <select id="timer-toggle">
+                                <option value="false" selected>Off</option>
+                                <option value="true">On</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="public-lobby-toggle">Visibility</label>
+                            <select id="public-lobby-toggle">
+                                <option value="false" selected>Private (Code Only)</option>
+                                <option value="true">Public (In Browser)</option>
+                            </select>
+                        </div>
+                    </div>
                     <button class="btn btn-primary btn-large" id="create-lobby"><i class="fas fa-plus"></i> Create Lobby</button>
                 </div>
                 
                 <div class="action-card">
-                    <div class="action-icon"><i class="fas fa-sign-in-alt"></i></div>
-                    <h3 class="action-title">Join Existing Lobby</h3>
-                    <p class="action-description">Join a lobby using a code provided by the referee. Select your role before entering.</p>
-                    <button class="btn btn-large" id="join-lobby"><i class="fas fa-door-open"></i> Join Lobby</button>
+                    <div class="action-icon"><i class="fas fa-gavel"></i></div>
+                    <h3 class="action-title">Tournament Rules</h3>
+                    <p class="action-description">Review the official rules and regulations for competitive drafting.</p>
+                    <button class="btn btn-secondary btn-large" id="show-rules-btn"><i class="fas fa-book-open"></i> Read Rules</button>
                 </div>
             </div>
             
-            <div class="lobby-access" id="lobby-access-form" style="display: none;">
-                <h2>Enter Lobby Details</h2>
-                <div class="form-group">
-                    <label for="lobby-code">Lobby Code:</label>
-                    <input type="text" id="lobby-code" placeholder="Enter 6-character code" maxlength="6">
+            <div id="join-lobby-area" class="card">
+                <h3><i class="fas fa-sign-in-alt"></i> Join a Lobby</h3>
+                <div class="join-tabs">
+                    <button class="join-tab-btn active" data-tab="browse">Browse Public Lobbies</button>
+                    <button class="join-tab-btn" data-tab="code">Join with Code</button>
                 </div>
-                <div class="form-group">
-                    <label>Select Your Role:</label>
-                    <div class="role-options">
-                        <div class="role-option" data-role="p1"><i class="fas fa-user"></i><div>Player 1</div></div>
-                        <div class="role-option" data-role="p2"><i class="fas fa-user"></i><div>Player 2</div></div>
-                        <div class="role-option" data-role="ref"><i class="fas fa-star"></i><div>Referee</div></div>
+            
+                <div id="browse-lobbies-tab" class="join-tab-content active">
+                    <div class="public-lobbies-header">
+                        <h4>Available Public Lobbies</h4>
+                        <button id="refresh-lobbies-btn" class="btn btn-small"><i class="fas fa-sync"></i> Refresh</button>
+                    </div>
+                    <div id="public-lobbies-list">
+                        <p>Click "Refresh" to find public lobbies.</p>
                     </div>
                 </div>
-                <button class="btn btn-primary btn-large" id="enter-lobby"><i class="fas fa-play"></i> Enter Lobby</button>
+            
+                <div id="code-join-tab" class="join-tab-content">
+                    <div class="form-group">
+                        <label for="lobby-code-input">Lobby Code:</label>
+                        <input type="text" id="lobby-code-input" placeholder="Enter 6-character code" maxlength="6">
+                    </div>
+                    <button class="btn btn-primary" id="enter-lobby-by-code"><i class="fas fa-play"></i> Find Lobby</button>
+                </div>
             </div>
         </div>
         
