@@ -512,10 +512,11 @@ wss.on('connection', (ws) => {
             }
 
             case 'getPublicLobbies': {
+                // FIX: Use a query that doesn't require a custom composite index.
+                const validPhases = ['roster', 'coinFlip', 'egoBan', 'ban', 'pick'];
                 const snapshot = await firestore.collection('lobbies')
                     .where('draft.isPublic', '==', true)
-                    .where('draft.phase', '!=', 'complete')
-                    .orderBy('draft.phase', 'asc')
+                    .where('draft.phase', 'in', validPhases)
                     .orderBy('createdAt', 'desc')
                     .limit(50)
                     .get();
