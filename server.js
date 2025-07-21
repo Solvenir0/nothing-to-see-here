@@ -32,13 +32,15 @@ const DRAFT_LOGIC = {
         ban1Steps: 8,
         pick1: [{ p: 'p1', c: 1 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 1 }],
         midBanSteps: 6,
-        pick2: [{ p: 'p2', c: 1 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 1 }]
+        pick2: [{ p: 'p2', c: 1 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 1 }],
+        pick_s2: [{ p: 'p1', c: 1 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 1 }] // 6 picks per player
     },
     '2-3-2': {
         ban1Steps: 8,
         pick1: [{ p: 'p1', c: 2 }, { p: 'p2', c: 3 }, { p: 'p1', c: 2 }, { p: 'p2', c: 3 }, { p: 'p1', c: 2 }],
         midBanSteps: 6,
-        pick2: [{ p: 'p2', c: 2 }, { p: 'p1', c: 3 }, { p: 'p2', c: 2 }, { p: 'p1', c: 3 }, { p: 'p2', c: 2 }]
+        pick2: [{ p: 'p2', c: 2 }, { p: 'p1', c: 3 }, { p: 'p2', c: 2 }, { p: 'p1', c: 3 }, { p: 'p2', c: 2 }],
+        pick_s2: [{ p: 'p1', c: 1 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 1 }] // 6 picks per player
     }
 };
 
@@ -243,7 +245,7 @@ async function generateUniqueLobbyCode() {
 }
 
 function createNewLobbyState(options = {}) {
-    const { draftLogic = '1-2-2', timerEnabled = false, isPublic = false, name = 'Referee' } = options;
+    const { draftLogic = '1-2-2', timerEnabled = false, isPublic = false, name = 'Referee', matchType = 'section1' } = options;
     return {
         hostName: name,
         createdAt: new Date().toISOString(),
@@ -264,8 +266,10 @@ function createNewLobbyState(options = {}) {
             idBans: { p1: [], p2: [] },
             egoBans: { p1: [], p2: [] },
             picks: { p1: [], p2: [] },
+            picks_s2: { p1: [], p2: [] },
             hovered: { p1: null, p2: null },
             draftLogic,
+            matchType,
             isPublic,
             coinFlipWinner: null,
             playerOrder: ['p1', 'p2'],
@@ -342,7 +346,7 @@ async function setTimerForLobby(lobbyCode, lobbyData) {
         if (bansMade < EGO_BAN_COUNT) {
              duration = TIMERS.egoBan - (bansMade * TIMERS.pick);
         }
-    } else if (draft.phase === 'pick' || draft.phase === 'ban') {
+    } else if (['pick', 'ban', 'midBan', 'pick2', 'pick_s2'].includes(draft.phase)) {
         duration = TIMERS.pick * draft.actionCount;
     }
 
@@ -371,79 +375,115 @@ function advancePhase(lobbyData) {
 
     const getPlayer = (p) => (p === 'p1' ? firstPlayer : secondPlayer);
 
-    switch (draft.phase) {
+    switch (draft.action) {
+        case "": // from EGO Ban
+             draft.available.p1 = [...lobbyData.roster.p1];
+             draft.available.p2 = [...lobbyData.roster.p2];
+             draft.action = "ban";
+             draft.step = 0;
+             draft.currentPlayer = firstPlayer;
+             draft.actionCount = 1;
+             break;
         case "egoBan":
             if (draft.currentPlayer === firstPlayer && draft.egoBans[firstPlayer].length === EGO_BAN_COUNT) {
                 draft.currentPlayer = secondPlayer;
             } else if (draft.currentPlayer === secondPlayer && draft.egoBans[secondPlayer].length === EGO_BAN_COUNT) {
-                draft.available.p1 = [...lobbyData.roster.p1];
-                draft.available.p2 = [...lobbyData.roster.p2];
-                
-                draft.phase = "ban";
-                draft.step = 0;
-                draft.currentPlayer = firstPlayer;
-                draft.action = "ban";
-                draft.actionCount = 1;
-
+                draft.action = ""; // Transition to ID bans
+                return advancePhase(lobbyData); // Recurse to handle the transition
             }
             break;
         case "ban":
-            const banSteps = draft.action === 'midBan' ? logic.midBanSteps : logic.ban1Steps;
-            if (draft.step < banSteps - 1) {
+            if (draft.step < logic.ban1Steps - 1) {
                 draft.step++;
                 draft.currentPlayer = draft.currentPlayer === firstPlayer ? secondPlayer : firstPlayer;
                 draft.actionCount = 1;
             } else {
-                draft.phase = "pick";
+                draft.action = "pick";
                 draft.step = 0;
-                const next = draft.action === 'midBan' ? logic.pick2[0] : logic.pick1[0];
-                draft.action = draft.action === 'midBan' ? 'pick2' : 'pick';
+                const next = logic.pick1[0];
                 draft.currentPlayer = getPlayer(next.p);
                 draft.actionCount = next.c;
             }
             break;
         case "pick":
-            const currentPickSeq = draft.action === 'pick2' ? logic.pick2 : logic.pick1;
-            
-            if (draft.step < currentPickSeq.length - 1) {
+            if (draft.step < logic.pick1.length - 1) {
                 draft.step++;
-                const next = currentPickSeq[draft.step];
+                const next = logic.pick1[draft.step];
                 draft.currentPlayer = getPlayer(next.p);
                 draft.actionCount = next.c;
             } else {
-                if (draft.action !== 'pick2') {
-                    const lastPickSequence = logic.pick1;
-                    const lastPickerDesignation = lastPickSequence[lastPickSequence.length - 1].p;
-                    const lastPicker = getPlayer(lastPickerDesignation);
-                    
-                    draft.phase = "ban";
-                    draft.action = "midBan";
+                draft.action = "midBan";
+                draft.step = 0;
+                draft.currentPlayer = firstPlayer;
+                draft.actionCount = 1;
+            }
+            break;
+        case "midBan":
+             if (draft.step < logic.midBanSteps - 1) {
+                draft.step++;
+                draft.currentPlayer = draft.currentPlayer === firstPlayer ? secondPlayer : firstPlayer;
+                draft.actionCount = 1;
+            } else {
+                draft.action = "pick2";
+                draft.step = 0;
+                const next = logic.pick2[0];
+                draft.currentPlayer = getPlayer(next.p);
+                draft.actionCount = next.c;
+            }
+            break;
+        case "pick2":
+            if (draft.step < logic.pick2.length - 1) {
+                draft.step++;
+                const next = logic.pick2[draft.step];
+                draft.currentPlayer = getPlayer(next.p);
+                draft.actionCount = next.c;
+            } else {
+                 if (draft.matchType === 'allSections') {
+                    draft.action = "pick_s2";
                     draft.step = 0;
-                    draft.currentPlayer = lastPicker === firstPlayer ? secondPlayer : firstPlayer;
-                    draft.actionCount = 1;
+                    const next = logic.pick_s2[0];
+                    draft.currentPlayer = getPlayer(next.p);
+                    draft.actionCount = next.c;
                 } else {
                     draft.phase = "complete";
+                    draft.action = "complete";
                     draft.currentPlayer = "";
                 }
             }
             break;
+        case "pick_s2":
+            if (draft.step < logic.pick_s2.length - 1) {
+                draft.step++;
+                const next = logic.pick_s2[draft.step];
+                draft.currentPlayer = getPlayer(next.p);
+                draft.actionCount = next.c;
+            } else {
+                draft.phase = "complete";
+                draft.action = "complete";
+                draft.currentPlayer = "";
+            }
+            break;
     }
+    
+    if (draft.phase !== "complete") {
+        draft.phase = draft.action;
+    }
+    
     return lobbyData;
 }
 
 async function handleDraftConfirm(lobbyRef, lobbyData, ws) {
     const { draft } = lobbyData;
-    const { currentPlayer, hovered } = draft;
+    const { currentPlayer, hovered, action } = draft;
     const selectedId = hovered[currentPlayer];
 
     if (!selectedId) return;
     
     if (ws) {
-        const actingPlayer = draft.currentPlayer;
-        if (ws.userRole !== actingPlayer && ws.userRole !== 'ref') return;
+        if (ws.userRole !== currentPlayer && ws.userRole !== 'ref') return;
     }
 
-    if (draft.phase === 'egoBan') {
+    if (action === 'egoBan') {
         const playerBans = draft.egoBans[currentPlayer];
         const banIndex = playerBans.indexOf(selectedId);
         
@@ -452,12 +492,21 @@ async function handleDraftConfirm(lobbyRef, lobbyData, ws) {
         } else if (playerBans.length < EGO_BAN_COUNT) {
             playerBans.push(selectedId); // Ban
         }
-    } else if (['ban', 'pick'].includes(draft.phase)) {
+    } else if (['ban', 'pick', 'midBan', 'pick2', 'pick_s2'].includes(action)) {
         if (draft.actionCount <= 0) {
             console.log(`[Draft Confirm] Player ${currentPlayer} has no actions left, but tried to confirm.`);
             return;
         }
-        const listToUpdate = draft.phase === 'ban' ? draft.idBans[currentPlayer] : draft.picks[currentPlayer];
+
+        let listToUpdate;
+        if (action.includes('ban')) {
+            listToUpdate = draft.idBans[currentPlayer];
+        } else if (action === 'pick_s2') {
+            listToUpdate = draft.picks_s2[currentPlayer];
+        } else {
+            listToUpdate = draft.picks[currentPlayer];
+        }
+        
         listToUpdate.push(selectedId);
         
         let p1Index = draft.available.p1.indexOf(selectedId);
@@ -512,8 +561,7 @@ wss.on('connection', (ws) => {
             }
 
             case 'getPublicLobbies': {
-                // FIX: Use a query that doesn't require a custom composite index.
-                const validPhases = ['roster', 'coinFlip', 'egoBan', 'ban', 'pick'];
+                const validPhases = ['roster', 'coinFlip', 'egoBan', 'ban', 'pick', 'midBan', 'pick2', 'pick_s2'];
                 const snapshot = await firestore.collection('lobbies')
                     .where('draft.isPublic', '==', true)
                     .where('draft.phase', 'in', validPhases)
@@ -714,6 +762,7 @@ wss.on('connection', (ws) => {
                 }
                 
                 draft.phase = 'egoBan';
+                draft.action = 'egoBan';
                 draft.currentPlayer = draft.playerOrder[0];
 
                 await lobbyRef.update({ draft: draft });
