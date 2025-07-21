@@ -52,6 +52,10 @@ const state = {
     egoSearch: "",
     timerInterval: null,
     socket: null,
+    joinTarget: {
+        lobbyCode: null,
+        role: null,
+    }
 };
 
 let elements = {};
@@ -248,6 +252,8 @@ function handleServerMessage(message) {
         case 'lobbyCreated': handleLobbyCreated(message); break;
         case 'lobbyJoined': handleLobbyJoined(message); break;
         case 'stateUpdate': handleStateUpdate(message); break;
+        case 'publicLobbiesList': renderPublicLobbies(message.lobbies); break;
+        case 'lobbyInfo': showRoleSelectionModal(message.lobby); break;
         case 'notification': showNotification(message.text); break;
         case 'error':
             showNotification(`Error: ${message.message}`, true);
@@ -420,7 +426,6 @@ function updateAllUIsFromState() {
     const { draft } = state;
     const { phase } = draft;
 
-    // FIX: Always evaluate draft status panel visibility before any early returns.
     elements.draftStatusPanel.classList.toggle('hidden', phase === 'roster' || phase === 'complete');
 
     if (phase === 'complete') {
@@ -586,9 +591,7 @@ function renderBannedEgosDisplay() {
 }
 
 function updateDraftUI() {
-    // FIX: Render picks/bans chronologically (most recent first) instead of sorted.
     const renderCompactIdListChronological = (container, idList) => {
-        // This function renders IDs in the order provided, without sorting.
         const idObjects = idList.map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
         renderIDList(container, idObjects, {});
     };
@@ -680,7 +683,6 @@ function updateDraftInstructions() {
         poolEl.style.maxHeight = '60vh';
         elements.draftPoolContainer.appendChild(poolEl);
 
-        // FIX: Make shared ID calculation universal for all draft phases
         const sharedIds = state.roster.p1.filter(id => state.roster.p2.includes(id));
 
         renderGroupedView(poolEl, availableObjects, { 
@@ -727,7 +729,6 @@ function handleCoinFlipUI() {
 function renderCompletedView() {
     const renderCompactIdList = (container, idList) => {
         container.innerHTML = '';
-        // The final view remains sorted for clarity
         const sortedIdList = sortIdsByMasterList(idList);
         const idObjects = sortedIdList.map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
         const fragment = document.createDocumentFragment();
@@ -832,6 +833,70 @@ function updateTimerUI() {
     elements.phaseTimer.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
 
+function renderPublicLobbies(lobbies) {
+    const listEl = elements.publicLobbiesList;
+    listEl.innerHTML = '';
+
+    if (!lobbies || lobbies.length === 0) {
+        listEl.innerHTML = '<p style="text-align: center; padding: 20px;">No public lobbies found. Why not create one?</p>';
+        return;
+    }
+
+    lobbies.forEach(lobby => {
+        const item = document.createElement('div');
+        item.className = 'public-lobby-item';
+        
+        const takenRoles = Object.entries(lobby.participants)
+            .filter(([, p]) => p.status === 'connected')
+            .map(([role]) => role);
+        const playerCount = takenRoles.filter(r => r !== 'ref').length;
+
+        item.innerHTML = `
+            <div class="lobby-item-name">${lobby.hostName || 'Unnamed Lobby'}</div>
+            <div class="lobby-item-players"><i class="fas fa-users"></i> ${playerCount}/2 Players</div>
+            <div class="lobby-item-mode"><i class="fas fa-cogs"></i> ${lobby.draftLogic}</div>
+            <button class="btn btn-primary btn-small join-from-browser-btn" data-lobby-code="${lobby.code}">Join</button>
+        `;
+        listEl.appendChild(item);
+    });
+}
+
+function showRoleSelectionModal(lobby) {
+    state.joinTarget.lobbyCode = lobby.code;
+    elements.roleModalLobbyCode.textContent = lobby.code;
+    
+    const roleOptionsContainer = elements.modalRoleOptions;
+    roleOptionsContainer.innerHTML = ''; // Clear previous options
+
+    const roles = {
+        p1: { icon: 'fa-user', text: 'Player 1' },
+        p2: { icon: 'fa-user', text: 'Player 2' },
+        ref: { icon: 'fa-star', text: 'Referee' }
+    };
+
+    Object.entries(roles).forEach(([role, details]) => {
+        const isTaken = lobby.participants[role].status === 'connected';
+        const option = document.createElement('div');
+        option.className = 'role-option';
+        option.dataset.role = role;
+        option.innerHTML = `<i class="fas ${details.icon}"></i><div>${details.text}</div>`;
+        if (isTaken) {
+            option.classList.add('disabled');
+        } else {
+            option.addEventListener('click', () => {
+                roleOptionsContainer.querySelectorAll('.role-option').forEach(opt => opt.classList.remove('selected'));
+                option.classList.add('selected');
+                state.joinTarget.role = role;
+                elements.confirmJoinBtn.disabled = false;
+            });
+        }
+        roleOptionsContainer.appendChild(option);
+    });
+
+    elements.roleSelectionModal.classList.remove('hidden');
+}
+
+
 // ======================
 // CLIENT ACTIONS & EVENT HANDLERS
 // ======================
@@ -877,6 +942,7 @@ function handleLobbyCreated(message) {
 }
 
 function handleLobbyJoined(message) {
+    elements.roleSelectionModal.classList.add('hidden');
     elements.rejoinOverlay.style.display = 'none';
 
     state.lobbyCode = message.lobbyCode || message.code;
@@ -946,32 +1012,63 @@ function setupEventListeners() {
     // Main Page
     elements.createLobbyBtn.addEventListener('click', () => {
         const options = {
-            name: elements.playerNameInput.value.trim(),
+            name: elements.playerNameInput.value.trim() || 'Referee',
             draftLogic: elements.draftLogicSelect.value,
-            timerEnabled: elements.timerToggle.value === 'true'
+            timerEnabled: elements.timerToggle.value === 'true',
+            isPublic: elements.publicLobbyToggle.value === 'true'
         };
         sendMessage({ type: 'createLobby', options });
     });
-    elements.joinLobbyBtn.addEventListener('click', () => {
-        elements.lobbyAccessForm.style.display = 'block';
-        elements.joinLobbyBtn.style.display = 'none';
-    });
+    
     elements.goToBuilder.addEventListener('click', () => {
         state.builderSelectedSinner = "Yi Sang";
         switchView('rosterBuilderPage');
         renderRosterBuilder();
     });
-    elements.roleOptions.forEach(option => {
-        option.addEventListener('click', () => {
-            elements.roleOptions.forEach(opt => opt.classList.remove('selected'));
-            option.classList.add('selected');
+
+    elements.showRulesBtn.addEventListener('click', () => elements.rulesModal.classList.remove('hidden'));
+    elements.closeRulesBtn.addEventListener('click', () => elements.rulesModal.classList.add('hidden'));
+
+    elements.joinTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            elements.joinTabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            const tabName = tab.dataset.tab;
+            document.querySelectorAll('.join-tab-content').forEach(content => {
+                content.classList.toggle('active', content.id === `${tabName}-lobbies-tab` || content.id === `${tabName}-join-tab`);
+            });
+            if (tabName === 'browse') {
+                sendMessage({ type: 'getPublicLobbies' });
+            }
         });
     });
-    elements.enterLobbyBtn.addEventListener('click', () => {
+
+    elements.refreshLobbiesBtn.addEventListener('click', () => sendMessage({ type: 'getPublicLobbies' }));
+
+    elements.publicLobbiesList.addEventListener('click', (e) => {
+        const joinBtn = e.target.closest('.join-from-browser-btn');
+        if (joinBtn) {
+            const lobbyCode = joinBtn.dataset.lobbyCode;
+            sendMessage({ type: 'getLobbyInfo', lobbyCode });
+        }
+    });
+
+    elements.enterLobbyByCode.addEventListener('click', () => {
         const lobbyCode = elements.lobbyCodeInput.value.trim().toUpperCase();
-        const selectedRole = document.querySelector('.role-option.selected')?.dataset.role;
-        if (!lobbyCode || !selectedRole) return showNotification('Enter code and select a role.', true);
-        sendMessage({ type: 'joinLobby', lobbyCode, role: selectedRole, name: elements.playerNameInput.value.trim() });
+        if (!lobbyCode) return showNotification('Please enter a lobby code.', true);
+        sendMessage({ type: 'getLobbyInfo', lobbyCode });
+    });
+
+    elements.closeRoleModalBtn.addEventListener('click', () => elements.roleSelectionModal.classList.add('hidden'));
+    elements.confirmJoinBtn.addEventListener('click', () => {
+        if (state.joinTarget.lobbyCode && state.joinTarget.role) {
+            sendMessage({
+                type: 'joinLobby',
+                lobbyCode: state.joinTarget.lobbyCode,
+                role: state.joinTarget.role,
+                name: elements.playerNameInput.value.trim()
+            });
+        }
     });
     
     const clearSessionAndReload = () => {
@@ -1106,16 +1203,27 @@ function cacheDOMElements() {
         rejoinOverlay: document.getElementById('rejoin-overlay'),
 
         // Main Page
-        lobbyAccessForm: document.getElementById('lobby-access-form'),
         createLobbyBtn: document.getElementById('create-lobby'),
-        joinLobbyBtn: document.getElementById('join-lobby'),
         goToBuilder: document.getElementById('go-to-builder'),
-        enterLobbyBtn: document.getElementById('enter-lobby'),
-        lobbyCodeInput: document.getElementById('lobby-code'),
-        roleOptions: document.querySelectorAll('.role-option'),
         playerNameInput: document.getElementById('player-name'),
         draftLogicSelect: document.getElementById('draft-logic-select'),
         timerToggle: document.getElementById('timer-toggle'),
+        publicLobbyToggle: document.getElementById('public-lobby-toggle'),
+        showRulesBtn: document.getElementById('show-rules-btn'),
+        joinTabs: document.querySelectorAll('.join-tab-btn'),
+        refreshLobbiesBtn: document.getElementById('refresh-lobbies-btn'),
+        publicLobbiesList: document.getElementById('public-lobbies-list'),
+        lobbyCodeInput: document.getElementById('lobby-code-input'),
+        enterLobbyByCode: document.getElementById('enter-lobby-by-code'),
+
+        // Modals
+        rulesModal: document.getElementById('rules-modal'),
+        closeRulesBtn: document.getElementById('close-rules-btn'),
+        roleSelectionModal: document.getElementById('role-selection-modal'),
+        closeRoleModalBtn: document.getElementById('close-role-modal-btn'),
+        roleModalLobbyCode: document.getElementById('role-modal-lobby-code'),
+        modalRoleOptions: document.getElementById('modal-role-options'),
+        confirmJoinBtn: document.getElementById('confirm-join-btn'),
 
         // Shared
         backToMainLobby: document.getElementById('back-to-main-lobby'),
@@ -1206,8 +1314,6 @@ function cacheDOMElements() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Data is now in data.js, which is loaded before this script
-    
     cacheDOMElements();
 
     document.getElementById('global-filter-bar-roster').innerHTML = createFilterBarHTML({ showSinnerFilter: true });
