@@ -160,12 +160,25 @@ h4 {
     font-size: 1.3rem;
 }
 
+.btn-small {
+    padding: 8px 15px;
+    font-size: 0.9rem;
+}
+
 #main-page {
     text-align: center;
     max-width: 1200px;
     margin: 0 auto;
     position: relative;
 }
+
+.top-left-controls {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 10;
+}
+
 
 .logo {
     width: 150px;
@@ -257,12 +270,11 @@ h4 {
     background: rgba(0,0,0,0.2);
     border-radius: 15px;
     padding: 20px;
-    margin: 20px auto;
-    max-width: 800px;
+    margin: 20px 0;
     display: flex;
-    gap: 20px;
+    flex-direction: column;
+    gap: 15px;
     justify-content: center;
-    flex-wrap: wrap;
 }
 
 .lobby-access {
@@ -327,6 +339,12 @@ input:focus, select:focus {
     background: var(--primary);
     border-color: var(--accent);
     box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
+}
+
+.role-option.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    background: #111;
 }
 
 .btn-ready {
@@ -1108,7 +1126,7 @@ input:focus, select:focus {
     flex-wrap: wrap;
 }
 
-/* Coin Flip Modal */
+/* --- Modals --- */
 .modal-overlay {
     position: fixed;
     top: 0;
@@ -1130,8 +1148,32 @@ input:focus, select:focus {
     border: 1px solid var(--accent);
     box-shadow: 0 0 40px rgba(255, 215, 0, 0.2);
     width: 90%;
-    max-width: 500px;
+    max-width: 600px;
+    position: relative;
 }
+
+.modal-content .close-modal-btn {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    background: none;
+    border: none;
+    font-size: 2.5rem;
+    color: #fff;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.rules-content {
+    text-align: left;
+    max-height: 60vh;
+    overflow-y: auto;
+    padding-right: 15px;
+}
+.rules-content p {
+    margin-bottom: 1em;
+}
+
 .coin {
     width: 100px;
     height: 100px;
@@ -1174,6 +1216,102 @@ input:focus, select:focus {
     gap: 20px;
     justify-content: center;
 }
+
+/* --- Join Lobby Area --- */
+#join-lobby-card .action-title {
+    text-align: center;
+    border-bottom: none;
+    margin-bottom: 0;
+}
+#join-lobby-card .join-tabs {
+    margin-top: 15px;
+}
+
+.join-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 20px;
+}
+.join-tab-btn {
+    padding: 10px 20px;
+    cursor: pointer;
+    background: none;
+    border: none;
+    color: #aaa;
+    font-size: 1.1rem;
+    border-bottom: 3px solid transparent;
+    transition: all 0.3s;
+    flex-grow: 1;
+}
+.join-tab-btn:hover {
+    color: #fff;
+}
+.join-tab-btn.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+}
+
+.join-tab-content {
+    display: none;
+    flex-grow: 1;
+}
+.join-tab-content.active {
+    display: block;
+}
+
+.public-lobbies-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+.public-lobbies-header h4 {
+    margin: 0;
+    border: none;
+    padding: 0;
+    text-align: left;
+}
+
+#public-lobbies-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 250px;
+    overflow-y: auto;
+    text-align: left;
+    padding: 5px;
+}
+
+.public-lobby-item {
+    display: grid;
+    grid-template-columns: 2fr 1.5fr 1.5fr auto;
+    gap: 15px;
+    align-items: center;
+    padding: 15px;
+    background: var(--secondary);
+    border-radius: 8px;
+    border-left: 4px solid var(--accent);
+    transition: background-color 0.2s;
+}
+.public-lobby-item:hover {
+    background: #3a3a3e;
+}
+
+.lobby-item-name {
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+.lobby-item-players {
+    color: #ccc;
+}
+.lobby-item-players i {
+    margin-right: 5px;
+}
+.lobby-item-mode {
+    font-style: italic;
+    color: #ddd;
+}
+
 
 /* FIX: Larger draft status panel */
 #draft-status-panel {
@@ -1275,13 +1413,18 @@ input:focus, select:focus {
 
 @media (max-width: 768px) {
     .container { max-width: 100%; }
-    .action-container { flex-direction: column; align-items: center; }
-    .action-card, .final-player-panel { min-width: 100%; }
+    .action-container {
+        grid-template-columns: 1fr;
+    }
+    .final-player-panel { min-width: 100%; }
     .lobby-info { flex-direction: column; gap: 20px; }
     h1 { font-size: 2.5rem; }
     .code-display { font-size: 1.5rem; letter-spacing: 4px; }
     .role-options { flex-direction: column; }
     .phase-container, .player-area { flex-direction: column; }
     .connection-status { top: 5px; right: 5px; font-size: 0.8rem; padding: 5px 10px; }
-    #draft-status-panel { bottom: 10px; right: 10px; max-width: 250px; }
+    #draft-status-panel { bottom: 10px; right: 10px; left: 10px; width: auto; max-width: none; }
+    .public-lobby-item { grid-template-columns: 1fr auto; grid-template-rows: auto auto; }
+    .public-lobby-item .btn { grid-column: 2 / 3; grid-row: 1 / 3; }
+    .top-left-controls { top: 10px; left: 10px; }
 }
