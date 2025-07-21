@@ -1,9 +1,12 @@
 // =================================================================================
 // FILE: server.js
+// DESCRIPTION: This is the updated server logic with fixes for the draft flow.
+// The primary changes are in the handleTimer function to prevent skipping ban
+// phases and a corrected DRAFT_LOGIC configuration.
 // =================================================================================
 const express = require('express');
 const http = require('http');
-const path = require('path');
+const path =require('path');
 const WebSocket = require('ws');
 const crypto = require('crypto');
 
@@ -23,11 +26,12 @@ const ROSTER_SIZE = 42;
 const EGO_BAN_COUNT = 5;
 const TIMERS = {
     roster: 90,
-    egoBan: 75, // 15 * 5
+    egoBan: 75, // 15s per ban
     pick: 15,
 };
 
 // --- DRAFT LOGIC SEQUENCES ---
+// Corrected the '2-3-2' logic, especially for the final pick phase.
 const DRAFT_LOGIC = {
     '1-2-2': {
         ban1Steps: 8,
@@ -41,6 +45,7 @@ const DRAFT_LOGIC = {
         pick1: [{ p: 'p1', c: 2 }, { p: 'p2', c: 3 }, { p: 'p1', c: 2 }, { p: 'p2', c: 3 }, { p: 'p1', c: 2 }],
         midBanSteps: 6,
         pick2: [{ p: 'p2', c: 2 }, { p: 'p1', c: 3 }, { p: 'p2', c: 2 }, { p: 'p1', c: 3 }, { p: 'p2', c: 2 }],
+        // Corrected pick_s2 to ensure 6 picks per player (12 total)
         pick_s2: [{ p: 'p1', c: 1 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 1 }]
     }
 };
@@ -301,25 +306,43 @@ function updateLobbyActivity(lobbyCode) {
     }
 }
 
-
+/**
+ * [FIXED] This function is updated to handle timer expiration more gracefully.
+ * It now prevents the server from automatically skipping mandatory ban phases.
+ */
 function handleTimer(lobbyCode) {
     let lobbyData = lobbies[lobbyCode];
     if (!lobbyData) return;
 
-    const { hovered, currentPlayer } = lobbyData.draft;
+    const { hovered, currentPlayer, phase } = lobbyData.draft;
     const hoveredId = hovered[currentPlayer];
 
-    console.log(`Timer expired for ${lobbyCode}. Player: ${currentPlayer}, Hovered: ${hoveredId}`);
+    console.log(`Timer expired for ${lobbyCode}. Player: ${currentPlayer}, Phase: ${phase}, Hovered: ${hoveredId}`);
     
+    // If an item is hovered when the timer expires, confirm it. This is good for any phase.
     if (hoveredId) {
         handleDraftConfirm(lobbyCode, lobbyData, null);
-    } else {
-        console.log("Timer expired with no hover. Advancing phase.");
+        return;
+    }
+
+    // If nothing is hovered, the behavior depends on the phase.
+    // For ban phases, the turn should NOT be skipped automatically as they are mandatory.
+    if (phase === 'egoBan' || phase === 'ban' || phase === 'midBan') {
+        console.log(`${phase} timer expired. No automatic action. This is a mandatory choice.`);
+        lobbyData.draft.timer.running = false; // Stop the timer display
+        broadcastState(lobbyCode);
+        return;
+    }
+
+    // For pick phases, skipping the turn (advancing the phase) is acceptable.
+    if (phase.includes('pick')) {
+        console.log("Pick timer expired with no hover. Skipping turn by advancing phase.");
         lobbyData = advancePhase(lobbyData);
         setTimerForLobby(lobbyCode, lobbyData);
         broadcastState(lobbyCode);
     }
 }
+
 
 function setTimerForLobby(lobbyCode, lobbyData) {
     if (lobbyTimers[lobbyCode] && lobbyTimers[lobbyCode].timeoutId) {
