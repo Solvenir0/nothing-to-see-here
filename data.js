@@ -1,4 +1,4 @@
-const idCsvData = `Name,Keywords,SinAffinities,Rarity
+window.idCsvData = `Name,Keywords,SinAffinities,Rarity
 "LCB Sinner Yi Sang","Sinking","Gloom,Envy,Sloth","0"
 "Seven Association South Section 6 Yi Sang","Rupture","Gloom,Gluttony,Sloth","00"
 "Molar Office Fixer Yi Sang","Discard,Tremor","Lust,Sloth,Wrath","00"
@@ -147,7 +147,7 @@ const idCsvData = `Name,Keywords,SinAffinities,Rarity
 "Heishou Pack - Si Branch Gregor","Poise,Rupture","Pride,Gluttony,Envy","000"
 `;
 
-const egoData = `Crow's Eye View Yi Sang - ZAYIN - Sloth - Yellow
+window.egoData = `Crow's Eye View Yi Sang - ZAYIN - Sloth - Yellow
 Bygone Days Yi Sang - ZAYIN - Gloom - Blue
 4th Match Flame Yi Sang - TETH - Wrath - Red
 Wishing Cairn Yi Sang - TETH - Sloth - Yellow
