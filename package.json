@@ -1,7 +1,7 @@
 {
-  "name": "limbus-draft-app",
-  "version": "1.3.0",
-  "description": "A multiplayer draft tool for Limbus Company.",
+  "name": "limbus-draft-app-vue",
+  "version": "2.0.0",
+  "description": "A multiplayer draft tool for Limbus Company, rewritten in Vue.js.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
