@@ -254,17 +254,31 @@
                         <p class="action-description">Start a new drafting session as the referee. You'll get a unique lobby code to share with players.</p>
                         <div class="lobby-options">
                             <div class="form-group">
-                                <label>Match Type</label>
-                                <select v-model="createOptions.matchType">
+                                <label for="match-type-select">Match Type</label>
+                                <select id="match-type-select" v-model="createOptions.matchType">
                                     <option value="section1">Section 1 Only</option>
                                     <option value="allSections">All Sections</option>
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label>Draft Logic</label>
-                                <select v-model="createOptions.draftLogic">
+                                <label for="draft-logic-select">Draft Logic</label>
+                                <select id="draft-logic-select" v-model="createOptions.draftLogic">
                                     <option value="1-2-2">Standard (1-2-2)</option>
                                     <option value="2-3-2">Alternate (2-3-2)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="timer-toggle">Enable Timer</label>
+                                <select id="timer-toggle" v-model="createOptions.timerEnabled">
+                                    <option :value="false">Off</option>
+                                    <option :value="true">On</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="public-lobby-toggle">Visibility</label>
+                                <select id="public-lobby-toggle" v-model="createOptions.isPublic">
+                                    <option :value="false">Private (Code Only)</option>
+                                    <option :value="true">Public (In Browser)</option>
                                 </select>
                             </div>
                         </div>
@@ -441,8 +455,6 @@
         `
     };
     
-    // The Lobby component would be very large and complex. 
-    // This is a placeholder to show the structure.
     const Lobby = {
         props: ['state'],
         emits: ['clearSession'],
