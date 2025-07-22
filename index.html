@@ -3,461 +3,697 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Limbus Company Draft System - Multiplayer</title>
+    <title>Limbus Company Draft System - Vue Edition</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="/style.css">
+    <!-- Vue.js script -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
 </head>
 <body>
-    <div id="rejoin-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999; color: white; display: none; flex-direction: column; align-items: center; justify-content: center; font-size: 2rem; gap: 20px;">
-        <i class="fas fa-sync fa-spin"></i>
-        <p>Attempting to rejoin lobby...</p>
-        <button class="btn btn-secondary" id="cancel-rejoin-btn" style="margin-top: 20px;">Cancel</button>
-    </div>
-
-    <div class="connection-status" id="connection-status">
-        <i class="fas fa-plug"></i>
-        <span>Connecting...</span>
-    </div>
- 
-    <div class="notification" id="notification">Player joined the lobby!</div>
-
-    <!-- Modals -->
-    <div id="coin-flip-modal" class="modal-overlay hidden">
-        <div class="modal-content">
-            <h2>Coin Flip</h2>
-            <div class="coin" id="coin-icon"><div class="coin-inner"></div></div>
-            <p id="coin-flip-status">Referee is starting the coin flip...</p>
-            <div id="turn-choice-buttons" class="hidden">
-                <button class="btn btn-primary" id="go-first-btn">Go First</button>
-                <button class="btn btn-secondary" id="go-second-btn">Go Second</button>
-            </div>
+    <!-- The root element for our Vue application -->
+    <div id="app">
+        <!-- Connection Status Indicator -->
+        <div class="connection-status" :class="connectionStatus.class">
+            <i class="fas fa-plug"></i>
+            <span>{{ connectionStatus.text }}</span>
         </div>
-    </div>
-    <div id="rules-modal" class="modal-overlay hidden">
-        <div class="modal-content">
-            <button id="close-rules-btn" class="close-modal-btn">&times;</button>
-            <h2>Tournament Rules</h2>
-            <div class="rules-content">
-                <p><strong>0. Application Requirements</strong></p>
-                <p>To apply for this tournament, participants must have successfully cleared RR6 (Refraction Railway 6) with a total turn count of at most 55 turns. Proof of this clear may be requested upon application.</p>
-                
-                <p><strong>1. Roster Submission</strong></p>
-                <p>Each player must submit a 42-ID Roster before the match. Players may only draft IDs listed in their roster.</p>
-                <p><em>Banned IDs:</em><br>
-                - Lobotomy E.G.O::The Sword Sharpened with Tears Rodion<br>
-                - Heishou Pack - Mao Branch Adept Faust</p>
 
-                <p><strong>2. Tournament Structure</strong></p>
-                <p><strong>2.1. Elimination Round (If Applicable):</strong> If there are more than 32 applicants, an elimination round will be held. This round will consist of 1 game of Section 1 matches. These matches will continue until the number of remaining players is reduced to 32.</p>
-                <p><strong>2.2. Group Stage:</strong> After the elimination round (or directly if 32 or fewer applicants), players will be divided into groups of 4. Each player within a group will play against every other player in their group once in Section 1 matches, for a total of 3 matches per player. The first 2 placements from each group will advance to the next stage: the Play-ins.</p>
-                <p><strong>2.3. Play-ins:</strong> In the Play-ins, players will compete in matches consisting of 1 game of Section 1 and 2. Winners will advance to the Quarter-finals.</p>
-                <p><strong>2.4. Quarter-finals:</strong> The Quarter-finals will also consist of matches with 1 game of Section 1 and 2. Winners will advance to the Semi-finals.</p>
-                <p><strong>2.5. Semi-finals and Finals:</strong> The Semi-finals and Finals will consist of matches with 1 game of Section 1, 2, and 3.</p>
-                
-                <p><strong>3. Match Start & Draft Order</strong></p>
-                <p>A coin flip determines which player drafts first. In matches with multiple sections, the loser of the previous section drafts first in the next section.</p>
-                
-                <p><strong>4. Final Draft Phase Structure</strong></p>
-                <p>(All pick/ban actions have 15s time limits unless noted)</p>
-                <p><strong>EGO Ban Phase (10 total bans)</strong><br>
-                - P1: Ban 5 EGO (45s)<br>
-                - P2: Ban 5 EGO (45s)</p>
-                <p><strong>ID Ban Phase (8 total bans)</strong><br>
-                - P1: Ban 4 ID (alternating)<br>
-                - P2: Ban 4 ID (alternating)</p>
-                <p><strong>Pick Phase - Round 1 (6 IDs per player)</strong><br>
-                - P1: Pick 1, P2: Pick 2, P1: Pick 2, P2: Pick 2, P1: Pick 2, P2: Pick 2, P1: Pick 1</p>
-                <p><strong>Mid-Draft ID Ban Phase (6 total bans)</strong><br>
-                - P1: Ban 3 ID (alternating)<br>
-                - P2: Ban 3 ID (alternating)</p>
-                <p><strong>Pick Phase - Round 2 (6 more IDs per player to reach 12 total)</strong><br>
-                - P2: Pick 1, P1: Pick 2, P2: Pick 2, P1: Pick 2, P2: Pick 2, P1: Pick 2, P2: Pick 1</p>
-                 <p><strong>"All Sections" Mode - Pick Phase 3 (6 additional IDs per player)</strong><br>
-                - If the "All Sections" match type is selected, a third pick phase occurs. These 6 IDs are for use in Sections 2 and 3 only and cannot be used in Section 1.</p>
-                <p><strong>Post-Draft:</strong> A 60-second match preparation period follows the draft.</p>
-
-                <p><strong>5. Win Condition</strong></p>
-                <p>Victory is awarded to the player who successfully clears the section with a lower turn count than their opponent.</p>
-                
-                <p><strong>6. Sudden Death</strong></p>
-                <p>If 30 minutes pass from the start of the match, Sudden Death is triggered.<br>
-                - If one player has cleared and the other has not, the player who cleared wins.<br>
-                - If neither player has cleared, they enter a 10-minute grace period: The first player to clear during this time wins.<br>
-                - If no player clears, the match is decided by coin toss. The turn count is then recorded as +1 above the highest tournament turn count.</p>
-                
-                <p><strong>7. Restart Rules</strong></p>
-                <p>Each player has: 10 Turn 1 Restart Chances, 3 Normal Restart Chances. No restarts are allowed during Sudden Death.</p>
-            </div>
+        <!-- Notification Popup -->
+        <div class="notification" :class="{ show: notification.show }" :style="{ background: notification.isError ? 'var(--disconnected)' : 'var(--primary)' }">
+            {{ notification.text }}
         </div>
-    </div>
-    <div id="role-selection-modal" class="modal-overlay hidden">
-        <div class="modal-content">
-            <button id="close-role-modal-btn" class="close-modal-btn">&times;</button>
-            <h3>Select Your Role for Lobby <span id="role-modal-lobby-code"></span></h3>
-            <div class="role-options" id="modal-role-options">
-                <!-- Role options will be dynamically enabled/disabled -->
-            </div>
-            <button class="btn btn-primary btn-large" id="confirm-join-btn" style="margin-top: 20px;" disabled>Join Lobby</button>
+
+        <!-- Rejoin Overlay -->
+        <div id="rejoin-overlay" v-if="showRejoinOverlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 2rem; gap: 20px;">
+            <i class="fas fa-sync fa-spin"></i>
+            <p>Attempting to rejoin lobby...</p>
+            <button class="btn btn-secondary" @click="cancelRejoin" style="margin-top: 20px;">Cancel</button>
         </div>
+
+        <!-- Main content is rendered by Vue Router -->
+        <main class="container">
+             <component 
+                :is="currentView.component"
+                :state="state"
+                :master-i-d-list="masterIDList"
+                :master-e-g-o-list="masterEGOList"
+                :roster-size="ROSTER_SIZE"
+                :ego-ban-count="EGO_BAN_COUNT"
+                @navigate="navigate"
+                @send-message="sendMessage"
+                @show-notification="showNotification"
+                @clear-session="clearSessionAndGoHome"
+            />
+        </main>
     </div>
 
+    <!-- External Data and Main Vue Script -->
+    <script src="/data.js"></script>
+    <script type="module">
+    const { createApp, ref, reactive, computed, onMounted, watch, defineAsyncComponent } = Vue;
 
-    <div class="container">
-        <div id="main-page">
-            <div class="top-left-controls">
-                <button id="show-rules-btn" class="btn btn-secondary btn-small"><i class="fas fa-book-open"></i> Rules</button>
-            </div>
+    // ================================= //
+    //         UTILITY FUNCTIONS         //
+    // ================================= //
+    
+    function createSlug(name) {
+        if (!name) return '';
+        let slug = name.toLowerCase();
+        slug = slug.replace(/ryōshū/g, 'ryshu').replace(/öufi/g, 'ufi');
+        slug = slug.replace(/e\.g\.o::/g, 'ego-');
+        slug = slug.replace(/ & /g, ' ').replace(/[.'"]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/[^\w-]+/g, '');
+        return slug;
+    }
 
-            <header>
-                <h1><i class="fas fa-dragon"></i> Limbus Company Draft System</h1>
-                <p>Organize and participate in competitive drafting sessions</p>
-            </header>
+    function parseIDCSV(csv) {
+        const lines = csv.split('\n').filter(line => line.trim() !== '');
+        if (lines.length < 2) return [];
+        const regex = /(".*?"|[^",]+)(?=\s*,|\s*$)/g;
+        const headers = lines[0].split(',').map(h => h.trim());
+        const result = [];
+        for (let i = 1; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (!line) continue;
+            const values = line.match(regex) || [];
+            if (values.length !== headers.length) continue;
+            const obj = {};
+            headers.forEach((header, idx) => {
+                let value = values[idx].trim();
+                if (value.startsWith('"') && value.endsWith('"')) value = value.slice(1, -1);
+                obj[header] = value;
+            });
 
-            <div class="logo">
-                <i class="fas fa-dragon"></i>
-            </div>
+            const name = obj.Name;
+            const sinnerMatch = name.match(/(Yi Sang|Faust|Don Quixote|Ryōshū|Meursault|Hong Lu|Heathcliff|Ishmael|Rodion|Sinclair|Outis|Gregor)/);
             
-            <div class="welcome-text">
-                <p>Welcome to the official Limbus Company drafting system. Here you can create or join lobbies to organize competitive matches with other players, or use the Roster Builder to prepare your teams in advance.</p>
-            </div>
-            
-            <div class="form-group" style="max-width: 400px; margin: 30px auto; text-align: left;">
-                <label for="player-name">Your Display Name</label>
-                <input type="text" id="player-name" placeholder="Enter your name">
-            </div>
+            result.push({
+                id: createSlug(name), 
+                name: name,
+                keywords: obj.Keywords ? obj.Keywords.split(',').map(k => k.trim()) : [],
+                sinAffinities: obj.SinAffinities ? obj.SinAffinities.split(',').map(s => s.trim()) : [],
+                rarity: obj.Rarity,
+                imageFile: `${createSlug(name)}.webp`, 
+                sinner: sinnerMatch ? sinnerMatch[0] : "Unknown",
+            });
+        }
+        return result;
+    }
 
-            <div class="action-container">
-                <div class="action-card">
-                    <div class="action-icon"><i class="fas fa-users-cog"></i></div>
-                    <h3 class="action-title">Roster Builder</h3>
-                    <p class="action-description">Create a 42-ID roster and generate a shareable code for quick loading during a match.</p>
-                    <button class="btn btn-secondary btn-large" id="go-to-builder"><i class="fas fa-wrench"></i> Open Builder</button>
-                </div>
-
-                <div class="action-card">
-                    <div class="action-icon"><i class="fas fa-plus-circle"></i></div>
-                    <h3 class="action-title">Create New Lobby</h3>
-                    <p class="action-description">Start a new drafting session as the referee. You'll get a unique lobby code to share with players.</p>
-                    <div class="lobby-options">
-                        <div class="form-group">
-                            <label for="match-type-select">Match Type</label>
-                            <select id="match-type-select">
-                                <option value="section1" selected>Section 1 Only</option>
-                                <option value="allSections">All Sections</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="draft-logic-select">Draft Logic</label>
-                            <select id="draft-logic-select">
-                                <option value="1-2-2" selected>Standard (1-2-2)</option>
-                                <option value="2-3-2">Alternate (2-3-2)</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="timer-toggle">Enable Timer</label>
-                            <select id="timer-toggle">
-                                <option value="false" selected>Off</option>
-                                <option value="true">On</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="public-lobby-toggle">Visibility</label>
-                            <select id="public-lobby-toggle">
-                                <option value="false" selected>Private (Code Only)</option>
-                                <option value="true">Public (In Browser)</option>
-                            </select>
-                        </div>
-                    </div>
-                    <button class="btn btn-primary btn-large" id="create-lobby"><i class="fas fa-plus"></i> Create Lobby</button>
-                </div>
-                
-                <div class="action-card" id="join-lobby-card">
-                    <div class="action-icon"><i class="fas fa-sign-in-alt"></i></div>
-                    <h3 class="action-title">Join a Lobby</h3>
-                    <div class="join-tabs">
-                        <button class="join-tab-btn active" data-tab="browse">Browse Public Lobbies</button>
-                        <button class="join-tab-btn" data-tab="code">Join with Code</button>
-                    </div>
-                
-                    <div id="browse-lobbies-tab" class="join-tab-content active">
-                        <div class="public-lobbies-header">
-                            <h4>Available Public Lobbies</h4>
-                            <button id="refresh-lobbies-btn" class="btn btn-small"><i class="fas fa-sync"></i> Refresh</button>
-                        </div>
-                        <div id="public-lobbies-list">
-                            <p>Click "Refresh" to find public lobbies.</p>
-                        </div>
-                    </div>
-                
-                    <div id="code-join-tab" class="join-tab-content">
-                        <div class="form-group">
-                            <label for="lobby-code-input">Lobby Code:</label>
-                            <input type="text" id="lobby-code-input" placeholder="Enter 6-character code" maxlength="6">
-                        </div>
-                        <button class="btn btn-primary" id="enter-lobby-by-code"><i class="fas fa-play"></i> Find Lobby</button>
-                    </div>
-                </div>
-            </div>
-        </div>
+    function parseEGOData(data) {
+        const lines = data.trim().split('\n');
+        const egoList = [];
+        const bgColorMap = { 
+            'Yellow': 'var(--sin-sloth-bg)', 'Blue': 'var(--sin-gloom-bg)', 'Red': 'var(--sin-wrath-bg)',
+            'Indigo': 'var(--sin-pride-bg)', 'Purple': 'var(--sin-envy-bg)', 'Orange': 'var(--sin-lust-bg)',
+            'Green': 'var(--sin-gluttony-bg)'
+        };
         
-        <div id="lobby-view">
-            <button class="btn back-button" id="back-to-main-lobby"><i class="fas fa-arrow-left"></i> Main Menu</button>
+        lines.forEach(line => {
+            if (!line.includes(' - ')) return;
+            const parts = line.split(' - ');
+            if (parts.length < 4) return;
+
+            const nameAndSinner = parts[0];
+            const rarity = parts[1].trim();
+            const sin = parts[2].trim();
+            const color = parts[3].trim();
+
+            const sinners = ["Yi Sang", "Faust", "Don Quixote", "Ryōshū", "Meursault", "Hong Lu", "Heathcliff", "Ishmael", "Rodion", "Sinclair", "Outis", "Gregor"];
+            let sinner = "Unknown";
+            let name = nameAndSinner;
+
+            for (const s of sinners) {
+                if (nameAndSinner.includes(s)) {
+                    sinner = s;
+                    name = nameAndSinner.replace(s, '').trim();
+                    break;
+                }
+            }
             
-            <header>
-                <h1><i class="fas fa-dragon"></i> Limbus Company Draft System</h1>
-                <p>Drafting session in progress</p>
-            </header>
+            egoList.push({
+                id: createSlug(`${name} ${sinner}`),
+                name: `${name} (${sinner})`, sinner, rarity, sin, color,
+                cssColor: bgColorMap[color] || 'rgba(128, 128, 128, 0.7)'
+            });
+        });
+        return egoList;
+    }
+    
+    function generateRosterCode(roster, masterList) {
+        if (roster.length !== 42) return null;
+        try {
+            const indices = roster.map(slug => {
+                const index = masterList.findIndex(id => id.id === slug);
+                return index > -1 ? index : 255; 
+            });
+            const uint8Array = new Uint8Array(indices);
+            const binaryString = String.fromCharCode.apply(null, uint8Array);
+            return btoa(binaryString);
+        } catch (e) {
+            console.error("Error generating roster code:", e);
+            return null;
+        }
+    }
+
+    function loadRosterFromCode(code, masterList) {
+        try {
+            const binaryString = atob(code);
+            if (binaryString.length !== 42) return null;
+            const uint8Array = new Uint8Array(binaryString.split('').map(c => c.charCodeAt(0)));
+            const rosterSlugs = Array.from(uint8Array).map(index => {
+                return (index < masterList.length) ? masterList[index].id : null;
+            }).filter(Boolean);
+
+            return rosterSlugs.length === 42 ? rosterSlugs : null;
+        } catch (e) {
+            console.error("Error decoding roster code:", e);
+            return null;
+        }
+    }
+
+
+    // ================================= //
+    //          VUE COMPONENTS           //
+    // ================================= //
+    const HomePage = {
+        props: ['state'],
+        emits: ['navigate', 'sendMessage', 'showNotification'],
+        setup(props, { emit }) {
+            const createOptions = reactive({
+                draftLogic: '1-2-2',
+                matchType: 'section1',
+                timerEnabled: false,
+                isPublic: false
+            });
+            const joinCode = ref('');
+
+            const playerName = computed({
+                get: () => props.state.playerName,
+                set: (val) => { props.state.playerName = val; }
+            });
+
+            function createLobby() {
+                if (!playerName.value) {
+                    emit('showNotification', 'Please enter a display name first.', true);
+                    return;
+                }
+                emit('sendMessage', {
+                    type: 'createLobby',
+                    options: { ...createOptions, name: playerName.value }
+                });
+            }
             
-            <div class="card">
-                <div class="lobby-info">
-                    <div>
-                        <h3>LOBBY CODE</h3>
-                        <div class="code-display" id="lobby-code-display"></div>
-                        <p>Share this code with other participants</p>
-                    </div>
-                    <div>
-                        <h3>PHASE TIMER</h3>
-                        <div class="timer-display" id="phase-timer">--:--</div>
-                        <button class="btn btn-secondary" id="ref-timer-control" style="margin-top: 5px;"><i class="fas fa-pause"></i> Pause Timer</button>
-                    </div>
-                    <div>
-                        <h3>PARTICIPANTS</h3>
-                        <div class="participants" id="participants-list"></div>
-                    </div>
-                </div>
-                
-                <!-- Roster Selection Phase -->
-                <div id="roster-phase" class="phase-section">
-                    <h2>Roster Selection Phase</h2>
-                    <p>Each player must select 42 IDs. When both are ready, the Referee can start the coin flip.</p>
-                    <div class="filter-bar" id="global-filter-bar-roster">
-                        <!-- Filters are now globally defined and rendered by JS -->
-                    </div>
-                    <div class="player-area">
-                        <div class="player-panel" id="p1-panel">
-                            <div class="player-header">
-                                <div class="player-name" id="p1-name-display">Player 1</div>
-                                <div class="player-status status-waiting" id="p1-status">Selecting</div>
-                            </div>
-                            <div class="counter"><i class="fas fa-users"></i> Selected: <strong id="p1-counter">0</strong> / 42 IDs</div>
-                            <div class="roster-load-form">
-                                <input type="text" id="p1-roster-code-input" placeholder="Paste Roster Code...">
-                                <button class="btn btn-secondary" id="p1-roster-load"><i class="fas fa-upload"></i> Load</button>
-                            </div>
-                            <div class="roster-selection" id="p1-roster"></div>
-                            <div class="controls">
-                                <button class="btn" id="p1-random"><i class="fas fa-random"></i> Randomize</button>
-                                <button class="btn" id="p1-clear"><i class="fas fa-trash"></i> Clear</button>
-                                <button class="btn" id="p1-ready"><i class="fas fa-check"></i> Ready</button>
-                            </div>
-                        </div>
-                        <div class="player-panel" id="p2-panel">
-                            <div class="player-header">
-                                <div class="player-name" id="p2-name-display">Player 2</div>
-                                <div class="player-status status-waiting" id="p2-status">Selecting</div>
-                            </div>
-                            <div class="counter"><i class="fas fa-users"></i> Selected: <strong id="p2-counter">0</strong> / 42 IDs</div>
-                            <div class="roster-load-form">
-                                <input type="text" id="p2-roster-code-input" placeholder="Paste Roster Code...">
-                                <button class="btn btn-secondary" id="p2-roster-load"><i class="fas fa-upload"></i> Load</button>
-                            </div>
-                            <div class="roster-selection" id="p2-roster"></div>
-                            <div class="controls">
-                                <button class="btn" id="p2-random"><i class="fas fa-random"></i> Randomize</button>
-                                <button class="btn" id="p2-clear"><i class="fas fa-trash"></i> Clear</button>
-                                <button class="btn" id="p2-ready"><i class="fas fa-check"></i> Ready</button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="ref-actions" style="text-align: center; margin-top: 20px;">
-                        <button class="btn btn-primary btn-large" id="start-coin-flip" disabled><i class="fas fa-coins"></i> Start Coin Flip</button>
-                    </div>
-                </div>
+            function joinLobby() {
+                 if (!playerName.value) {
+                    emit('showNotification', 'Please enter a display name first.', true);
+                    return;
+                }
+                if (!joinCode.value) {
+                    emit('showNotification', 'Please enter a lobby code.', true);
+                    return;
+                }
+                emit('sendMessage', { type: 'joinLobby', lobbyCode: joinCode.value.toUpperCase(), name: playerName.value });
+            }
 
-                <!-- EGO Ban Phase -->
-                <div id="ego-ban-phase" class="phase-section hidden">
-                    <h2 id="ego-ban-title">EGO Ban Phase</h2>
-                    <div id="p1-ego-bans-preview" class="banned-egos-display hidden">
-                        <h3>Player 1's Bans</h3>
-                        <div class="banned-egos-list"></div>
+            return {
+                createOptions,
+                joinCode,
+                playerName,
+                createLobby,
+                joinLobby,
+                navigate: (path) => emit('navigate', path)
+            };
+        },
+        template: `
+            <div id="main-page">
+                <header>
+                    <h1><i class="fas fa-dragon"></i> Limbus Company Draft System</h1>
+                    <p>Organize and participate in competitive drafting sessions (Vue Edition)</p>
+                </header>
+                <div class="logo"><i class="fas fa-dragon"></i></div>
+                <div class="welcome-text">
+                    <p>Welcome to the official Limbus Company drafting system. Here you can create or join lobbies to organize competitive matches with other players, or use the Roster Builder to prepare your teams in advance.</p>
+                </div>
+                <div class="form-group" style="max-width: 400px; margin: 30px auto; text-align: left;">
+                    <label for="player-name">Your Display Name</label>
+                    <input type="text" id="player-name" placeholder="Enter your name" v-model="playerName">
+                </div>
+                <div class="action-container">
+                    <div class="action-card">
+                        <div class="action-icon"><i class="fas fa-users-cog"></i></div>
+                        <h3 class="action-title">Roster Builder</h3>
+                        <p class="action-description">Create a 42-ID roster and generate a shareable code for quick loading during a match.</p>
+                        <button class="btn btn-secondary btn-large" @click="navigate('/rosterbuilder')"><i class="fas fa-wrench"></i> Open Builder</button>
                     </div>
-                    <div class="ego-ban-layout">
-                        <div id="ego-ban-main-panel">
-                            <h3>Available EGOs</h3>
-                            <div class="filter-bar">
-                                <div class="filter-group" style="flex-grow: 2;">
-                                    <label class="filter-label" for="ego-search-input">Search EGOs:</label>
-                                    <input type="text" id="ego-search-input" placeholder="Search by name or sinner...">
+                    <div class="action-card">
+                        <div class="action-icon"><i class="fas fa-plus-circle"></i></div>
+                        <h3 class="action-title">Create New Lobby</h3>
+                        <p class="action-description">Start a new drafting session as the referee. You'll get a unique lobby code to share with players.</p>
+                        <div class="lobby-options">
+                            <div class="form-group">
+                                <label>Match Type</label>
+                                <select v-model="createOptions.matchType">
+                                    <option value="section1">Section 1 Only</option>
+                                    <option value="allSections">All Sections</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Draft Logic</label>
+                                <select v-model="createOptions.draftLogic">
+                                    <option value="1-2-2">Standard (1-2-2)</option>
+                                    <option value="2-3-2">Alternate (2-3-2)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary btn-large" @click="createLobby"><i class="fas fa-plus"></i> Create Lobby</button>
+                    </div>
+                    <div class="action-card" id="join-lobby-card">
+                        <div class="action-icon"><i class="fas fa-sign-in-alt"></i></div>
+                        <h3 class="action-title">Join a Lobby</h3>
+                         <div class="form-group">
+                            <label for="lobby-code-input">Lobby Code:</label>
+                            <input type="text" id="lobby-code-input" placeholder="Enter 6-character code" maxlength="6" v-model="joinCode">
+                        </div>
+                        <button class="btn btn-primary" @click="joinLobby"><i class="fas fa-play"></i> Join Lobby</button>
+                    </div>
+                </div>
+            </div>
+        `
+    };
+
+    const RosterBuilder = {
+        props: ['masterIDList', 'rosterSize'],
+        emits: ['navigate', 'showNotification'],
+        setup(props, { emit }) {
+            const SINNER_ORDER = ["Yi Sang", "Faust", "Don Quixote", "Ryōshū", "Meursault", "Hong Lu", "Heathcliff", "Ishmael", "Rodion", "Sinclair", "Outis", "Gregor"];
+            const builderRoster = ref([]);
+            const selectedSinner = ref(SINNER_ORDER[0]);
+            const loadCodeInput = ref('');
+
+            const idsBySinner = computed(() => {
+                const grouped = {};
+                SINNER_ORDER.forEach(sinner => {
+                    grouped[sinner] = props.masterIDList.filter(id => id.sinner === sinner);
+                });
+                return grouped;
+            });
+
+            const displayedIDs = computed(() => idsBySinner.value[selectedSinner.value] || []);
+            
+            const groupedSelectedRoster = computed(() => {
+                const grouped = {};
+                const sortedRoster = [...builderRoster.value].sort((a, b) => {
+                    const indexA = props.masterIDList.findIndex(item => item.id === a);
+                    const indexB = props.masterIDList.findIndex(item => item.id === b);
+                    return indexA - indexB;
+                });
+
+                sortedRoster.forEach(idSlug => {
+                    const idData = props.masterIDList.find(id => id.id === idSlug);
+                    if (idData) {
+                        if (!grouped[idData.sinner]) grouped[idData.sinner] = [];
+                        grouped[idData.sinner].push(idData);
+                    }
+                });
+                return SINNER_ORDER.map(sinner => ({ sinner, ids: grouped[sinner] || [] })).filter(g => g.ids.length > 0);
+            });
+
+            const rosterCode = computed(() => {
+                if (builderRoster.value.length !== props.rosterSize) {
+                    return `Select ${props.rosterSize - builderRoster.value.length} more IDs.`;
+                }
+                return generateRosterCode(builderRoster.value, props.masterIDList) || "Error generating code.";
+            });
+
+            function toggleBuilderIdSelection(id) {
+                const index = builderRoster.value.indexOf(id);
+                if (index > -1) {
+                    builderRoster.value.splice(index, 1);
+                } else {
+                    if (builderRoster.value.length < props.rosterSize) {
+                        builderRoster.value.push(id);
+                    } else {
+                        emit('showNotification', `You can only select ${props.rosterSize} IDs.`);
+                    }
+                }
+            }
+            
+            function randomizeRoster() {
+                const shuffled = [...props.masterIDList].sort(() => 0.5 - Math.random());
+                builderRoster.value = shuffled.slice(0, props.rosterSize).map(id => id.id);
+            }
+
+            function clearRoster() {
+                builderRoster.value = [];
+            }
+            
+            function copyCode() {
+                if (builderRoster.value.length !== props.rosterSize) return;
+                navigator.clipboard.writeText(rosterCode.value).then(() => {
+                    emit('showNotification', "Roster code copied!");
+                }, () => {
+                    emit('showNotification', "Failed to copy code.", true);
+                });
+            }
+            
+            function loadFromCode() {
+                const roster = loadRosterFromCode(loadCodeInput.value, props.masterIDList);
+                if (roster) {
+                    builderRoster.value = roster;
+                    emit('showNotification', "Roster loaded successfully!");
+                } else {
+                    emit('showNotification', "Invalid roster code.", true);
+                }
+            }
+
+            return {
+                SINNER_ORDER,
+                builderRoster,
+                selectedSinner,
+                loadCodeInput,
+                displayedIDs,
+                groupedSelectedRoster,
+                rosterCode,
+                toggleBuilderIdSelection,
+                randomizeRoster,
+                clearRoster,
+                copyCode,
+                loadFromCode,
+                navigate: (path) => emit('navigate', path)
+            };
+        },
+        template: `
+            <div id="roster-builder-page">
+                <button class="btn back-button" @click="navigate('/')"><i class="fas fa-arrow-left"></i> Main Menu</button>
+                <header>
+                    <h1><i class="fas fa-users-cog"></i> Roster Builder</h1>
+                    <p>Create a roster and generate a shareable code.</p>
+                </header>
+                <div class="card">
+                    <div class="builder-sinner-nav">
+                        <button v-for="sinner in SINNER_ORDER" :key="sinner" class="btn sinner-nav-btn" :class="{ selected: sinner === selectedSinner }" @click="selectedSinner = sinner">
+                            {{ sinner }}
+                        </button>
+                    </div>
+                    <div class="builder-content-wrapper">
+                        <div class="builder-main-panel">
+                            <h3>Available Identities</h3>
+                            <div class="builder-id-pool">
+                                <div v-for="idData in displayedIDs" :key="idData.id" class="id-item" :class="['rarity-' + idData.rarity, { selected: builderRoster.includes(idData.id) }]" @click="toggleBuilderIdSelection(idData.id)">
+                                    <div class="id-icon" :style="{ backgroundImage: 'url(/uploads/' + idData.imageFile + ')' }"></div>
+                                    <div class="id-name">{{ idData.name }}</div>
                                 </div>
-                                <button class="btn btn-primary" id="confirm-selection-ego" disabled><i class="fas fa-check"></i> Confirm Ban</button>
-                            </div>
-                            <div class="ego-ban-container" id="ego-ban-container"></div>
-                        </div>
-                        <div id="ego-ban-side-panel">
-                            <div id="ego-ban-player-bans-section">
-                                <h3>Your Bans (<span id="ego-ban-counter">0</span>/5)</h3>
-                                <div id="current-player-ego-bans"></div>
-                                <div class="controls" style="margin-top: 20px;">
-                                    <button class="btn btn-primary" id="confirm-ego-bans" disabled><i class="fas fa-check-double"></i> Confirm All Bans</button>
-                                </div>
-                            </div>
-                            <div id="opponent-roster-display">
-                                <h3 id="opponent-roster-title">Opponent's Roster</h3>
-                                <div class="sinner-grouped-roster" id="opponent-roster-list"></div>
                             </div>
                         </div>
-                    </div>
-                </div>
-                
-                <!-- ID Draft Phase -->
-                <div id="id-draft-phase" class="phase-section hidden">
-                    <div class="banned-egos-display" id="draft-banned-egos">
-                        <h3><i class="fas fa-ban"></i> Banned EGOs</h3>
-                        <div class="banned-egos-list" id="draft-banned-egos-list"></div>
-                    </div>
-                
-                    <div class="triptych-layout">
-                        <!-- Left Column: Player 1 Info -->
-                        <div class="draft-player-column" id="p1-draft-column">
-                            <div class="player-header">
-                                <div class="player-name" id="p1-draft-name">Player 1</div>
-                                <div class="player-status status-waiting" id="p1-draft-status">Waiting</div>
+                        <div class="builder-side-panel">
+                            <h3>Your Roster ({{ builderRoster.length }}/{{ rosterSize }})</h3>
+                            <div class="sinner-grouped-roster">
+                                <template v-for="group in groupedSelectedRoster" :key="group.sinner">
+                                    <div class="sinner-header"></div>
+                                    <div class="sinner-id-container">
+                                        <div v-for="idData in group.ids" :key="idData.id" class="id-item" @click="toggleBuilderIdSelection(idData.id)">
+                                            <div class="id-icon" :style="{ backgroundImage: 'url(/uploads/' + idData.imageFile + ')' }"></div>
+                                        </div>
+                                    </div>
+                                </template>
                             </div>
-                            <h4>Picked IDs</h4>
-                            <div class="compact-id-list" id="p1-picks"></div>
-                            <div id="p1-s2-picks-container" class="hidden">
-                                <h4>Picked IDs (Sec 2/3)</h4>
-                                <div class="compact-id-list section2-picks" id="p1-s2-picks"></div>
+                            <div class="controls" style="margin-top: 10px;">
+                                <button class="btn" @click="randomizeRoster"><i class="fas fa-random"></i> Random</button>
+                                <button class="btn" @click="clearRoster"><i class="fas fa-trash"></i> Clear</button>
                             </div>
-                            <h4>Banned from Roster</h4>
-                            <div class="compact-id-list" id="p1-id-bans"></div>
-                        </div>
-                
-                        <!-- Center Column: Interaction Hub -->
-                        <div class="draft-interaction-hub" id="draft-interaction-hub">
-                            <div class="filter-bar" id="global-filter-bar-draft">
-                                <!-- Filters for draft phase rendered here by JS -->
+                            <h3 style="margin-top: 20px;">Roster Code</h3>
+                            <div id="builder-roster-code-display" style="background: #111; padding: 10px; border-radius: 5px; font-family: monospace; min-height: 50px; margin-top: 10px; word-wrap: break-word;">
+                                {{ rosterCode }}
                             </div>
-                            <div class="draft-pool-container" id="draft-pool-container">
-                                <!-- Draft pool will be rendered here by JS -->
+                            <button class="btn btn-primary" @click="copyCode" style="width: 100%; margin-top: 10px;" :disabled="builderRoster.length !== rosterSize"><i class="fas fa-copy"></i> Copy Code</button>
+                            <h3 style="margin-top: 20px;">Load from Code</h3>
+                            <div class="roster-code-actions">
+                                <input type="text" v-model="loadCodeInput" placeholder="Paste code here...">
+                                <button class="btn" @click="loadFromCode"><i class="fas fa-upload"></i></button>
                             </div>
-                             <div class="draft-controls">
-                                <button class="btn btn-primary btn-large" id="confirm-selection-id" disabled><i class="fas fa-check"></i> Confirm Selection</button>
-                                <button class="btn hidden" id="next-phase" disabled><i class="fas fa-step-forward"></i> Next Phase</button>
-                                <button class="btn btn-primary" id="complete-draft" disabled><i class="fas fa-flag-checkered"></i> Complete Draft</button>
-                            </div>
-                        </div>
-                
-                        <!-- Right Column: Player 2 Info -->
-                        <div class="draft-player-column" id="p2-draft-column">
-                            <div class="player-header">
-                                <div class="player-name" id="p2-draft-name">Player 2</div>
-                                <div class="player-status status-waiting" id="p2-draft-status">Waiting</div>
-                            </div>
-                            <h4>Picked IDs</h4>
-                            <div class="compact-id-list" id="p2-picks"></div>
-                             <div id="p2-s2-picks-container" class="hidden">
-                                <h4>Picked IDs (Sec 2/3)</h4>
-                                <div class="compact-id-list section2-picks" id="p2-s2-picks"></div>
-                            </div>
-                            <h4>Banned from Roster</h4>
-                            <div class="compact-id-list" id="p2-id-bans"></div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-
-        <!-- Roster Builder Page -->
-        <div id="roster-builder-page">
-            <button class="btn back-button" id="back-to-main-builder"><i class="fas fa-arrow-left"></i> Main Menu</button>
-            <header>
-                <h1><i class="fas fa-users-cog"></i> Roster Builder</h1>
-                <p>Create a roster and generate a shareable code.</p>
-            </header>
-            <div class="card">
-                <div class="builder-sinner-nav" id="builder-sinner-nav">
-                    <!-- Sinner buttons will be rendered here -->
-                </div>
-                <div class="builder-content-wrapper">
-                    <div class="builder-main-panel">
-                        <h3>Available Identities</h3>
-                         <div class="filter-bar" id="global-filter-bar-builder"></div>
-                         <div class="builder-id-pool" id="builder-id-pool">
-                             <!-- Sinner IDs will be rendered here -->
-                         </div>
-                    </div>
-                    <div class="builder-side-panel">
-                        <h3>Your Roster (<span id="builder-counter">0</span>/42)</h3>
-                        <div class="sinner-grouped-roster" id="builder-selected-roster"></div>
-                        <div class="controls" style="margin-top: 10px;">
-                            <button class="btn" id="builder-random"><i class="fas fa-random"></i> Random</button>
-                            <button class="btn" id="builder-clear"><i class="fas fa-trash"></i> Clear</button>
+        `
+    };
+    
+    // The Lobby component would be very large and complex. 
+    // This is a placeholder to show the structure.
+    const Lobby = {
+        props: ['state'],
+        emits: ['clearSession'],
+        setup(props, { emit }) {
+            return {
+                lobbyCode: computed(() => props.state.lobbyCode),
+                clearSession: () => emit('clearSession')
+            }
+        },
+        template: `
+            <div id="lobby-view">
+                <button class="btn back-button" @click="clearSession"><i class="fas fa-arrow-left"></i> Main Menu</button>
+                <header>
+                     <h1><i class="fas fa-dragon"></i> Limbus Company Draft System</h1>
+                     <p>Drafting session in progress</p>
+                </header>
+                <div class="card">
+                     <div class="lobby-info">
+                        <div>
+                            <h3>LOBBY CODE</h3>
+                            <div class="code-display">{{ lobbyCode }}</div>
+                            <p>Share this code with other participants</p>
                         </div>
-                        <h3 style="margin-top: 20px;">Roster Code</h3>
-                        <p>Use this code to quickly load your roster here or in a match lobby.</p>
-                        <div id="builder-roster-code-display" style="background: #111; padding: 10px; border-radius: 5px; font-family: monospace; min-height: 50px; margin-top: 10px; word-wrap: break-word;">
-                            Select 42 IDs to generate a code.
-                        </div>
-                        <button class="btn btn-primary" id="builder-copy-code" style="width: 100%; margin-top: 10px;" disabled><i class="fas fa-copy"></i> Copy Code</button>
-                        
-                        <h3 style="margin-top: 20px;">Load from Code</h3>
-                        <div class="roster-code-actions">
-                            <input type="text" id="builder-load-code-input" placeholder="Paste code here...">
-                            <button class="btn" id="builder-load-code"><i class="fas fa-upload"></i></button>
-                        </div>
-                    </div>
+                     </div>
+                     <h2>Lobby View</h2>
+                     <p>Drafting functionality would be implemented here.</p>
+                     <pre style="text-align: left; background: #111; padding: 10px; border-radius: 5px; max-height: 400px; overflow: auto;">{{ JSON.stringify(state, null, 2) }}</pre>
                 </div>
             </div>
-        </div>
+        `
+    };
 
-        <!-- Completed Draft View -->
-        <div id="completed-view" style="display: none;">
-            <header>
-                <h1><i class="fas fa-flag-checkered"></i> Draft Complete</h1>
-                <p>Final Rosters</p>
-            </header>
-            <div class="banned-egos-display" id="final-banned-egos">
-                <h3><i class="fas fa-ban"></i> Banned EGOs</h3>
-                <div class="banned-egos-list" id="final-banned-egos-list"></div>
-            </div>
-            <div class="final-rosters-container">
-                <div class="final-player-panel">
-                    <h2 id="final-p1-name">Player 1's Roster</h2>
-                    <h4>Picked IDs (Section 1)</h4>
-                    <div class="final-picks" id="final-p1-picks"></div>
-                    <div id="final-p1-s2-picks-container" class="hidden">
-                        <h4>Picked IDs (Sections 2 & 3)</h4>
-                        <div class="final-picks section2-picks" id="final-p1-s2-picks"></div>
-                    </div>
-                    <h3>Banned from Roster</h3>
-                    <div class="final-bans" id="final-p1-bans"></div>
-                </div>
-                <div class="final-player-panel">
-                    <h2 id="final-p2-name">Player 2's Roster</h2>
-                    <h4>Picked IDs (Section 1)</h4>
-                    <div class="final-picks" id="final-p2-picks"></div>
-                    <div id="final-p2-s2-picks-container" class="hidden">
-                        <h4>Picked IDs (Sections 2 & 3)</h4>
-                        <div class="final-picks section2-picks" id="final-p2-s2-picks"></div>
-                    </div>
-                    <h3>Banned from Roster</h3>
-                    <div class="final-bans" id="final-p2-bans"></div>
-                </div>
-            </div>
-            <button class="btn btn-large btn-primary" id="restart-draft"><i class="fas fa-redo"></i> Start New Draft</button>
-        </div>
-    </div>
+    // ================================= //
+    //          VUE APPLICATION          //
+    // ================================= //
 
-    <div id="draft-status-panel" class="hidden">
-        <h3 id="current-phase">Waiting for draft to start...</h3>
-        <p id="draft-action-description"></p>
-    </div>
+    const app = createApp({
+        setup() {
+            // ================================= //
+            //         REACTIVE STATE            //
+            // ================================= //
+            const ROSTER_SIZE = 42;
+            const EGO_BAN_COUNT = 5;
+            const masterIDList = ref(parseIDCSV(window.idCsvData));
+            const masterEGOList = ref(parseEGOData(window.egoData));
 
-    <script src="data.js"></script>
-    <script src="script.js"></script>
+            const state = reactive({
+                lobbyCode: null,
+                userRole: null,
+                rejoinToken: null,
+                playerName: localStorage.getItem('limbusPlayerName') || '',
+                participants: {
+                    p1: { name: "Player 1", status: "disconnected", ready: false },
+                    p2: { name: "Player 2", status: "disconnected", ready: false },
+                    ref: { name: "Referee", status: "disconnected" }
+                },
+                roster: { p1: [], p2: [] },
+                draft: {}, // Will be populated by server
+            });
+
+            const connectionStatus = ref({ class: '', text: 'Disconnected' });
+            const notification = reactive({ show: false, text: '', isError: false });
+            const showRejoinOverlay = ref(false);
+            let socket = null;
+            let rejoinTimeout = null;
+
+            // ================================= //
+            //         ROUTER LOGIC              //
+            // ================================= //
+            const routes = {
+                '/': { component: HomePage },
+                '/rosterbuilder': { component: RosterBuilder },
+                '/lobby': { component: Lobby } // Base for lobby routes
+            };
+
+            const currentPath = ref(window.location.pathname);
+            
+            const currentView = computed(() => {
+                const path = currentPath.value;
+                if (path.startsWith('/lobby/')) {
+                    return routes['/lobby'];
+                }
+                return routes[path] || routes['/']; // Fallback to HomePage
+            });
+
+            window.addEventListener('popstate', () => {
+                currentPath.value = window.location.pathname;
+            });
+            
+            function navigate(path) {
+                window.history.pushState({}, '', path);
+                currentPath.value = path;
+            }
+
+            // ================================= //
+            //        WEBSOCKET LOGIC            //
+            // ================================= //
+            function sendMessage(message) {
+                if (socket && socket.readyState === WebSocket.OPEN) {
+                    socket.send(JSON.stringify(message));
+                }
+            }
+
+            function connectWebSocket() {
+                const loc = window.location;
+                const wsProtocol = loc.protocol === 'https:' ? 'wss:' : 'ws:';
+                const remoteUrl = `${wsProtocol}//${loc.host}/`;
+                socket = new WebSocket(remoteUrl);
+
+                connectionStatus.value = { class: 'connecting', text: 'Connecting...' };
+
+                socket.onopen = () => {
+                    connectionStatus.value = { class: 'connected', text: 'Connected' };
+                    const session = JSON.parse(localStorage.getItem('limbusDraftSession'));
+                    if (session && session.lobbyCode && session.userRole && session.rejoinToken) {
+                        showRejoinOverlay.value = true;
+                        sendMessage({ 
+                            type: 'rejoinLobby', 
+                            lobbyCode: session.lobbyCode,
+                            role: session.userRole,
+                            rejoinToken: session.rejoinToken
+                        });
+                        rejoinTimeout = setTimeout(() => {
+                            if (showRejoinOverlay.value) {
+                                cancelRejoin();
+                                showNotification('Failed to rejoin lobby. Session might have expired.', true);
+                            }
+                        }, 10000);
+                    }
+                };
+
+                socket.onmessage = (event) => handleServerMessage(JSON.parse(event.data));
+                
+                socket.onclose = () => {
+                    connectionStatus.value = { class: '', text: 'Disconnected' };
+                };
+
+                socket.onerror = (error) => console.error('WebSocket error:', error);
+            }
+
+            function handleServerMessage(message) {
+                console.log("Received:", message);
+                switch (message.type) {
+                    case 'lobbyCreated':
+                    case 'lobbyJoined':
+                        handleLobbyJoined(message);
+                        break;
+                    case 'stateUpdate':
+                        handleStateUpdate(message.state);
+                        break;
+                    case 'notification':
+                        showNotification(message.text, message.isError);
+                        break;
+                    case 'error':
+                        showNotification(`Error: ${message.message}`, true);
+                        if (message.message.includes('rejoin')) {
+                           cancelRejoin();
+                        }
+                        break;
+                }
+            }
+            
+            function handleLobbyJoined(message) {
+                if (rejoinTimeout) clearTimeout(rejoinTimeout);
+                showRejoinOverlay.value = false;
+
+                state.lobbyCode = message.lobbyCode || message.code;
+                state.userRole = message.role;
+                state.rejoinToken = message.rejoinToken;
+
+                if (state.rejoinToken) {
+                    localStorage.setItem('limbusDraftSession', JSON.stringify({
+                        lobbyCode: state.lobbyCode,
+                        userRole: state.userRole,
+                        rejoinToken: state.rejoinToken
+                    }));
+                }
+                handleStateUpdate(message.state);
+                navigate(`/lobby/${state.lobbyCode}`);
+            }
+
+            function handleStateUpdate(newState) {
+                Object.assign(state.participants, newState.participants);
+                Object.assign(state.roster, newState.roster);
+                state.draft = newState.draft; // Replace draft state entirely
+            }
+            
+            function cancelRejoin() {
+                if (rejoinTimeout) clearTimeout(rejoinTimeout);
+                localStorage.removeItem('limbusDraftSession');
+                showRejoinOverlay.value = false;
+            }
+
+            // ================================= //
+            //         GENERAL METHODS           //
+            // ================================= //
+            function showNotification(text, isError = false) {
+                notification.text = text;
+                notification.isError = isError;
+                notification.show = true;
+                setTimeout(() => { notification.show = false; }, 3000);
+            }
+            
+            function clearSessionAndGoHome() {
+                localStorage.removeItem('limbusDraftSession');
+                state.lobbyCode = null;
+                state.userRole = null;
+                state.rejoinToken = null;
+                if (socket && socket.readyState === WebSocket.OPEN) {
+                    socket.close();
+                }
+                Object.assign(state.participants, { p1: {name: "P1"}, p2: {name: "P2"}, ref: {name: "Ref"} });
+                state.roster = { p1: [], p2: [] };
+                state.draft = {};
+                navigate('/');
+                setTimeout(connectWebSocket, 100);
+            }
+
+            watch(() => state.playerName, (newName) => {
+                localStorage.setItem('limbusPlayerName', newName);
+            });
+
+            // ================================= //
+            //         LIFECYCLE HOOKS           //
+            // ================================= //
+            onMounted(() => {
+                connectWebSocket();
+                const path = window.location.pathname;
+                if (path.startsWith('/lobby/')) {
+                    const lobbyCodeFromUrl = path.split('/')[2].toUpperCase();
+                    const session = JSON.parse(localStorage.getItem('limbusDraftSession'));
+                    if (!session || session.lobbyCode !== lobbyCodeFromUrl) {
+                        showNotification('You are not part of this lobby. Redirecting home.', true);
+                        navigate('/');
+                    } else {
+                        state.lobbyCode = lobbyCodeFromUrl;
+                    }
+                }
+            });
+
+            return {
+                state, masterIDList, masterEGOList,
+                connectionStatus, notification, showRejoinOverlay,
+                ROSTER_SIZE, EGO_BAN_COUNT,
+                currentView, navigate,
+                sendMessage, showNotification, cancelRejoin, clearSessionAndGoHome
+            };
+        },
+    });
+
+    app.mount('#app');
+    </script>
 </body>
 </html>
