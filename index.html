@@ -456,12 +456,50 @@
     };
     
     const Lobby = {
-        props: ['state'],
-        emits: ['clearSession'],
+        props: ['state', 'masterIDList', 'masterEGOList', 'rosterSize', 'egoBanCount'],
+        emits: ['clearSession', 'sendMessage', 'showNotification'],
         setup(props, { emit }) {
+            const p1RosterCode = ref('');
+            const p2RosterCode = ref('');
+
+            const lobbyCode = computed(() => props.state.lobbyCode);
+            const userRole = computed(() => props.state.userRole);
+            const draft = computed(() => props.state.draft || {});
+            const participants = computed(() => props.state.participants || {});
+
+            const p1Ready = computed(() => participants.value.p1?.ready && props.state.roster.p1.length === props.rosterSize);
+            const p2Ready = computed(() => participants.value.p2?.ready && props.state.roster.p2.length === props.rosterSize);
+
+            function sendMessage(type, payload) {
+                emit('sendMessage', { type, lobbyCode: lobbyCode.value, ...payload });
+            }
+
+            function setPlayerRoster(player, code) {
+                const roster = loadRosterFromCode(code, props.masterIDList);
+                if (roster) {
+                    sendMessage('rosterSet', { player, roster });
+                    emit('showNotification', `${player.toUpperCase()}'s roster loaded!`);
+                } else {
+                    emit('showNotification', 'Invalid roster code.', true);
+                }
+            }
+
+            function toggleReady(player) {
+                if (props.state.roster[player].length !== props.rosterSize && !participants.value[player].ready) {
+                    emit('showNotification', `Must select ${props.rosterSize} IDs.`, true);
+                    return;
+                }
+                sendMessage('updateReady', { player });
+            }
+
             return {
-                lobbyCode: computed(() => props.state.lobbyCode),
-                clearSession: () => emit('clearSession')
+                lobbyCode, userRole, draft, participants, p1Ready, p2Ready,
+                p1RosterCode, p2RosterCode,
+                clearSession: () => emit('clearSession'),
+                sendMessage,
+                setPlayerRoster,
+                toggleReady,
+                loadRosterFromCode: (code) => loadRosterFromCode(code, props.masterIDList)
             }
         },
         template: `
@@ -472,16 +510,96 @@
                      <p>Drafting session in progress</p>
                 </header>
                 <div class="card">
-                     <div class="lobby-info">
+                    <div class="lobby-info">
                         <div>
                             <h3>LOBBY CODE</h3>
                             <div class="code-display">{{ lobbyCode }}</div>
                             <p>Share this code with other participants</p>
                         </div>
-                     </div>
-                     <h2>Lobby View</h2>
-                     <p>Drafting functionality would be implemented here.</p>
-                     <pre style="text-align: left; background: #111; padding: 10px; border-radius: 5px; max-height: 400px; overflow: auto;">{{ JSON.stringify(state, null, 2) }}</pre>
+                        <div>
+                            <h3>PHASE TIMER</h3>
+                            <div class="timer-display">--:--</div>
+                        </div>
+                        <div>
+                            <h3>PARTICIPANTS</h3>
+                            <div class="participants">
+                                <div v-for="(p, role) in participants" :key="role" class="participant" :class="{ 'current-user': userRole === role }">
+                                    <i class="fas" :class="role === 'ref' ? 'fa-star' : 'fa-user'"></i>
+                                    {{ p.name }} {{ userRole === role ? '(You)' : '' }}
+                                    <i v-if="p.status === 'connected'" class="fas fa-check-circle" style="color:var(--connected);"></i>
+                                    <i v-else class="fas fa-times-circle" style="color:var(--disconnected);"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Roster Selection Phase -->
+                    <div v-if="draft.phase === 'roster'" id="roster-phase" class="phase-section">
+                        <h2>Roster Selection Phase</h2>
+                        <p>Each player must select 42 IDs. When both are ready, the Referee can start the coin flip.</p>
+                        <div class="player-area">
+                            <!-- Player 1 Panel -->
+                            <div class="player-panel" :class="{ locked: participants.p1?.ready }">
+                                <div class="player-header">
+                                    <div class="player-name">{{ participants.p1?.name }}</div>
+                                    <div class="player-status" :class="participants.p1?.ready ? 'status-ready' : 'status-waiting'">
+                                        {{ participants.p1?.ready ? 'Ready' : 'Selecting' }}
+                                    </div>
+                                </div>
+                                <div class="counter"><i class="fas fa-users"></i> Selected: <strong>{{ state.roster.p1.length }}</strong> / {{ rosterSize }} IDs</div>
+                                <div class="roster-load-form">
+                                    <input type="text" v-model="p1RosterCode" placeholder="Paste Roster Code..." :disabled="userRole !== 'p1' && userRole !== 'ref'">
+                                    <button class="btn btn-secondary" @click="setPlayerRoster('p1', p1RosterCode)" :disabled="userRole !== 'p1' && userRole !== 'ref'"><i class="fas fa-upload"></i> Load</button>
+                                </div>
+                                <div class="roster-selection">
+                                   <p class="empty-roster" style="padding: 20px; text-align: center;">ID selection grid would be here.</p>
+                                </div>
+                                <div class="controls">
+                                    <button class="btn" @click="sendMessage('rosterRandomize', { player: 'p1' })" :disabled="userRole !== 'p1' && userRole !== 'ref'"><i class="fas fa-random"></i> Random</button>
+                                    <button class="btn" @click="sendMessage('rosterClear', { player: 'p1' })" :disabled="userRole !== 'p1' && userRole !== 'ref'"><i class="fas fa-trash"></i> Clear</button>
+                                    <button class="btn" :class="{'btn-ready': participants.p1?.ready}" @click="toggleReady('p1')" :disabled="userRole !== 'p1' && userRole !== 'ref'">
+                                        <i class="fas" :class="participants.p1?.ready ? 'fa-times' : 'fa-check'"></i> {{ participants.p1?.ready ? 'Unready' : 'Ready' }}
+                                    </button>
+                                </div>
+                            </div>
+                            <!-- Player 2 Panel -->
+                             <div class="player-panel" :class="{ locked: participants.p2?.ready }">
+                                <div class="player-header">
+                                    <div class="player-name">{{ participants.p2?.name }}</div>
+                                    <div class="player-status" :class="participants.p2?.ready ? 'status-ready' : 'status-waiting'">
+                                        {{ participants.p2?.ready ? 'Ready' : 'Selecting' }}
+                                    </div>
+                                </div>
+                                <div class="counter"><i class="fas fa-users"></i> Selected: <strong>{{ state.roster.p2.length }}</strong> / {{ rosterSize }} IDs</div>
+                                <div class="roster-load-form">
+                                    <input type="text" v-model="p2RosterCode" placeholder="Paste Roster Code..." :disabled="userRole !== 'p2' && userRole !== 'ref'">
+                                    <button class="btn btn-secondary" @click="setPlayerRoster('p2', p2RosterCode)" :disabled="userRole !== 'p2' && userRole !== 'ref'"><i class="fas fa-upload"></i> Load</button>
+                                </div>
+                                <div class="roster-selection">
+                                   <p class="empty-roster" style="padding: 20px; text-align: center;">ID selection grid would be here.</p>
+                                </div>
+                                <div class="controls">
+                                    <button class="btn" @click="sendMessage('rosterRandomize', { player: 'p2' })" :disabled="userRole !== 'p2' && userRole !== 'ref'"><i class="fas fa-random"></i> Random</button>
+                                    <button class="btn" @click="sendMessage('rosterClear', { player: 'p2' })" :disabled="userRole !== 'p2' && userRole !== 'ref'"><i class="fas fa-trash"></i> Clear</button>
+                                    <button class="btn" :class="{'btn-ready': participants.p2?.ready}" @click="toggleReady('p2')" :disabled="userRole !== 'p2' && userRole !== 'ref'">
+                                        <i class="fas" :class="participants.p2?.ready ? 'fa-times' : 'fa-check'"></i> {{ participants.p2?.ready ? 'Unready' : 'Ready' }}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="ref-actions" style="text-align: center; margin-top: 20px;">
+                            <button class="btn btn-primary btn-large" @click="sendMessage('startCoinFlip')" :disabled="userRole !== 'ref' || !p1Ready || !p2Ready">
+                                <i class="fas fa-coins"></i> Start Coin Flip
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Other phases would be implemented with v-else-if -->
+                    <div v-else>
+                        <h2>{{ draft.phase }} Phase</h2>
+                        <p>This phase is not yet fully implemented in the UI.</p>
+                         <pre style="text-align: left; background: #111; padding: 10px; border-radius: 5px; max-height: 400px; overflow: auto;">{{ JSON.stringify(state, null, 2) }}</pre>
+                    </div>
                 </div>
             </div>
         `
