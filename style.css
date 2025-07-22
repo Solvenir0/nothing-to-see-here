@@ -406,7 +406,7 @@ input:focus, select:focus {
 }
 
 #lobby-view, #roster-builder-page {
-    display: none;
+    display: block; /* Vue will handle showing/hiding */
 }
 
 .code-display {
@@ -724,7 +724,7 @@ input:focus, select:focus {
     transform: translateX(-50%) translateY(10px);
 }
 
-#completed-view { text-align: center; display: none; }
+#completed-view { text-align: center; }
 
 .final-rosters-container {
     display: flex;
