@@ -119,7 +119,7 @@ wss.on('connection', (ws) => {
             return;
         }
 
-        const { type, options, lobbyCode: rawLobbyCode, name, role, rejoinToken } = incomingData;
+        const { type, options, lobbyCode: rawLobbyCode, name, role, rejoinToken, player, roster } = incomingData;
         const lobbyCode = rawLobbyCode ? rawLobbyCode.toUpperCase() : null;
         let lobbyData = lobbyCode ? lobbies[lobbyCode] : null;
 
@@ -133,6 +133,7 @@ wss.on('connection', (ws) => {
 
                 newLobbyState.participants.ref.status = "connected";
                 newLobbyState.participants.ref.rejoinToken = newRejoinToken;
+                if (options.name) newLobbyState.participants.ref.name = options.name;
                 
                 lobbies[newLobbyCode] = newLobbyState;
                 
@@ -152,15 +153,10 @@ wss.on('connection', (ws) => {
                     return ws.send(JSON.stringify({ type: 'error', message: 'Lobby not found.' }));
                 }
 
-                // Simple logic to find an open spot
                 let assignedRole = null;
-                if (lobbyData.participants.p1.status === 'disconnected') {
-                    assignedRole = 'p1';
-                } else if (lobbyData.participants.p2.status === 'disconnected') {
-                    assignedRole = 'p2';
-                } else if (lobbyData.participants.ref.status === 'disconnected') {
-                    assignedRole = 'ref';
-                }
+                if (lobbyData.participants.p1.status === 'disconnected') assignedRole = 'p1';
+                else if (lobbyData.participants.p2.status === 'disconnected') assignedRole = 'p2';
+                else if (lobbyData.participants.ref.status === 'disconnected') assignedRole = 'ref';
 
                 if (!assignedRole) {
                     return ws.send(JSON.stringify({ type: 'error', message: 'Lobby is full.' }));
@@ -196,7 +192,7 @@ wss.on('connection', (ws) => {
                     lobbyData.participants[role].status = 'connected';
                     
                     ws.send(JSON.stringify({
-                        type: 'lobbyJoined', // Client handles this the same as a fresh join
+                        type: 'lobbyJoined',
                         lobbyCode: ws.lobbyCode,
                         role,
                         rejoinToken: rejoinToken,
@@ -209,8 +205,58 @@ wss.on('connection', (ws) => {
                 break;
             }
 
-            // ... other message handlers for draft logic would go here
-            // (e.g., roster selection, ready status, draft actions)
+            case 'rosterSet': {
+                if (!lobbyData || !player || !roster) return;
+                if (lobbyData.participants[player].ready) return;
+                if (Array.isArray(roster) && roster.length === ROSTER_SIZE) {
+                    lobbyData.roster[player] = roster;
+                    broadcastState(lobbyCode);
+                }
+                break;
+            }
+            
+            case 'rosterRandomize': {
+                if (!lobbyData || !player) return;
+                if (lobbyData.participants[player].ready) return;
+                // This requires the master ID list on the server, which we don't have.
+                // This action should be handled client-side, and then send a 'rosterSet' message.
+                // For now, we'll just notify the client that this should be client-side.
+                ws.send(JSON.stringify({ type: 'notification', text: 'Randomization should be handled client-side.', isError: true }));
+                break;
+            }
+
+            case 'rosterClear': {
+                if (!lobbyData || !player) return;
+                if (lobbyData.participants[player].ready) return;
+                lobbyData.roster[player] = [];
+                broadcastState(lobbyCode);
+                break;
+            }
+
+            case 'updateReady': {
+                if (!lobbyData || !player) return;
+                const participant = lobbyData.participants[player];
+                const currentRoster = lobbyData.roster[player];
+                if (!participant.ready && currentRoster.length !== ROSTER_SIZE) {
+                    return ws.send(JSON.stringify({ type: 'notification', text: `Player must have ${ROSTER_SIZE} IDs to be ready.`, isError: true }));
+                }
+                participant.ready = !participant.ready;
+                broadcastState(lobbyCode);
+                break;
+            }
+
+            case 'startCoinFlip': {
+                if (!lobbyData || ws.userRole !== 'ref') return;
+                const p1Ready = lobbyData.participants.p1.ready;
+                const p2Ready = lobbyData.participants.p2.ready;
+                if (!p1Ready || !p2Ready) {
+                    return ws.send(JSON.stringify({ type: 'notification', text: 'Both players must be ready.', isError: true }));
+                }
+                lobbyData.draft.phase = 'coinFlip';
+                lobbyData.draft.coinFlipWinner = Math.random() < 0.5 ? 'p1' : 'p2';
+                broadcastState(lobbyCode);
+                break;
+            }
         }
     });
 
@@ -220,7 +266,6 @@ wss.on('connection', (ws) => {
         if (lobbyCode && userRole && lobbies[lobbyCode]) {
             const lobbyData = lobbies[lobbyCode];
             lobbyData.participants[userRole].status = 'disconnected';
-            // Note: We keep the rejoinToken to allow them to reconnect
             broadcastState(lobbyCode);
         }
     });
@@ -231,10 +276,7 @@ wss.on('connection', (ws) => {
 //         SPA ROUTE HANDLING        //
 // ================================= //
 
-// For any route that is not a static file, serve the main index.html
-// This allows the Vue router to take over on the client side.
 app.get('*', (req, res) => {
-    // Exclude static file paths from being redirected to index.html
     if (req.path.includes('.') || req.path.startsWith('/uploads')) {
         res.status(404).send('Not found');
         return;
