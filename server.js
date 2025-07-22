@@ -1,8 +1,8 @@
 // =================================================================================
 // FILE: server.js
-// DESCRIPTION: This version contains a definitive fix for the ID ban phases.
-// The logic in `handleDraftConfirm` is now more explicit to ensure that IDs
-// banned during 'ban' and 'midBan' phases are correctly processed.
+// DESCRIPTION: This version clarifies the ban logic. Bans are now stored
+// against the player who *performs* the ban, making the data structure
+// more intuitive and easier for the client to display correctly.
 // =================================================================================
 const express = require('express');
 const http = require('http');
@@ -496,10 +496,10 @@ function handleDraftConfirm(lobbyCode, lobbyData, ws) {
         let listToUpdate;
         const isBanAction = (phase === 'ban' || phase === 'midBan');
 
-        // [FIXED] More explicit logic to prevent mis-routing bans to the picks list.
+        // [FIXED] A ban is an action performed BY the current player.
+        // So we store it in the current player's ban list for clarity.
         if (isBanAction) {
-            const opponent = currentPlayer === 'p1' ? 'p2' : 'p1';
-            listToUpdate = draft.idBans[opponent];
+            listToUpdate = draft.idBans[currentPlayer];
         } else if (phase === 'pick' || phase === 'pick2') {
             listToUpdate = draft.picks[currentPlayer];
         } else if (phase === 'pick_s2') {
@@ -510,6 +510,7 @@ function handleDraftConfirm(lobbyCode, lobbyData, ws) {
             listToUpdate.push(selectedId);
         }
         
+        // A banned or picked ID is removed from both players' available pools.
         let p1Index = draft.available.p1.indexOf(selectedId);
         if(p1Index > -1) draft.available.p1.splice(p1Index, 1);
         let p2Index = draft.available.p2.indexOf(selectedId);
