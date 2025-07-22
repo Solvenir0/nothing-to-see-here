@@ -1,5 +1,8 @@
 // =================================================================================
 // FILE: script.js
+// DESCRIPTION: This version aligns the final summary view's ban display
+// with the new, more intuitive server logic, ensuring consistency throughout
+// the entire draft process.
 // =================================================================================
 // ======================
 // CONSTANTS & CONFIG
@@ -616,6 +619,8 @@ function updateDraftUI() {
         container.scrollTop = scrollTop;
     };
     
+    // With the server logic fixed, this is now a direct mapping.
+    // The bans in a player's column are the bans made BY that player.
     renderCompactIdListChronological(elements.p1IdBans, [...state.draft.idBans.p1].reverse());
     renderCompactIdListChronological(elements.p2IdBans, [...state.draft.idBans.p2].reverse());
     renderCompactIdListChronological(elements.p1Picks, [...state.draft.picks.p1].reverse());
@@ -786,8 +791,10 @@ function renderCompletedView() {
         renderCompactIdList(elements.finalP2S2Picks, state.draft.picks_s2.p2);
     }
 
-    renderCompactIdList(elements.finalP1Bans, state.draft.idBans.p2); 
-    renderCompactIdList(elements.finalP2Bans, state.draft.idBans.p1);
+    // [FIXED] With server logic corrected, this mapping is now direct and intuitive.
+    // P1's bans are in p1's list, P2's bans are in p2's list.
+    renderCompactIdList(elements.finalP1Bans, state.draft.idBans.p1);
+    renderCompactIdList(elements.finalP2Bans, state.draft.idBans.p2);
     
     renderBannedEgosDisplay();
 }
