@@ -1372,6 +1372,75 @@ input:focus, select:focus {
     line-height: 1.4;
 }
 
+.advanced-random-container {
+    margin-top: 20px;
+    border-top: 1px solid var(--border);
+    padding-top: 20px;
+}
+
+#advanced-random-options {
+    margin-top: 15px;
+    padding: 15px;
+    background: rgba(0,0,0,0.2);
+    border-radius: 8px;
+}
+
+#advanced-random-options h4 {
+    margin-top: 0;
+    text-align: center;
+}
+
+#advanced-random-options p {
+    font-size: 0.9rem;
+    text-align: center;
+    margin-bottom: 15px;
+}
+
+#sinner-sliders-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    max-height: 300px;
+    overflow-y: auto;
+    padding-right: 10px;
+}
+
+.sinner-slider-group {
+    display: grid;
+    grid-template-columns: 70px 1fr; /* Sinner name, then sliders */
+    gap: 10px;
+    align-items: center;
+}
+.sinner-slider-group label {
+    font-size: 1rem;
+    font-weight: bold;
+}
+.slider-container {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+.slider-row {
+    display: grid;
+    grid-template-columns: 30px 1fr 25px;
+    gap: 8px;
+    align-items: center;
+    font-size: 0.9rem;
+}
+.slider-value {
+    font-weight: bold;
+    color: var(--accent);
+    text-align: right;
+}
+
+.advanced-random-summary {
+    margin-top: 15px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+    text-align: center;
+    font-weight: bold;
+}
+
 
 /* Medium screens and up */
 @media (min-width: 992px) {
