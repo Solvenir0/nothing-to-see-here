@@ -1329,6 +1329,12 @@ function cacheDOMElements() {
         builderCopyCode: document.getElementById('builder-copy-code'),
         builderLoadCodeInput: document.getElementById('builder-load-code-input'),
         builderLoadCode: document.getElementById('builder-load-code'),
+        toggleAdvancedRandom: document.getElementById('toggle-advanced-random'),
+        advancedRandomOptions: document.getElementById('advanced-random-options'),
+        sinnerSlidersContainer: document.getElementById('sinner-sliders-container'),
+        totalMinDisplay: document.getElementById('total-min-display'),
+        totalMaxDisplay: document.getElementById('total-max-display'),
+        builderAdvancedRandom: document.getElementById('builder-advanced-random'),
 
         // EGO Ban Phase
         egoBanPhase: document.getElementById('ego-ban-phase'),
