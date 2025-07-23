@@ -1,14 +1,15 @@
 // =================================================================================
 // FILE: script.js
-// DESCRIPTION: This version aligns the final summary view's ban display
-// with the new, more intuitive server logic, ensuring consistency throughout
-// the entire draft process.
+// DESCRIPTION: This version introduces an advanced randomization feature in the
+// Roster Builder with sinner count constraints. It also hides LCB IDs from
+// the builder and fixes various UI bugs.
 // =================================================================================
 // ======================
 // CONSTANTS & CONFIG
 // ======================
 const ROSTER_SIZE = 42;
 const EGO_BAN_COUNT = 5;
+const SINNER_ORDER = ["Yi Sang", "Faust", "Don Quixote", "Ryōshū", "Meursault", "Hong Lu", "Heathcliff", "Ishmael", "Rodion", "Sinclair", "Outis", "Gregor"];
 
 // ======================
 // APPLICATION STATE
@@ -27,6 +28,7 @@ const state = {
     roster: { p1: [], p2: [] },
     builderRoster: [],
     masterIDList: [],
+    builderMasterIDList: [],
     masterEGOList: [],
     idsBySinner: null,
     builderSelectedSinner: "Yi Sang",
@@ -381,7 +383,6 @@ function renderGroupedView(container, idObjectList, options = {}) {
     }
 
     const groupedBySinner = {};
-    const sinnerOrder = ["Yi Sang", "Faust", "Don Quixote", "Ryōshū", "Meursault", "Hong Lu", "Heathcliff", "Ishmael", "Rodion", "Sinclair", "Outis", "Gregor"];
 
     idObjectList.forEach(id => {
         if (!id) return;
@@ -394,7 +395,7 @@ function renderGroupedView(container, idObjectList, options = {}) {
     const fragment = document.createDocumentFragment();
     let isFirstRenderedGroup = true;
 
-    sinnerOrder.forEach(sinnerName => {
+    SINNER_ORDER.forEach(sinnerName => {
         if (groupedBySinner[sinnerName] && groupedBySinner[sinnerName].length > 0) {
             const sinnerRow = document.createElement('div');
             sinnerRow.className = 'sinner-row';
@@ -513,11 +514,17 @@ function filterAndRenderRosterSelection() {
     });
 }
 
-function filterIDs(sourceList, filterObject, draftPhase = false) {
+function filterIDs(sourceList, filterObject, options = {}) {
+    const { draftPhase = false, builderPhase = false } = options;
     const searchTerm = filterObject.rosterSearch.toLowerCase();
+
     return sourceList.filter(fullData => {
         if (!fullData) return false;
-        if (draftPhase && (fullData.rarity === '0' || fullData.name.toLowerCase().includes('lcb sinner'))) return false;
+        
+        const isLcb = fullData.name.toLowerCase().includes('lcb sinner');
+        if (builderPhase && isLcb) return false;
+        if (draftPhase && (fullData.rarity === '0' || isLcb)) return false;
+
         if (filterObject.sinner && fullData.sinner !== filterObject.sinner) return false;
         if (filterObject.sinAffinity && !fullData.sinAffinities.includes(filterObject.sinAffinity)) return false;
         if (filterObject.keyword && !fullData.keywords.includes(filterObject.keyword)) return false;
@@ -710,7 +717,7 @@ function updateDraftInstructions() {
 
         let availableObjects = availableIdList.map(id => state.masterIDList.find(item => item && item.id === id)).filter(Boolean);
         
-        availableObjects = filterIDs(availableObjects, state.draftFilters, true);
+        availableObjects = filterIDs(availableObjects, state.draftFilters, { draftPhase: true });
         
         const clickHandler = (state.userRole === currentPlayer || state.userRole === 'ref') ? (id) => hoverDraftID(id) : null;
         
@@ -812,9 +819,8 @@ function checkPhaseReadiness() {
 function renderRosterBuilder() {
     const sinnerNav = elements.builderSinnerNav;
     sinnerNav.innerHTML = '';
-    const sinnerOrder = ["Yi Sang", "Faust", "Don Quixote", "Ryōshū", "Meursault", "Hong Lu", "Heathcliff", "Ishmael", "Rodion", "Sinclair", "Outis", "Gregor"];
     
-    sinnerOrder.forEach(sinnerName => {
+    SINNER_ORDER.forEach(sinnerName => {
         const btn = document.createElement('button');
         btn.className = 'btn sinner-nav-btn';
         btn.textContent = sinnerName;
@@ -829,7 +835,7 @@ function renderRosterBuilder() {
     });
 
     const sinnerIDs = state.idsBySinner[state.builderSelectedSinner];
-    const filteredSinnerIDs = filterIDs(sinnerIDs, state.filters);
+    const filteredSinnerIDs = filterIDs(sinnerIDs, state.filters, { builderPhase: true });
     renderIDList(elements.builderIdPool, filteredSinnerIDs, {
         selectionSet: state.builderRoster, 
         clickHandler: toggleBuilderIdSelection
@@ -1168,7 +1174,7 @@ function setupEventListeners() {
     
     // Roster Builder Controls
     elements.builderRandom.addEventListener('click', () => {
-        const shuffled = [...state.masterIDList].sort(() => 0.5 - Math.random());
+        const shuffled = [...state.builderMasterIDList].sort(() => 0.5 - Math.random());
         state.builderRoster = shuffled.slice(0, ROSTER_SIZE).map(id => id.id);
         renderRosterBuilder();
     });
@@ -1193,6 +1199,13 @@ function setupEventListeners() {
             showNotification("Roster loaded successfully!");
         }
     });
+
+    // Advanced Random
+    elements.toggleAdvancedRandom.addEventListener('click', () => {
+        elements.advancedRandomOptions.classList.toggle('hidden');
+    });
+    elements.builderAdvancedRandom.addEventListener('click', generateAdvancedRandomRoster);
+
 
     // EGO Search
     elements.egoSearchInput.addEventListener('input', (e) => {
@@ -1400,14 +1413,15 @@ document.addEventListener('DOMContentLoaded', () => {
     setupFilterBar('global-filter-bar-draft', state.draftFilters);
 
     state.masterIDList = parseIDCSV(idCsvData);
+    state.builderMasterIDList = state.masterIDList.filter(id => !id.name.includes('LCB Sinner'));
     state.masterEGOList = parseEGOData(egoData);
 
-    const sinnerOrder = ["Yi Sang", "Faust", "Don Quixote", "Ryōshū", "Meursault", "Hong Lu", "Heathcliff", "Ishmael", "Rodion", "Sinclair", "Outis", "Gregor"];
     state.idsBySinner = {};
-    sinnerOrder.forEach(sinnerName => {
-        state.idsBySinner[sinnerName] = state.masterIDList.filter(id => id.sinner === sinnerName);
+    SINNER_ORDER.forEach(sinnerName => {
+        state.idsBySinner[sinnerName] = state.builderMasterIDList.filter(id => id.sinner === sinnerName);
     });
-
+    
+    setupAdvancedRandomUI();
     setupEventListeners();
     connectWebSocket();
     switchView('mainPage');
