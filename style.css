@@ -992,7 +992,6 @@ input:focus, select:focus {
     flex-direction: row;
     flex-wrap: wrap;
     gap: 8px;
-    justify-content: center;
 }
 
 .sinner-nav-btn {
