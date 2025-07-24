@@ -1,22 +1,3 @@
-// =================================================================================
-// FILE: script.js
-// DESCRIPTION: This is the complete frontend script for the Limbus Company Draft
-//              System. It handles all UI rendering, user interactions, and
-//              communication with the WebSocket server.
-//
-// REFACTOR SUMMARY:
-// - Modular State: The large global `state` object has been broken into smaller,
-//   more manageable pieces (e.g., `appState`, `lobbyState`, `builderState`).
-// - Server-side Data: The client no longer parses ID/EGO data. It receives
-//   fully parsed data and configuration from the server upon connection.
-// - Efficient DOM Updates: Instead of full re-renders, the script now uses more
-//   targeted DOM updates to improve performance, especially for large lists.
-// - Semantic HTML & Accessibility: Event listeners are attached to proper
-//   <button> elements, improving accessibility.
-// - Code Organization: The script is now organized into logical sections for
-//   state, UI rendering, WebSocket handling, and event listeners.
-// =================================================================================
-
 // ==========================================================================
 // 1. APPLICATION STATE
 // ==========================================================================
@@ -200,13 +181,20 @@ function handleSocketMessage(event) {
         case 'initialData':
             appState.gameData = payload.gameData;
             appState.config = payload.config;
+            appState.gameData.idsBySinner = {}; // Ensure it's a clean object
             appState.gameData.masterIDList.forEach(id => {
-                if (!appState.gameData.idsBySinner[id.sinner]) appState.gameData.idsBySinner[id.sinner] = [];
+                if (!appState.gameData.idsBySinner[id.sinner]) {
+                    appState.gameData.idsBySinner[id.sinner] = [];
+                }
                  if(!id.name.toLowerCase().includes('lcb sinner')) {
                     appState.gameData.idsBySinner[id.sinner].push(id);
                  }
             });
             setupAdvancedRandomUI();
+            // If we are already in a lobby, trigger a UI update now that data is loaded
+            if (lobbyState.code) {
+                updateAllUIs();
+            }
             break;
         case 'lobbyCreated':
         case 'lobbyJoined':
@@ -267,6 +255,12 @@ function handleStateUpdate(newLobbyState) {
 // ==========================================================================
 
 function updateAllUIs() {
+    // FIX: Add a guard clause to ensure game data is loaded before rendering.
+    if (!appState.gameData.masterIDList || appState.gameData.masterIDList.length === 0) {
+        console.log("Waiting for initial game data before rendering UI...");
+        return;
+    }
+
     if (!lobbyState.draft) return;
     const { phase } = lobbyState.draft;
 
