@@ -1085,14 +1085,19 @@ function setupEventListeners() {
     elements.showRulesBtn.addEventListener('click', () => elements.rulesModal.classList.remove('hidden'));
     elements.closeRulesBtn.addEventListener('click', () => elements.rulesModal.classList.add('hidden'));
 
+    // [FIXED] Corrected tab switching logic
     elements.joinTabs.forEach(tab => {
         tab.addEventListener('click', () => {
+            // Deactivate all tabs and content
             elements.joinTabs.forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.join-tab-content').forEach(content => content.classList.remove('active'));
+
+            // Activate the clicked tab and its corresponding content
             tab.classList.add('active');
             const tabName = tab.dataset.tab;
-            document.querySelectorAll('.join-tab-content').forEach(content => {
-                content.classList.toggle('active', content.id === `${tabName}-lobbies-tab` || content.id === `${tabName}-join-tab`);
-            });
+            const targetContentId = tabName === 'browse' ? 'browse-lobbies-tab' : 'code-join-tab';
+            document.getElementById(targetContentId).classList.add('active');
+
             if (tabName === 'browse') {
                 sendMessage({ type: 'getPublicLobbies' });
             }
@@ -1204,6 +1209,7 @@ function setupEventListeners() {
     elements.toggleAdvancedRandom.addEventListener('click', () => {
         elements.advancedRandomOptions.classList.toggle('hidden');
     });
+    // [FIXED] Added event listener for the new function
     elements.builderAdvancedRandom.addEventListener('click', generateAdvancedRandomRoster);
 
 
@@ -1266,6 +1272,135 @@ function createFilterBarHTML(options = {}) {
             <button class="btn reset-filters-btn"><i class="fas fa-sync"></i> Reset</button>
         </div>
     `;
+}
+
+// [FIXED] Added this function
+function setupAdvancedRandomUI() {
+    const container = elements.sinnerSlidersContainer;
+    container.innerHTML = '';
+
+    const updateTotals = () => {
+        let totalMin = 0, totalMax = 0;
+        SINNER_ORDER.forEach(sinner => {
+            totalMin += parseInt(document.getElementById(`slider-${sinner}-min`).value, 10);
+            totalMax += parseInt(document.getElementById(`slider-${sinner}-max`).value, 10);
+        });
+        elements.totalMinDisplay.textContent = totalMin;
+        elements.totalMaxDisplay.textContent = totalMax;
+        const possible = totalMin <= ROSTER_SIZE && totalMax >= ROSTER_SIZE;
+        elements.builderAdvancedRandom.disabled = !possible;
+        elements.advancedRandomSummary.style.color = possible ? 'var(--text)' : 'var(--primary)';
+    };
+
+    SINNER_ORDER.forEach(sinner => {
+        const group = document.createElement('div');
+        group.className = 'sinner-slider-group';
+        const maxIDs = state.idsBySinner[sinner]?.length || 0;
+
+        group.innerHTML = `
+            <label>${sinner}</label>
+            <div class="slider-container">
+                <div class="slider-row">
+                    <span>Min</span>
+                    <input type="range" id="slider-${sinner}-min" min="0" max="${maxIDs}" value="0">
+                    <span class="slider-value" id="slider-val-${sinner}-min">0</span>
+                </div>
+                <div class="slider-row">
+                    <span>Max</span>
+                    <input type="range" id="slider-${sinner}-max" min="0" max="${maxIDs}" value="${maxIDs}">
+                    <span class="slider-value" id="slider-val-${sinner}-max">${maxIDs}</span>
+                </div>
+            </div>
+        `;
+        container.appendChild(group);
+
+        const minSlider = document.getElementById(`slider-${sinner}-min`);
+        const maxSlider = document.getElementById(`slider-${sinner}-max`);
+        const minVal = document.getElementById(`slider-val-${sinner}-min`);
+        const maxVal = document.getElementById(`slider-val-${sinner}-max`);
+
+        minSlider.addEventListener('input', () => {
+            minVal.textContent = minSlider.value;
+            if (parseInt(minSlider.value) > parseInt(maxSlider.value)) {
+                maxSlider.value = minSlider.value;
+                maxVal.textContent = maxSlider.value;
+            }
+            updateTotals();
+        });
+        maxSlider.addEventListener('input', () => {
+            maxVal.textContent = maxSlider.value;
+             if (parseInt(maxSlider.value) < parseInt(minSlider.value)) {
+                minSlider.value = maxSlider.value;
+                minVal.textContent = minSlider.value;
+            }
+            updateTotals();
+        });
+    });
+    updateTotals();
+}
+
+// [FIXED] Added this function
+function generateAdvancedRandomRoster() {
+    const constraints = {};
+    let totalMin = 0;
+    let totalMax = 0;
+
+    SINNER_ORDER.forEach(sinner => {
+        const min = parseInt(document.getElementById(`slider-${sinner}-min`).value, 10);
+        const max = parseInt(document.getElementById(`slider-${sinner}-max`).value, 10);
+        constraints[sinner] = { min, max, available: state.idsBySinner[sinner] || [] };
+        totalMin += min;
+        totalMax += max;
+    });
+
+    if (totalMin > ROSTER_SIZE || totalMax < ROSTER_SIZE) {
+        showNotification("Constraints are impossible. Total Min must be <= 42 and Total Max must be >= 42.", true);
+        return;
+    }
+
+    let roster = [];
+    let availableIDs = [...state.builderMasterIDList];
+    
+    // 1. Fulfill minimum requirements
+    for (const sinner in constraints) {
+        const { min, available } = constraints[sinner];
+        if (available.length < min) {
+            showNotification(`Not enough IDs for ${sinner} to meet the minimum of ${min}.`, true);
+            return;
+        }
+        const shuffled = [...available].sort(() => 0.5 - Math.random());
+        const toAdd = shuffled.slice(0, min);
+        roster.push(...toAdd);
+    }
+
+    // Remove added IDs from the general pool
+    const rosterSlugs = new Set(roster.map(id => id.id));
+    availableIDs = availableIDs.filter(id => !rosterSlugs.has(id.id));
+
+    // 2. Add remaining IDs up to ROSTER_SIZE
+    let attempts = 0;
+    while (roster.length < ROSTER_SIZE && attempts < 1000) {
+        if (availableIDs.length === 0) break;
+
+        const randomIndex = Math.floor(Math.random() * availableIDs.length);
+        const candidate = availableIDs[randomIndex];
+        
+        const sinnerCount = roster.filter(id => id.sinner === candidate.sinner).length;
+        if (sinnerCount < constraints[candidate.sinner].max) {
+            roster.push(candidate);
+            rosterSlugs.add(candidate.id);
+            availableIDs.splice(randomIndex, 1);
+        }
+        attempts++;
+    }
+
+    if (roster.length === ROSTER_SIZE) {
+        state.builderRoster = roster.map(id => id.id);
+        renderRosterBuilder();
+        showNotification("Advanced random roster generated!");
+    } else {
+        showNotification("Could not generate a valid roster with the given constraints. Try relaxing them.", true);
+    }
 }
 
 function cacheDOMElements() {
@@ -1426,4 +1561,3 @@ document.addEventListener('DOMContentLoaded', () => {
     connectWebSocket();
     switchView('mainPage');
 });
-
