@@ -191,10 +191,9 @@ function handleSocketMessage(event) {
                  }
             });
             setupAdvancedRandomUI();
-            // If we are already in a lobby, trigger a UI update now that data is loaded
-            if (lobbyState.code) {
-                updateAllUIs();
-            }
+            // Always update the UI now that we have the initial game data.
+            // This will ensure the correct view is shown based on the current state.
+            updateAllUIs();
             break;
         case 'lobbyCreated':
         case 'lobbyJoined':
