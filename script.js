@@ -1267,6 +1267,146 @@ function createFilterBarHTML(options = {}) {
         </div>
     `;
 }
+function setupAdvancedRandomUI() {
+    const container = elements.sinnerSlidersContainer;
+    container.innerHTML = '';
+    const fragment = document.createDocumentFragment();
+
+    SINNER_ORDER.forEach(sinnerName => {
+        const sinnerIDs = state.idsBySinner[sinnerName] || [];
+        const maxAvailable = sinnerIDs.length;
+
+        const group = document.createElement('div');
+        group.className = 'sinner-slider-group';
+        group.innerHTML = `
+            <label>${sinnerName}</label>
+            <div class="slider-container">
+                <div class="slider-row">
+                    <span>Min</span>
+                    <input type="range" class="sinner-slider-min" data-sinner="${sinnerName}" min="0" max="${maxAvailable}" value="0">
+                    <span class="slider-value min-value">0</span>
+                </div>
+                <div class="slider-row">
+                    <span>Max</span>
+                    <input type="range" class="sinner-slider-max" data-sinner="${sinnerName}" min="0" max="${maxAvailable}" value="${maxAvailable}">
+                    <span class="slider-value max-value">${maxAvailable}</span>
+                </div>
+            </div>
+        `;
+        fragment.appendChild(group);
+    });
+    container.appendChild(fragment);
+
+    const sliders = container.querySelectorAll('input[type="range"]');
+    sliders.forEach(slider => slider.addEventListener('input', updateAdvancedRandomUI));
+
+    updateAdvancedRandomUI(); // Initial call to set totals
+}
+
+function updateAdvancedRandomUI() {
+    let totalMin = 0;
+    let totalMax = 0;
+
+    SINNER_ORDER.forEach(sinnerName => {
+        const group = elements.sinnerSlidersContainer.querySelector(`[data-sinner="${sinnerName}"]`).closest('.sinner-slider-group');
+        const minSlider = group.querySelector('.sinner-slider-min');
+        const maxSlider = group.querySelector('.sinner-slider-max');
+        const minValDisplay = group.querySelector('.min-value');
+        const maxValDisplay = group.querySelector('.max-value');
+
+        let minVal = parseInt(minSlider.value, 10);
+        let maxVal = parseInt(maxSlider.value, 10);
+
+        // Ensure min value does not exceed max value
+        if (minVal > maxVal) {
+            minVal = maxVal;
+            minSlider.value = minVal;
+        }
+
+        minValDisplay.textContent = minVal;
+        maxValDisplay.textContent = maxVal;
+
+        totalMin += minVal;
+        totalMax += maxVal;
+    });
+
+    elements.totalMinDisplay.textContent = totalMin;
+    elements.totalMaxDisplay.textContent = totalMax;
+
+    const generateBtn = elements.builderAdvancedRandom;
+    if (totalMin > ROSTER_SIZE || totalMax < ROSTER_SIZE) {
+        generateBtn.disabled = true;
+    } else {
+        generateBtn.disabled = false;
+    }
+}
+
+function generateAdvancedRandomRoster() {
+    const constraints = {};
+    let totalMin = 0;
+    let totalMax = 0;
+
+    SINNER_ORDER.forEach(sinnerName => {
+        const group = elements.sinnerSlidersContainer.querySelector(`[data-sinner="${sinnerName}"]`).closest('.sinner-slider-group');
+        const minVal = parseInt(group.querySelector('.sinner-slider-min').value, 10);
+        const maxVal = parseInt(group.querySelector('.sinner-slider-max').value, 10);
+        constraints[sinnerName] = { min: minVal, max: maxVal };
+        totalMin += minVal;
+        totalMax += maxVal;
+    });
+
+    if (totalMin > ROSTER_SIZE) {
+        showNotification("Impossible roster: Sum of minimums exceeds 42.", true);
+        return;
+    }
+    if (totalMax < ROSTER_SIZE) {
+        showNotification("Impossible roster: Sum of maximums is less than 42.", true);
+        return;
+    }
+
+    let newRoster = [];
+    const usedIds = new Set();
+    const availableIdsBySinner = {};
+    
+    // Step 1: Fulfill all minimum requirements
+    for (const sinnerName of SINNER_ORDER) {
+        const { min } = constraints[sinnerName];
+        if (min === 0) continue;
+        
+        const sinnerPool = [...state.idsBySinner[sinnerName]].sort(() => 0.5 - Math.random());
+        const selections = sinnerPool.slice(0, min);
+        
+        selections.forEach(idData => {
+            newRoster.push(idData.id);
+            usedIds.add(idData.id);
+        });
+    }
+
+    // Step 2: Create a pool of all possible remaining candidates
+    let candidatePool = [];
+    for (const sinnerName of SINNER_ORDER) {
+        const { min, max } = constraints[sinnerName];
+        const canAdd = max - min;
+        if (canAdd <= 0) continue;
+
+        const sinnerPool = state.idsBySinner[sinnerName].filter(idData => !usedIds.has(idData.id));
+        const selections = sinnerPool.sort(() => 0.5 - Math.random()).slice(0, canAdd);
+        candidatePool.push(...selections);
+    }
+
+    // Step 3: Fill the rest of the roster from the candidate pool
+    const remainingSlots = ROSTER_SIZE - newRoster.length;
+    candidatePool = candidatePool.sort(() => 0.5 - Math.random());
+    const finalAdditions = candidatePool.slice(0, remainingSlots);
+
+    finalAdditions.forEach(idData => {
+        newRoster.push(idData.id);
+    });
+
+    state.builderRoster = newRoster;
+    renderRosterBuilder();
+    showNotification("Advanced random roster generated!");
+}
 
 function cacheDOMElements() {
      elements = {
