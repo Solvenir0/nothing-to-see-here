@@ -1413,7 +1413,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupFilterBar('global-filter-bar-draft', state.draftFilters);
 
     state.masterIDList = parseIDCSV(idCsvData);
-    state.builderMasterIDList = state.masterIDList.filter(id => !id.name.includes('LCB Sinner'));
+    state.builderMasterIDList = state.masterIDList.filter(id => !id.name.toLowerCase().includes('lcb sinner'));
     state.masterEGOList = parseEGOData(egoData);
 
     state.idsBySinner = {};
@@ -1425,3 +1425,4 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
     connectWebSocket();
     switchView('mainPage');
+});
