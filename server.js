@@ -3,6 +3,7 @@
 // DESCRIPTION: This version clarifies the ban logic. Bans are now stored
 // against the player who *performs* the ban, making the data structure
 // more intuitive and easier for the client to display correctly.
+// [FIX] Added a cleanup function to prevent memory leaks from inactive lobbies.
 // =================================================================================
 const express = require('express');
 const http = require('http');
@@ -640,7 +641,7 @@ wss.on('connection', (ws) => {
                         rejoinToken: incomingData.rejoinToken,
                         state: lobbyData
                     }));
-                    broadcastState(ws.lobbyCode);
+                    broadcastState(lobbyCode);
                 } else {
                     ws.send(JSON.stringify({ type: 'error', message: 'Failed to rejoin. The session might be invalid.' }));
                 }
@@ -798,6 +799,28 @@ wss.on('connection', (ws) => {
         }
     });
 });
+
+// [FIXED] Added lobby cleanup logic
+const LOBBY_TTL = 2 * 60 * 60 * 1000; // 2 hours in milliseconds
+
+function cleanupInactiveLobbies() {
+    const now = new Date();
+    for (const lobbyCode in lobbies) {
+        const lastActivity = new Date(lobbies[lobbyCode].lastActivity);
+        if (now - lastActivity > LOBBY_TTL) {
+            console.log(`Cleaning up inactive lobby: ${lobbyCode}`);
+            // Clean up any associated timers
+            if (lobbyTimers[lobbyCode] && lobbyTimers[lobbyCode].timeoutId) {
+                clearTimeout(lobbyTimers[lobbyCode].timeoutId);
+                delete lobbyTimers[lobbyCode];
+            }
+            delete lobbies[lobbyCode];
+        }
+    }
+}
+
+// Run the cleanup function periodically
+setInterval(cleanupInactiveLobbies, 30 * 60 * 1000); // Every 30 minutes
 
 
 const PORT = process.env.PORT || 8080;
