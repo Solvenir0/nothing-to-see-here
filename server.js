@@ -3,7 +3,7 @@
 // DESCRIPTION: This version clarifies the ban logic. Bans are now stored
 // against the player who *performs* the ban, making the data structure
 // more intuitive and easier for the client to display correctly.
-// [FIX] Added a cleanup function to prevent memory leaks from inactive lobbies.
+// [FIX] Inverts the turn order for the second ban/pick phase.
 // =================================================================================
 const express = require('express');
 const http = require('http');
@@ -413,7 +413,8 @@ function advancePhase(lobbyData) {
                 draft.phase = "midBan";
                 draft.action = "midBan";
                 draft.step = 0;
-                draft.currentPlayer = firstPlayer;
+                // [FIXED] The second player now starts the mid-draft ban phase.
+                draft.currentPlayer = secondPlayer;
                 draft.actionCount = 1;
             }
             break;
@@ -497,7 +498,7 @@ function handleDraftConfirm(lobbyCode, lobbyData, ws) {
         let listToUpdate;
         const isBanAction = (phase === 'ban' || phase === 'midBan');
 
-        // [FIXED] A ban is an action performed BY the current player.
+        // A ban is an action performed BY the current player.
         // So we store it in the current player's ban list for clarity.
         if (isBanAction) {
             listToUpdate = draft.idBans[currentPlayer];
