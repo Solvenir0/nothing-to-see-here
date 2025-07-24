@@ -11,15 +11,20 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- Overlays and Modals -->
-    <div id="rejoin-overlay" class="overlay hidden">
-        <div class="overlay-content">
-            <i class="fas fa-sync fa-spin"></i>
-            <p>Attempting to rejoin lobby...</p>
-            <button class="btn btn-secondary" id="cancel-rejoin-btn" style="margin-top: 20px;">Cancel</button>
-        </div>
+    <div id="rejoin-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999; color: white; display: none; flex-direction: column; align-items: center; justify-content: center; font-size: 2rem; gap: 20px;">
+        <i class="fas fa-sync fa-spin"></i>
+        <p>Attempting to rejoin lobby...</p>
+        <button class="btn btn-secondary" id="cancel-rejoin-btn" style="margin-top: 20px;">Cancel</button>
     </div>
 
+    <div class="connection-status" id="connection-status">
+        <i class="fas fa-plug"></i>
+        <span>Connecting...</span>
+    </div>
+ 
+    <div class="notification" id="notification">Player joined the lobby!</div>
+
+    <!-- Modals -->
     <div id="coin-flip-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <h2>Coin Flip</h2>
@@ -31,13 +36,11 @@
             </div>
         </div>
     </div>
-
     <div id="rules-modal" class="modal-overlay hidden">
         <div class="modal-content">
-            <button id="close-rules-btn" class="close-modal-btn" aria-label="Close Rules">&times;</button>
+            <button id="close-rules-btn" class="close-modal-btn">&times;</button>
             <h2>Tournament Rules</h2>
             <div class="rules-content">
-                <!-- Rules content remains the same -->
                 <p><strong>0. Application Requirements</strong></p>
                 <p>To apply for this tournament, participants must have successfully cleared RR6 (Refraction Railway 6) with a total turn count of at most 55 turns. Proof of this clear may be requested upon application.</p>
                 
@@ -90,29 +93,20 @@
             </div>
         </div>
     </div>
-
     <div id="role-selection-modal" class="modal-overlay hidden">
         <div class="modal-content">
-            <button id="close-role-modal-btn" class="close-modal-btn" aria-label="Close Role Selection">&times;</button>
+            <button id="close-role-modal-btn" class="close-modal-btn">&times;</button>
             <h3>Select Your Role for Lobby <span id="role-modal-lobby-code"></span></h3>
             <div class="role-options" id="modal-role-options">
-                <!-- Role options will be dynamically generated as buttons -->
+                <!-- Role options will be dynamically enabled/disabled -->
             </div>
             <button class="btn btn-primary btn-large" id="confirm-join-btn" style="margin-top: 20px;" disabled>Join Lobby</button>
         </div>
     </div>
 
-    <!-- UI Elements -->
-    <div class="connection-status" id="connection-status">
-        <i class="fas fa-plug"></i>
-        <span>Connecting...</span>
-    </div>
- 
-    <div class="notification" id="notification" role="alert">Player joined the lobby!</div>
 
     <div class="container">
-        <!-- Main Page -->
-        <main id="main-page" class="view">
+        <div id="main-page">
             <div class="top-left-controls">
                 <button id="show-rules-btn" class="btn btn-secondary btn-small"><i class="fas fa-book-open"></i> Rules</button>
             </div>
@@ -207,10 +201,9 @@
                     </div>
                 </div>
             </div>
-        </main>
+        </div>
         
-        <!-- Lobby View -->
-        <main id="lobby-view" class="view hidden">
+        <div id="lobby-view">
             <button class="btn back-button" id="back-to-main-lobby"><i class="fas fa-arrow-left"></i> Main Menu</button>
             
             <header>
@@ -252,7 +245,7 @@
                             <div class="counter"><i class="fas fa-users"></i> Selected: <strong id="p1-counter">0</strong> / 42 IDs</div>
                             <div class="roster-load-form">
                                 <input type="text" id="p1-roster-code-input" placeholder="Paste Roster Code...">
-                                <button class="btn btn-secondary" id="p1-roster-load" aria-label="Load Player 1 Roster"><i class="fas fa-upload"></i> Load</button>
+                                <button class="btn btn-secondary" id="p1-roster-load"><i class="fas fa-upload"></i> Load</button>
                             </div>
                             <div class="roster-selection" id="p1-roster"></div>
                             <div class="controls">
@@ -269,7 +262,7 @@
                             <div class="counter"><i class="fas fa-users"></i> Selected: <strong id="p2-counter">0</strong> / 42 IDs</div>
                             <div class="roster-load-form">
                                 <input type="text" id="p2-roster-code-input" placeholder="Paste Roster Code...">
-                                <button class="btn btn-secondary" id="p2-roster-load" aria-label="Load Player 2 Roster"><i class="fas fa-upload"></i> Load</button>
+                                <button class="btn btn-secondary" id="p2-roster-load"><i class="fas fa-upload"></i> Load</button>
                             </div>
                             <div class="roster-selection" id="p2-roster"></div>
                             <div class="controls">
@@ -376,10 +369,10 @@
                     </div>
                 </div>
             </div>
-        </main>
+        </div>
 
         <!-- Roster Builder Page -->
-        <main id="roster-builder-page" class="view hidden">
+        <div id="roster-builder-page">
             <button class="btn back-button" id="back-to-main-builder"><i class="fas fa-arrow-left"></i> Main Menu</button>
             <header>
                 <h1><i class="fas fa-users-cog"></i> Roster Builder</h1>
@@ -434,15 +427,15 @@
                         <h3 style="margin-top: 20px;">Load from Code</h3>
                         <div class="roster-code-actions">
                             <input type="text" id="builder-load-code-input" placeholder="Paste code here...">
-                            <button class="btn" id="builder-load-code" aria-label="Load Roster from Code"><i class="fas fa-upload"></i></button>
+                            <button class="btn" id="builder-load-code"><i class="fas fa-upload"></i></button>
                         </div>
                     </div>
                 </div>
             </div>
-        </main>
+        </div>
 
         <!-- Completed Draft View -->
-        <main id="completed-view" class="view hidden">
+        <div id="completed-view" style="display: none;">
             <header>
                 <h1><i class="fas fa-flag-checkered"></i> Draft Complete</h1>
                 <p>Final Rosters</p>
@@ -476,7 +469,7 @@
                 </div>
             </div>
             <button class="btn btn-large btn-primary" id="restart-draft"><i class="fas fa-redo"></i> Start New Draft</button>
-        </main>
+        </div>
     </div>
 
     <div id="draft-status-panel" class="hidden">
@@ -484,8 +477,7 @@
         <p id="draft-action-description"></p>
     </div>
 
-    <!-- The data.js file is no longer needed on the client -->
-    <!-- <script src="data.js"></script> -->
+    <script src="data.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
