@@ -1066,6 +1066,43 @@ function toggleBuilderIdSelection(id) {
 }
 
 // ======================
+// STATE HANDLERS
+// ======================
+function handleLobbyCreated(message) {
+    handleLobbyJoined(message);
+}
+
+function handleLobbyJoined(message) {
+    if (rejoinTimeout) clearTimeout(rejoinTimeout);
+    elements.roleSelectionModal.classList.add('hidden');
+    elements.rejoinOverlay.style.display = 'none';
+
+    state.lobbyCode = message.lobbyCode || message.code;
+    state.userRole = message.role;
+    state.rejoinToken = message.rejoinToken;
+
+    if (state.rejoinToken) {
+        localStorage.setItem('limbusDraftSession', JSON.stringify({
+            lobbyCode: state.lobbyCode,
+            userRole: state.userRole,
+            rejoinToken: state.rejoinToken
+        }));
+    }
+
+    handleStateUpdate(message);
+    showNotification(`Joined lobby as ${state.participants[state.userRole].name}`);
+}
+
+function handleStateUpdate(message) {
+    Object.assign(state.participants, message.state.participants);
+    Object.assign(state.roster, message.state.roster);
+    Object.assign(state.draft, message.state.draft);
+    
+    elements.lobbyCodeDisplay.textContent = state.lobbyCode;
+    updateAllUIsFromState();
+}
+
+// ======================
 // INITIALIZATION
 // ======================
 function setupFilterBar(barId, filterStateObject) {
@@ -1295,7 +1332,7 @@ function setupEventListeners() {
         sendMessage('createLobby', options);
     });
     elements.confirmJoinBtn.addEventListener('click', () => {
-        const { lobbyCode, role } = lobbyState.joinTarget;
+        const { lobbyCode, role } = state.joinTarget;
         if (lobbyCode && role) {
             sendMessage('joinLobby', {
                 lobbyCode, role,
@@ -1304,7 +1341,7 @@ function setupEventListeners() {
         }
     });
     elements.goToBuilder.addEventListener('click', () => {
-        builderState.selectedSinner = "Yi Sang";
+        state.builderSelectedSinner = "Yi Sang";
         switchView('rosterBuilderPage');
         renderRosterBuilder();
     });
@@ -1315,7 +1352,7 @@ function setupEventListeners() {
         if (rejoinTimeout) clearTimeout(rejoinTimeout);
         localStorage.removeItem('limbusDraftSession');
         elements.rejoinOverlay.classList.add('hidden');
-        if (appState.socket) appState.socket.close();
+        if (state.socket) state.socket.close();
     });
     elements.refreshLobbiesBtn.addEventListener('click', () => sendMessage('getPublicLobbies'));
     elements.enterLobbyByCode.addEventListener('click', () => {
@@ -1343,28 +1380,28 @@ function setupEventListeners() {
     };
     elements.backToMainLobby.addEventListener('click', clearSessionAndReload);
     elements.restartDraft.addEventListener('click', clearSessionAndReload);
-    elements.startCoinFlip.addEventListener('click', () => sendMessage('startCoinFlip', { lobbyCode: lobbyState.code }));
-    elements.goFirstBtn.addEventListener('click', () => sendMessage('setTurnOrder', { lobbyCode: lobbyState.code, choice: 'first' }));
-    elements.goSecondBtn.addEventListener('click', () => sendMessage('setTurnOrder', { lobbyCode: lobbyState.code, choice: 'second' }));
-    elements.confirmSelectionId.addEventListener('click', () => sendMessage('draftAction', { lobbyCode: lobbyState.code, selectedId: lobbyState.draft.hovered[appState.userRole] }));
-    elements.confirmSelectionEgo.addEventListener('click', () => sendMessage('draftAction', { lobbyCode: lobbyState.code, selectedId: lobbyState.draft.hovered[appState.userRole] }));
-    elements.completeDraft.addEventListener('click', () => sendMessage('draftControl', { lobbyCode: lobbyState.code, action: 'complete' }));
+    elements.startCoinFlip.addEventListener('click', () => sendMessage('startCoinFlip', { lobbyCode: state.lobbyCode }));
+    elements.goFirstBtn.addEventListener('click', () => sendMessage('setTurnOrder', { lobbyCode: state.lobbyCode, choice: 'first' }));
+    elements.goSecondBtn.addEventListener('click', () => sendMessage('setTurnOrder', { lobbyCode: state.lobbyCode, choice: 'second' }));
+    elements.confirmSelectionId.addEventListener('click', () => confirmSelection('id'));
+    elements.confirmSelectionEgo.addEventListener('click', () => confirmSelection('ego'));
+    elements.completeDraft.addEventListener('click', () => sendMessage({ type: 'draftControl', lobbyCode: state.lobbyCode, action: 'complete' }));
 
 
     ['p1', 'p2'].forEach(player => {
-        elements[`${player}Ready`].addEventListener('click', () => sendMessage('updateReady', { lobbyCode: lobbyState.code, player }));
-        elements[`${player}Clear`].addEventListener('click', () => sendMessage('rosterSet', { lobbyCode: lobbyState.code, player, roster: [] }));
+        elements[`${player}Ready`].addEventListener('click', () => sendMessage('updateReady', { lobbyCode: state.lobbyCode, player }));
+        elements[`${player}Clear`].addEventListener('click', () => sendMessage('rosterSet', { lobbyCode: state.lobbyCode, player, roster: [] }));
         elements[`${player}RosterLoad`].addEventListener('click', () => {
             const code = elements[`${player}RosterCodeInput`].value.trim();
             const roster = loadRosterFromCode(code);
-            if (roster) sendMessage('rosterSet', { lobbyCode: lobbyState.code, player, roster });
+            if (roster) sendMessage('rosterSet', { lobbyCode: state.lobbyCode, player, roster });
         });
     });
 
     // Roster Builder
     elements.backToMainBuilder.addEventListener('click', () => switchView('mainPage'));
     elements.builderClear.addEventListener('click', () => {
-        builderState.roster = [];
+        state.builderRoster = [];
         renderRosterBuilder();
     });
     elements.builderCopyCode.addEventListener('click', () => {
@@ -1375,7 +1412,7 @@ function setupEventListeners() {
         const code = elements.builderLoadCodeInput.value.trim();
         const roster = loadRosterFromCode(code);
         if (roster) {
-            builderState.roster = roster;
+            state.builderRoster = roster;
             renderRosterBuilder();
         }
     });
@@ -1385,13 +1422,23 @@ function setupEventListeners() {
 
 document.addEventListener('DOMContentLoaded', () => {
     cacheDOMElements();
-    setupEventListeners();
     document.getElementById('global-filter-bar-roster').innerHTML = createFilterBarHTML({ showSinnerFilter: true });
     document.getElementById('global-filter-bar-builder').innerHTML = createFilterBarHTML({ showSinnerFilter: false });
     document.getElementById('global-filter-bar-draft').innerHTML = createFilterBarHTML({ showSinnerFilter: true });
-    setupFilterBar('global-filter-bar-roster', lobbyState.filters);
-    setupFilterBar('global-filter-bar-builder', builderState.filters);
-    setupFilterBar('global-filter-bar-draft', lobbyState.draftFilters);
+    setupFilterBar('global-filter-bar-roster', state.filters);
+    setupFilterBar('global-filter-bar-builder', state.filters);
+    setupFilterBar('global-filter-bar-draft', state.draftFilters);
+    setupEventListeners();
     connectWebSocket();
     switchView('mainPage');
+    
+    // Load data from data.js
+    state.masterIDList = parseIDCSV(idCsvData);
+    state.builderMasterIDList = state.masterIDList.filter(id => !id.name.toLowerCase().includes('lcb sinner'));
+    state.masterEGOList = parseEGOData(egoData);
+    state.idsBySinner = {};
+    SINNER_ORDER.forEach(sinnerName => {
+        state.idsBySinner[sinnerName] = state.builderMasterIDList.filter(id => id.sinner === sinnerName);
+    });
+    setupAdvancedRandomUI();
 });
