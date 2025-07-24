@@ -3,6 +3,7 @@
 // DESCRIPTION: This version introduces an advanced randomization feature in the
 // Roster Builder with sinner count constraints. It also hides LCB IDs from
 // the builder and fixes various UI bugs.
+// [FIX] Added missing element to cacheDOMElements to prevent TypeError.
 // =================================================================================
 // ======================
 // CONSTANTS & CONFIG
@@ -1289,7 +1290,7 @@ function setupAdvancedRandomUI() {
         elements.totalMaxDisplay.textContent = totalMax;
         const possible = totalMin <= ROSTER_SIZE && totalMax >= ROSTER_SIZE;
         elements.builderAdvancedRandom.disabled = !possible;
-        elements.advancedRandomSummary.style.color = possible ? 'var(--text)' : 'var(--primary)';
+        elements.advancedRandomSummary.style.color = possible ? 'var(--text)' : 'var(--primary)'; // The error line
     };
 
     SINNER_ORDER.forEach(sinner => {
@@ -1480,6 +1481,7 @@ function cacheDOMElements() {
         toggleAdvancedRandom: document.getElementById('toggle-advanced-random'),
         advancedRandomOptions: document.getElementById('advanced-random-options'),
         sinnerSlidersContainer: document.getElementById('sinner-sliders-container'),
+        advancedRandomSummary: document.getElementById('advanced-random-summary'), // [FIXED] Caching the element
         totalMinDisplay: document.getElementById('total-min-display'),
         totalMaxDisplay: document.getElementById('total-max-display'),
         builderAdvancedRandom: document.getElementById('builder-advanced-random'),
