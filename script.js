@@ -121,7 +121,7 @@ function loadRosterFromCode(code) {
 
 function filterIDs(sourceList, filterObject, options = {}) {
     const { draftPhase = false, builderPhase = false } = options;
-    const searchTerm = filterObject.rosterSearch.toLowerCase();
+    const searchTerm = (filterObject.rosterSearch || "").toLowerCase();
 
     return sourceList.filter(fullData => {
         if (!fullData) return false;
@@ -200,9 +200,11 @@ function handleSocketMessage(event) {
             appState.gameData = payload.gameData;
             appState.config = payload.config;
             const builderMasterIDList = appState.gameData.masterIDList.filter(id => !id.name.toLowerCase().includes('lcb sinner'));
-            builderMasterIDList.forEach(id => {
+            appState.gameData.masterIDList.forEach(id => {
                 if (!appState.gameData.idsBySinner[id.sinner]) appState.gameData.idsBySinner[id.sinner] = [];
-                appState.gameData.idsBySinner[id.sinner].push(id);
+                 if(!id.name.toLowerCase().includes('lcb sinner')) {
+                    appState.gameData.idsBySinner[id.sinner].push(id);
+                 }
             });
             setupAdvancedRandomUI();
             break;
@@ -265,7 +267,7 @@ function handleStateUpdate(newLobbyState) {
 // ==========================================================================
 
 function updateAllUIs() {
-    if (!lobbyState.draft) return; // Guard against incomplete initial state
+    if (!lobbyState.draft) return;
     const { phase } = lobbyState.draft;
 
     elements.draftStatusPanel.classList.toggle('hidden', phase === 'roster' || phase === 'complete');
@@ -320,6 +322,7 @@ function renderParticipants() {
 function renderRosterSelectionPhase() {
     ['p1', 'p2'].forEach(player => {
         const pData = lobbyState.participants[player];
+        if (!pData) return;
         elements[`${player}NameDisplay`].textContent = pData.name;
         elements[`${player}Counter`].textContent = lobbyState.roster[player].length;
         const isReady = pData.ready;
