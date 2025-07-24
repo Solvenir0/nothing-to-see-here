@@ -1,15 +1,14 @@
 // =================================================================================
 // FILE: script.js
-// DESCRIPTION: This version introduces an advanced randomization feature in the
-// Roster Builder with sinner count constraints. It also hides LCB IDs from
-// the builder and fixes various UI bugs.
+// DESCRIPTION: This version aligns the final summary view's ban display
+// with the new, more intuitive server logic, ensuring consistency throughout
+// the entire draft process.
 // =================================================================================
 // ======================
 // CONSTANTS & CONFIG
 // ======================
 const ROSTER_SIZE = 42;
 const EGO_BAN_COUNT = 5;
-const SINNER_ORDER = ["Yi Sang", "Faust", "Don Quixote", "Ryōshū", "Meursault", "Hong Lu", "Heathcliff", "Ishmael", "Rodion", "Sinclair", "Outis", "Gregor"];
 
 // ======================
 // APPLICATION STATE
@@ -28,7 +27,6 @@ const state = {
     roster: { p1: [], p2: [] },
     builderRoster: [],
     masterIDList: [],
-    builderMasterIDList: [],
     masterEGOList: [],
     idsBySinner: null,
     builderSelectedSinner: "Yi Sang",
@@ -218,7 +216,7 @@ let rejoinTimeout;
 function connectWebSocket() {
     const loc = window.location;
     const wsProtocol = loc.protocol === 'https:' ? 'wss:' : 'ws:';
-    const remoteUrl = `${wsProtocol}//${window.location.host}`;
+    const remoteUrl = `${wsProtocol}//${loc.host}/`;
     state.socket = new WebSocket(remoteUrl);
 
     elements.connectionStatus.className = 'connection-status connecting';
@@ -383,6 +381,7 @@ function renderGroupedView(container, idObjectList, options = {}) {
     }
 
     const groupedBySinner = {};
+    const sinnerOrder = ["Yi Sang", "Faust", "Don Quixote", "Ryōshū", "Meursault", "Hong Lu", "Heathcliff", "Ishmael", "Rodion", "Sinclair", "Outis", "Gregor"];
 
     idObjectList.forEach(id => {
         if (!id) return;
@@ -395,7 +394,7 @@ function renderGroupedView(container, idObjectList, options = {}) {
     const fragment = document.createDocumentFragment();
     let isFirstRenderedGroup = true;
 
-    SINNER_ORDER.forEach(sinnerName => {
+    sinnerOrder.forEach(sinnerName => {
         if (groupedBySinner[sinnerName] && groupedBySinner[sinnerName].length > 0) {
             const sinnerRow = document.createElement('div');
             sinnerRow.className = 'sinner-row';
@@ -514,17 +513,11 @@ function filterAndRenderRosterSelection() {
     });
 }
 
-function filterIDs(sourceList, filterObject, options = {}) {
-    const { draftPhase = false, builderPhase = false } = options;
+function filterIDs(sourceList, filterObject, draftPhase = false) {
     const searchTerm = filterObject.rosterSearch.toLowerCase();
-
     return sourceList.filter(fullData => {
         if (!fullData) return false;
-        
-        const isLcb = fullData.name.toLowerCase().includes('lcb sinner');
-        if (builderPhase && isLcb) return false;
-        if (draftPhase && (fullData.rarity === '0' || isLcb)) return false;
-
+        if (draftPhase && (fullData.rarity === '0' || fullData.name.toLowerCase().includes('lcb sinner'))) return false;
         if (filterObject.sinner && fullData.sinner !== filterObject.sinner) return false;
         if (filterObject.sinAffinity && !fullData.sinAffinities.includes(filterObject.sinAffinity)) return false;
         if (filterObject.keyword && !fullData.keywords.includes(filterObject.keyword)) return false;
@@ -717,7 +710,7 @@ function updateDraftInstructions() {
 
         let availableObjects = availableIdList.map(id => state.masterIDList.find(item => item && item.id === id)).filter(Boolean);
         
-        availableObjects = filterIDs(availableObjects, state.draftFilters, { draftPhase: true });
+        availableObjects = filterIDs(availableObjects, state.draftFilters, true);
         
         const clickHandler = (state.userRole === currentPlayer || state.userRole === 'ref') ? (id) => hoverDraftID(id) : null;
         
@@ -816,33 +809,12 @@ function checkPhaseReadiness() {
     }
 }
 
-function updateTimerUI() {
-    const { timer } = state.draft;
-    elements.refTimerControl.classList.toggle('hidden', !timer.enabled || state.userRole !== 'ref');
-    elements.phaseTimer.classList.toggle('hidden', !timer.enabled);
-
-    if (!timer.enabled || !timer.running) {
-        elements.phaseTimer.textContent = "--:--";
-        if(state.timerInterval) clearInterval(state.timerInterval);
-        state.timerInterval = null;
-        return;
-    }
-
-    if (!state.timerInterval) {
-        state.timerInterval = setInterval(updateTimerUI, 1000);
-    }
-
-    const remaining = Math.max(0, Math.round((timer.endTime - Date.now()) / 1000));
-    const minutes = Math.floor(remaining / 60);
-    const seconds = remaining % 60;
-    elements.phaseTimer.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-}
-
 function renderRosterBuilder() {
     const sinnerNav = elements.builderSinnerNav;
     sinnerNav.innerHTML = '';
+    const sinnerOrder = ["Yi Sang", "Faust", "Don Quixote", "Ryōshū", "Meursault", "Hong Lu", "Heathcliff", "Ishmael", "Rodion", "Sinclair", "Outis", "Gregor"];
     
-    SINNER_ORDER.forEach(sinnerName => {
+    sinnerOrder.forEach(sinnerName => {
         const btn = document.createElement('button');
         btn.className = 'btn sinner-nav-btn';
         btn.textContent = sinnerName;
@@ -857,7 +829,7 @@ function renderRosterBuilder() {
     });
 
     const sinnerIDs = state.idsBySinner[state.builderSelectedSinner];
-    const filteredSinnerIDs = filterIDs(sinnerIDs, state.filters, { builderPhase: true });
+    const filteredSinnerIDs = filterIDs(sinnerIDs, state.filters);
     renderIDList(elements.builderIdPool, filteredSinnerIDs, {
         selectionSet: state.builderRoster, 
         clickHandler: toggleBuilderIdSelection
@@ -887,146 +859,91 @@ function renderRosterBuilder() {
     }
 }
 
-function setupAdvancedRandomUI() {
-    const container = elements.sinnerSlidersContainer;
-    container.innerHTML = '';
-    const fragment = document.createDocumentFragment();
+function updateTimerUI() {
+    const { timer } = state.draft;
+    elements.refTimerControl.classList.toggle('hidden', !timer.enabled || state.userRole !== 'ref');
+    elements.phaseTimer.classList.toggle('hidden', !timer.enabled);
 
-    SINNER_ORDER.forEach(sinnerName => {
-        const sinnerIDs = state.idsBySinner[sinnerName] || [];
-        const maxAvailable = sinnerIDs.length;
+    if (!timer.enabled || !timer.running) {
+        elements.phaseTimer.textContent = "--:--";
+        if(state.timerInterval) clearInterval(state.timerInterval);
+        state.timerInterval = null;
+        return;
+    }
 
-        const group = document.createElement('div');
-        group.className = 'sinner-slider-group';
-        group.innerHTML = `
-            <label>${sinnerName}</label>
-            <div class="slider-container">
-                <div class="slider-row">
-                    <span>Min</span>
-                    <input type="range" class="sinner-slider-min" data-sinner="${sinnerName}" min="0" max="${maxAvailable}" value="0">
-                    <span class="slider-value min-value">0</span>
-                </div>
-                <div class="slider-row">
-                    <span>Max</span>
-                    <input type="range" class="sinner-slider-max" data-sinner="${sinnerName}" min="0" max="${maxAvailable}" value="${maxAvailable}">
-                    <span class="slider-value max-value">${maxAvailable}</span>
-                </div>
-            </div>
+    if (!state.timerInterval) {
+        state.timerInterval = setInterval(updateTimerUI, 1000);
+    }
+
+    const remaining = Math.max(0, Math.round((timer.endTime - Date.now()) / 1000));
+    const minutes = Math.floor(remaining / 60);
+    const seconds = remaining % 60;
+    elements.phaseTimer.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
+
+function renderPublicLobbies(lobbies) {
+    const listEl = elements.publicLobbiesList;
+    listEl.innerHTML = '';
+
+    if (!lobbies || lobbies.length === 0) {
+        listEl.innerHTML = '<p style="text-align: center; padding: 20px;">No public lobbies found. Why not create one?</p>';
+        return;
+    }
+
+    lobbies.forEach(lobby => {
+        const item = document.createElement('div');
+        item.className = 'public-lobby-item';
+        
+        const takenRoles = Object.entries(lobby.participants)
+            .filter(([, p]) => p.status === 'connected')
+            .map(([role]) => role);
+        const playerCount = takenRoles.filter(r => r !== 'ref').length;
+
+        item.innerHTML = `
+            <div class="lobby-item-name">${lobby.hostName || 'Unnamed Lobby'}</div>
+            <div class="lobby-item-players"><i class="fas fa-users"></i> ${playerCount}/2 Players</div>
+            <div class="lobby-item-mode"><i class="fas fa-cogs"></i> ${lobby.draftLogic}</div>
+            <button class="btn btn-primary btn-small join-from-browser-btn" data-lobby-code="${lobby.code}">Join</button>
         `;
-        fragment.appendChild(group);
+        listEl.appendChild(item);
     });
-    container.appendChild(fragment);
-
-    const sliders = container.querySelectorAll('input[type="range"]');
-    sliders.forEach(slider => slider.addEventListener('input', updateAdvancedRandomUI));
-
-    updateAdvancedRandomUI(); // Initial call to set totals
 }
 
-function updateAdvancedRandomUI() {
-    let totalMin = 0;
-    let totalMax = 0;
-
-    SINNER_ORDER.forEach(sinnerName => {
-        const group = elements.sinnerSlidersContainer.querySelector(`[data-sinner="${sinnerName}"]`).closest('.sinner-slider-group');
-        const minSlider = group.querySelector('.sinner-slider-min');
-        const maxSlider = group.querySelector('.sinner-slider-max');
-        const minValDisplay = group.querySelector('.min-value');
-        const maxValDisplay = group.querySelector('.max-value');
-
-        let minVal = parseInt(minSlider.value, 10);
-        let maxVal = parseInt(maxSlider.value, 10);
-
-        // Ensure min value does not exceed max value
-        if (minVal > maxVal) {
-            minVal = maxVal;
-            minSlider.value = minVal;
-        }
-
-        minValDisplay.textContent = minVal;
-        maxValDisplay.textContent = maxVal;
-
-        totalMin += minVal;
-        totalMax += maxVal;
-    });
-
-    elements.totalMinDisplay.textContent = totalMin;
-    elements.totalMaxDisplay.textContent = totalMax;
-
-    const generateBtn = elements.builderAdvancedRandom;
-    if (totalMin > ROSTER_SIZE || totalMax < ROSTER_SIZE) {
-        generateBtn.disabled = true;
-    } else {
-        generateBtn.disabled = false;
-    }
-}
-
-function generateAdvancedRandomRoster() {
-    const constraints = {};
-    let totalMin = 0;
-    let totalMax = 0;
-
-    SINNER_ORDER.forEach(sinnerName => {
-        const group = elements.sinnerSlidersContainer.querySelector(`[data-sinner="${sinnerName}"]`).closest('.sinner-slider-group');
-        const minVal = parseInt(group.querySelector('.sinner-slider-min').value, 10);
-        const maxVal = parseInt(group.querySelector('.sinner-slider-max').value, 10);
-        constraints[sinnerName] = { min: minVal, max: maxVal };
-        totalMin += minVal;
-        totalMax += maxVal;
-    });
-
-    if (totalMin > ROSTER_SIZE) {
-        showNotification("Impossible roster: Sum of minimums exceeds 42.", true);
-        return;
-    }
-    if (totalMax < ROSTER_SIZE) {
-        showNotification("Impossible roster: Sum of maximums is less than 42.", true);
-        return;
-    }
-
-    let newRoster = [];
-    const usedIds = new Set();
-    const availableIdsBySinner = {};
+function showRoleSelectionModal(lobby) {
+    state.joinTarget.lobbyCode = lobby.code;
+    elements.roleModalLobbyCode.textContent = lobby.code;
     
-    // Step 1: Fulfill all minimum requirements
-    for (const sinnerName of SINNER_ORDER) {
-        const { min } = constraints[sinnerName];
-        if (min === 0) continue;
-        
-        const sinnerPool = [...state.idsBySinner[sinnerName]].sort(() => 0.5 - Math.random());
-        const selections = sinnerPool.slice(0, min);
-        
-        selections.forEach(idData => {
-            newRoster.push(idData.id);
-            usedIds.add(idData.id);
-        });
-    }
+    const roleOptionsContainer = elements.modalRoleOptions;
+    roleOptionsContainer.innerHTML = ''; // Clear previous options
 
-    // Step 2: Create a pool of all possible remaining candidates
-    let candidatePool = [];
-    for (const sinnerName of SINNER_ORDER) {
-        const { min, max } = constraints[sinnerName];
-        const canAdd = max - min;
-        if (canAdd <= 0) continue;
+    const roles = {
+        p1: { icon: 'fa-user', text: 'Player 1' },
+        p2: { icon: 'fa-user', text: 'Player 2' },
+        ref: { icon: 'fa-star', text: 'Referee' }
+    };
 
-        const sinnerPool = state.idsBySinner[sinnerName].filter(idData => !usedIds.has(idData.id));
-        const selections = sinnerPool.sort(() => 0.5 - Math.random()).slice(0, canAdd);
-        candidatePool.push(...selections);
-    }
-
-    // Step 3: Fill the rest of the roster from the candidate pool
-    const remainingSlots = ROSTER_SIZE - newRoster.length;
-    candidatePool = candidatePool.sort(() => 0.5 - Math.random());
-    const finalAdditions = candidatePool.slice(0, remainingSlots);
-
-    finalAdditions.forEach(idData => {
-        newRoster.push(idData.id);
+    Object.entries(roles).forEach(([role, details]) => {
+        const isTaken = lobby.participants[role].status === 'connected';
+        const option = document.createElement('div');
+        option.className = 'role-option';
+        option.dataset.role = role;
+        option.innerHTML = `<i class="fas ${details.icon}"></i><div>${details.text}</div>`;
+        if (isTaken) {
+            option.classList.add('disabled');
+        } else {
+            option.addEventListener('click', () => {
+                roleOptionsContainer.querySelectorAll('.role-option').forEach(opt => opt.classList.remove('selected'));
+                option.classList.add('selected');
+                state.joinTarget.role = role;
+                elements.confirmJoinBtn.disabled = false;
+            });
+        }
+        roleOptionsContainer.appendChild(option);
     });
 
-    state.builderRoster = newRoster;
-    renderRosterBuilder();
-    showNotification("Advanced random roster generated!");
+    elements.roleSelectionModal.classList.remove('hidden');
 }
+
 
 // ======================
 // CLIENT ACTIONS & EVENT HANDLERS
@@ -1140,6 +1057,160 @@ function setupFilterBar(barId, filterStateObject) {
     });
 }
 
+function setupEventListeners() {
+    // Main Page
+    elements.createLobbyBtn.addEventListener('click', () => {
+        const options = {
+            name: elements.playerNameInput.value.trim() || 'Referee',
+            draftLogic: elements.draftLogicSelect.value,
+            matchType: elements.matchTypeSelect.value,
+            timerEnabled: elements.timerToggle.value === 'true',
+            isPublic: elements.publicLobbyToggle.value === 'true'
+        };
+        sendMessage({ type: 'createLobby', options });
+    });
+    
+    elements.goToBuilder.addEventListener('click', () => {
+        state.builderSelectedSinner = "Yi Sang";
+        switchView('rosterBuilderPage');
+        renderRosterBuilder();
+    });
+
+    elements.showRulesBtn.addEventListener('click', () => elements.rulesModal.classList.remove('hidden'));
+    elements.closeRulesBtn.addEventListener('click', () => elements.rulesModal.classList.add('hidden'));
+
+    elements.joinTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            elements.joinTabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            const tabName = tab.dataset.tab;
+            document.querySelectorAll('.join-tab-content').forEach(content => {
+                content.classList.toggle('active', content.id === `${tabName}-lobbies-tab` || content.id === `${tabName}-join-tab`);
+            });
+            if (tabName === 'browse') {
+                sendMessage({ type: 'getPublicLobbies' });
+            }
+        });
+    });
+
+    elements.refreshLobbiesBtn.addEventListener('click', () => sendMessage({ type: 'getPublicLobbies' }));
+
+    elements.publicLobbiesList.addEventListener('click', (e) => {
+        const joinBtn = e.target.closest('.join-from-browser-btn');
+        if (joinBtn) {
+            const lobbyCode = joinBtn.dataset.lobbyCode;
+            sendMessage({ type: 'getLobbyInfo', lobbyCode });
+        }
+    });
+
+    elements.enterLobbyByCode.addEventListener('click', () => {
+        const lobbyCode = elements.lobbyCodeInput.value.trim().toUpperCase();
+        if (!lobbyCode) return showNotification('Please enter a lobby code.', true);
+        sendMessage({ type: 'getLobbyInfo', lobbyCode });
+    });
+
+    elements.closeRoleModalBtn.addEventListener('click', () => elements.roleSelectionModal.classList.add('hidden'));
+    elements.confirmJoinBtn.addEventListener('click', () => {
+        if (state.joinTarget.lobbyCode && state.joinTarget.role) {
+            sendMessage({
+                type: 'joinLobby',
+                lobbyCode: state.joinTarget.lobbyCode,
+                role: state.joinTarget.role,
+                name: elements.playerNameInput.value.trim()
+            });
+        }
+    });
+    
+    const cancelRejoinAction = () => {
+        if (rejoinTimeout) clearTimeout(rejoinTimeout);
+        localStorage.removeItem('limbusDraftSession');
+        elements.rejoinOverlay.style.display = 'none';
+        if (state.socket && state.socket.readyState !== WebSocket.CLOSED) {
+            state.socket.close();
+        }
+        setTimeout(connectWebSocket, 100); // Reconnect with a fresh state
+        showNotification("Rejoin attempt cancelled.");
+    };
+    elements.cancelRejoinBtn.addEventListener('click', cancelRejoinAction);
+
+    const clearSessionAndReload = () => {
+        localStorage.removeItem('limbusDraftSession');
+        window.location.reload();
+    };
+    elements.backToMainLobby.addEventListener('click', clearSessionAndReload);
+    elements.restartDraft.addEventListener('click', clearSessionAndReload);
+    elements.backToMainBuilder.addEventListener('click', () => {
+        state.lobbyCode = ''; 
+        switchView('mainPage');
+    });
+    
+    // Lobby Roster Controls
+    ['p1', 'p2'].forEach(player => {
+        elements[`${player}Random`].addEventListener('click', () => (state.userRole === player || state.userRole === 'ref') && sendMessage({ type: 'rosterRandomize', lobbyCode: state.lobbyCode, player }));
+        elements[`${player}Clear`].addEventListener('click', () => (state.userRole === player || state.userRole === 'ref') && sendMessage({ type: 'rosterClear', lobbyCode: state.lobbyCode, player }));
+        elements[`${player}Ready`].addEventListener('click', () => {
+            if (state.userRole === player || state.userRole === 'ref') {
+                 if (state.roster[player].length !== ROSTER_SIZE && !state.participants[player].ready) return showNotification(`Must select ${ROSTER_SIZE} IDs.`, true);
+                sendMessage({ type: 'updateReady', lobbyCode: state.lobbyCode, player });
+            }
+        });
+        elements[`${player}RosterLoad`].addEventListener('click', () => {
+            if (state.userRole === player || state.userRole === 'ref') {
+                const code = elements[`${player}RosterCodeInput`].value.trim();
+                const roster = loadRosterFromCode(code);
+                if (roster) {
+                    setPlayerRoster(player, roster);
+                    showNotification("Roster loaded successfully!");
+                }
+            }
+        });
+    });
+    
+    // Roster Builder Controls
+    elements.builderRandom.addEventListener('click', () => {
+        const shuffled = [...state.masterIDList].sort(() => 0.5 - Math.random());
+        state.builderRoster = shuffled.slice(0, ROSTER_SIZE).map(id => id.id);
+        renderRosterBuilder();
+    });
+    elements.builderClear.addEventListener('click', () => {
+        state.builderRoster = [];
+        renderRosterBuilder();
+    });
+    elements.builderCopyCode.addEventListener('click', () => {
+        const code = elements.builderRosterCodeDisplay.textContent;
+        navigator.clipboard.writeText(code).then(() => {
+            showNotification("Roster code copied to clipboard!");
+        }, () => {
+            showNotification("Failed to copy code.", true);
+        });
+    });
+    elements.builderLoadCode.addEventListener('click', () => {
+        const code = elements.builderLoadCodeInput.value.trim();
+        const roster = loadRosterFromCode(code);
+        if (roster) {
+            state.builderRoster = roster;
+            renderRosterBuilder();
+            showNotification("Roster loaded successfully!");
+        }
+    });
+
+    // EGO Search
+    elements.egoSearchInput.addEventListener('input', (e) => {
+        state.egoSearch = e.target.value;
+        renderEgoBanPhase();
+    });
+
+    // Draft controls
+    elements.startCoinFlip.addEventListener('click', () => sendMessage({ type: 'startCoinFlip', lobbyCode: state.lobbyCode }));
+    elements.goFirstBtn.addEventListener('click', () => sendMessage({ type: 'setTurnOrder', lobbyCode: state.lobbyCode, choice: 'first' }));
+    elements.goSecondBtn.addEventListener('click', () => sendMessage({ type: 'setTurnOrder', lobbyCode: state.lobbyCode, choice: 'second' }));
+    elements.confirmEgoBans.addEventListener('click', () => sendMessage({ type: 'draftControl', lobbyCode: state.lobbyCode, action: 'confirmEgoBans' }));
+    elements.completeDraft.addEventListener('click', () => sendMessage({ type: 'draftControl', lobbyCode: state.lobbyCode, action: 'complete' }));
+    elements.confirmSelectionId.addEventListener('click', () => confirmSelection('id'));
+    elements.confirmSelectionEgo.addEventListener('click', () => confirmSelection('ego'));
+    elements.refTimerControl.addEventListener('click', () => sendMessage({ type: 'timerControl', lobbyCode: state.lobbyCode, action: 'togglePause' }));
+}
+
 function createFilterBarHTML(options = {}) {
     const { showSinnerFilter = true } = options;
     const sinnerFilterHTML = `
@@ -1187,7 +1258,6 @@ function createFilterBarHTML(options = {}) {
 function cacheDOMElements() {
      elements = {
         // Pages
-        views: document.querySelectorAll('.view'),
         mainPage: document.getElementById('main-page'),
         lobbyView: document.getElementById('lobby-view'),
         rosterBuilderPage: document.getElementById('roster-builder-page'),
@@ -1319,126 +1389,26 @@ function cacheDOMElements() {
     };
 }
 
-function setupEventListeners() {
-    // Main Page & Modals
-    elements.createLobbyBtn.addEventListener('click', () => {
-        const options = {
-            name: elements.playerNameInput.value.trim() || 'Referee',
-            draftLogic: elements.draftLogicSelect.value,
-            matchType: elements.matchTypeSelect.value,
-            timerEnabled: elements.timerToggle.value === 'true',
-            isPublic: elements.publicLobbyToggle.value === 'true'
-        };
-        sendMessage('createLobby', options);
-    });
-    elements.confirmJoinBtn.addEventListener('click', () => {
-        const { lobbyCode, role } = state.joinTarget;
-        if (lobbyCode && role) {
-            sendMessage('joinLobby', {
-                lobbyCode, role,
-                name: elements.playerNameInput.value.trim() || `Player`
-            });
-        }
-    });
-    elements.goToBuilder.addEventListener('click', () => {
-        state.builderSelectedSinner = "Yi Sang";
-        switchView('rosterBuilderPage');
-        renderRosterBuilder();
-    });
-    elements.showRulesBtn.addEventListener('click', () => elements.rulesModal.classList.remove('hidden'));
-    elements.closeRulesBtn.addEventListener('click', () => elements.rulesModal.classList.add('hidden'));
-    elements.closeRoleModalBtn.addEventListener('click', () => elements.roleSelectionModal.classList.add('hidden'));
-    elements.cancelRejoinBtn.addEventListener('click', () => {
-        if (rejoinTimeout) clearTimeout(rejoinTimeout);
-        localStorage.removeItem('limbusDraftSession');
-        elements.rejoinOverlay.classList.add('hidden');
-        if (state.socket) state.socket.close();
-    });
-    elements.refreshLobbiesBtn.addEventListener('click', () => sendMessage('getPublicLobbies'));
-    elements.enterLobbyByCode.addEventListener('click', () => {
-        const code = elements.lobbyCodeInput.value.trim().toUpperCase();
-        if (code) sendMessage('getLobbyInfo', { lobbyCode: code });
-    });
-    elements.publicLobbiesList.addEventListener('click', (e) => {
-        const btn = e.target.closest('.join-from-browser-btn');
-        if (btn) sendMessage('getLobbyInfo', { lobbyCode: btn.dataset.lobbyCode });
-    });
-    elements.joinTabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            elements.joinTabs.forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-            document.querySelectorAll('.join-tab-content').forEach(content => {
-                content.classList.toggle('active', content.id.startsWith(tab.dataset.tab));
-            });
-        });
-    });
-
-    // Lobby & Draft
-    const clearSessionAndReload = () => {
-        localStorage.removeItem('limbusDraftSession');
-        window.location.reload();
-    };
-    elements.backToMainLobby.addEventListener('click', clearSessionAndReload);
-    elements.restartDraft.addEventListener('click', clearSessionAndReload);
-    elements.startCoinFlip.addEventListener('click', () => sendMessage('startCoinFlip', { lobbyCode: state.lobbyCode }));
-    elements.goFirstBtn.addEventListener('click', () => sendMessage('setTurnOrder', { lobbyCode: state.lobbyCode, choice: 'first' }));
-    elements.goSecondBtn.addEventListener('click', () => sendMessage('setTurnOrder', { lobbyCode: state.lobbyCode, choice: 'second' }));
-    elements.confirmSelectionId.addEventListener('click', () => confirmSelection('id'));
-    elements.confirmSelectionEgo.addEventListener('click', () => confirmSelection('ego'));
-    elements.completeDraft.addEventListener('click', () => sendMessage({ type: 'draftControl', lobbyCode: state.lobbyCode, action: 'complete' }));
-
-
-    ['p1', 'p2'].forEach(player => {
-        elements[`${player}Ready`].addEventListener('click', () => sendMessage('updateReady', { lobbyCode: state.lobbyCode, player }));
-        elements[`${player}Clear`].addEventListener('click', () => sendMessage('rosterSet', { lobbyCode: state.lobbyCode, player, roster: [] }));
-        elements[`${player}RosterLoad`].addEventListener('click', () => {
-            const code = elements[`${player}RosterCodeInput`].value.trim();
-            const roster = loadRosterFromCode(code);
-            if (roster) sendMessage('rosterSet', { lobbyCode: state.lobbyCode, player, roster });
-        });
-    });
-
-    // Roster Builder
-    elements.backToMainBuilder.addEventListener('click', () => switchView('mainPage'));
-    elements.builderClear.addEventListener('click', () => {
-        state.builderRoster = [];
-        renderRosterBuilder();
-    });
-    elements.builderCopyCode.addEventListener('click', () => {
-        const code = elements.builderRosterCodeDisplay.textContent;
-        navigator.clipboard.writeText(code).then(() => showNotification("Roster code copied!"), () => showNotification("Failed to copy.", true));
-    });
-    elements.builderLoadCode.addEventListener('click', () => {
-        const code = elements.builderLoadCodeInput.value.trim();
-        const roster = loadRosterFromCode(code);
-        if (roster) {
-            state.builderRoster = roster;
-            renderRosterBuilder();
-        }
-    });
-    elements.toggleAdvancedRandom.addEventListener('click', () => elements.advancedRandomOptions.classList.toggle('hidden'));
-    elements.builderAdvancedRandom.addEventListener('click', generateAdvancedRandomRoster);
-}
-
 document.addEventListener('DOMContentLoaded', () => {
     cacheDOMElements();
+
     document.getElementById('global-filter-bar-roster').innerHTML = createFilterBarHTML({ showSinnerFilter: true });
     document.getElementById('global-filter-bar-builder').innerHTML = createFilterBarHTML({ showSinnerFilter: false });
     document.getElementById('global-filter-bar-draft').innerHTML = createFilterBarHTML({ showSinnerFilter: true });
     setupFilterBar('global-filter-bar-roster', state.filters);
     setupFilterBar('global-filter-bar-builder', state.filters);
     setupFilterBar('global-filter-bar-draft', state.draftFilters);
+
+    state.masterIDList = parseIDCSV(idCsvData);
+    state.masterEGOList = parseEGOData(egoData);
+
+    const sinnerOrder = ["Yi Sang", "Faust", "Don Quixote", "Ryōshū", "Meursault", "Hong Lu", "Heathcliff", "Ishmael", "Rodion", "Sinclair", "Outis", "Gregor"];
+    state.idsBySinner = {};
+    sinnerOrder.forEach(sinnerName => {
+        state.idsBySinner[sinnerName] = state.masterIDList.filter(id => id.sinner === sinnerName);
+    });
+
     setupEventListeners();
     connectWebSocket();
     switchView('mainPage');
-    
-    // Load data from data.js
-    state.masterIDList = parseIDCSV(idCsvData);
-    state.builderMasterIDList = state.masterIDList.filter(id => !id.name.toLowerCase().includes('lcb sinner'));
-    state.masterEGOList = parseEGOData(egoData);
-    state.idsBySinner = {};
-    SINNER_ORDER.forEach(sinnerName => {
-        state.idsBySinner[sinnerName] = state.builderMasterIDList.filter(id => id.sinner === sinnerName);
-    });
-    setupAdvancedRandomUI();
 });
