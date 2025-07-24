@@ -31,6 +31,7 @@ const appState = {
         masterEGOList: [],
         idsBySinner: {},
         allIds: [],
+        SINNER_ORDER: ["Yi Sang", "Faust", "Don Quixote", "Ryōshū", "Meursault", "Hong Lu", "Heathcliff", "Ishmael", "Rodion", "Sinclair", "Outis", "Gregor"],
     },
     config: {
         ROSTER_SIZE: 42,
@@ -199,7 +200,6 @@ function handleSocketMessage(event) {
         case 'initialData':
             appState.gameData = payload.gameData;
             appState.config = payload.config;
-            const builderMasterIDList = appState.gameData.masterIDList.filter(id => !id.name.toLowerCase().includes('lcb sinner'));
             appState.gameData.masterIDList.forEach(id => {
                 if (!appState.gameData.idsBySinner[id.sinner]) appState.gameData.idsBySinner[id.sinner] = [];
                  if(!id.name.toLowerCase().includes('lcb sinner')) {
@@ -440,7 +440,7 @@ function renderPublicLobbies(lobbies) {
     }
 
     lobbies.forEach(lobby => {
-        const playerCount = Object.values(lobby.participants).filter(p => p.status === 'connected' && p.name.startsWith('Player')).length;
+        const playerCount = Object.values(lobby.participants).filter(p => p.status === 'connected' && (p.name.startsWith('Player 1') || p.name.startsWith('Player 2'))).length;
         const item = document.createElement('div');
         item.className = 'public-lobby-item';
         item.innerHTML = `
@@ -491,6 +491,7 @@ function updateDraftInstructions() {
 }
 
 function checkPhaseReadiness() {
+    if (!lobbyState.participants.p1 || !lobbyState.participants.p2) return;
     if (lobbyState.draft.phase === 'roster') {
         const p1Ready = lobbyState.participants.p1.ready && lobbyState.roster.p1.length === appState.config.ROSTER_SIZE;
         const p2Ready = lobbyState.participants.p2.ready && lobbyState.roster.p2.length === appState.config.ROSTER_SIZE;
