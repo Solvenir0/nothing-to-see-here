@@ -1,21 +1,4 @@
-// =================================================================================
-// FILE: script.js
-// DESCRIPTION: This is the complete frontend script for the Limbus Company Draft
-//              System. It handles all UI rendering, user interactions, and
-//              communication with the WebSocket server.
-//
-// REFACTOR SUMMARY:
-// - Modular State: The large global `state` object has been broken into smaller,
-//   more manageable pieces (e.g., `appState`, `lobbyState`, `builderState`).
-// - Server-side Data: The client no longer parses ID/EGO data. It receives
-//   fully parsed data and configuration from the server upon connection.
-// - Efficient DOM Updates: Instead of full re-renders, the script now uses more
-//   targeted DOM updates to improve performance, especially for large lists.
-// - Semantic HTML & Accessibility: Event listeners are attached to proper
-//   <button> elements, improving accessibility.
-// - Code Organization: The script is now organized into logical sections for
-//   state, UI rendering, WebSocket handling, and event listeners.
-// =================================================================================
+
 
 // ==========================================================================
 // 1. APPLICATION STATE
@@ -235,9 +218,9 @@ function handleSocketMessage(event) {
                  }
             });
             setupAdvancedRandomUI();
-            // Always update the UI now that we have the initial game data.
-            // This will ensure the correct view is shown based on the current state.
-            updateAllUIs();
+            // FIX: Do not call updateAllUIs() here. The UI should only update
+            // in response to a user action (like joining a lobby) or a specific
+            // state update from the server, not just from receiving background data.
             break;
         case 'lobbyCreated':
         case 'lobbyJoined':
@@ -298,48 +281,62 @@ function handleStateUpdate(newLobbyState) {
 // ==========================================================================
 
 function updateAllUIs() {
-    // Add a guard clause to ensure game data is loaded before rendering.
+    // Guard against running before game data is loaded.
     if (!appState.gameData.masterIDList || appState.gameData.masterIDList.length === 0) {
         console.log("Waiting for initial game data before rendering UI...");
         return;
     }
 
+    // If there's no lobby data, we can't proceed with rendering lobby components.
     if (!lobbyState.draft) return;
     const { phase } = lobbyState.draft;
 
-    // Correctly toggle visibility of the draft status panel.
-    const isDrafting = ['egoBan', 'ban', 'pick', 'midBan', 'pick2', 'pick_s2'].includes(phase);
-    elements.draftStatusPanel.classList.toggle('hidden', !isDrafting);
-
+    // --- View Switching Logic ---
     if (phase === 'complete') {
         switchView('completedView');
-        renderCompletedView();
-        return;
-    }
-    if (lobbyState.code) {
-        switchView('lobbyView');
-    } else if (appState.currentView !== 'rosterBuilderPage') {
-        switchView('mainPage');
+    } else if (lobbyState.code) {
+        // We are in a lobby, so ensure the lobby view is active.
+        if (appState.currentView !== 'lobbyView') {
+           switchView('lobbyView');
+        }
+    } else {
+        // We are not in a lobby. Should be on main menu or builder.
+        // If we are somehow on a lobby-related view, switch back to the main menu.
+        if (appState.currentView === 'lobbyView' || appState.currentView === 'completedView') {
+            switchView('mainPage');
+        }
     }
 
-    elements.rosterPhase.classList.toggle('hidden', phase !== 'roster');
-    elements.egoBanPhase.classList.toggle('hidden', phase !== 'egoBan');
-    elements.idDraftPhase.classList.toggle('hidden', !['ban', 'pick', 'midBan', 'pick2', 'pick_s2'].includes(phase));
-    elements.coinFlipModal.classList.toggle('hidden', phase !== 'coinFlip');
-
-    if (phase === 'coinFlip') renderCoinFlipUI();
-    
-    // Only render lobby-specific components if a lobby code exists
-    if (lobbyState.code) {
-        renderParticipants();
-        renderRosterSelectionPhase();
-        if (phase === 'egoBan') renderEgoBanPhase();
-        if (['ban', 'pick', 'midBan', 'pick2', 'pick_s2'].includes(phase)) renderIdDraftPhase();
+    // --- Component Visibility Logic ---
+    if (appState.currentView === 'lobbyView') {
+        const isDrafting = ['egoBan', 'ban', 'pick', 'midBan', 'pick2', 'pick_s2'].includes(phase);
+        elements.draftStatusPanel.classList.toggle('hidden', !isDrafting);
+        elements.rosterPhase.classList.toggle('hidden', phase !== 'roster');
+        elements.egoBanPhase.classList.toggle('hidden', phase !== 'egoBan');
+        elements.idDraftPhase.classList.toggle('hidden', !isDrafting);
+        elements.coinFlipModal.classList.toggle('hidden', phase !== 'coinFlip');
+    } else {
+        // If not in the lobby view, ensure all lobby-specific popups are hidden.
+        elements.draftStatusPanel.classList.add('hidden');
+        elements.coinFlipModal.classList.add('hidden');
     }
-    
-    updateDraftInstructions();
-    checkPhaseReadiness();
-    updateTimerUI();
+
+    // --- Component Rendering Logic ---
+    // Only render the contents of lobby components if we are actually in a lobby.
+    if (lobbyState.code) {
+        if (phase === 'complete') {
+            renderCompletedView();
+        } else {
+            renderParticipants();
+            renderRosterSelectionPhase();
+            if (phase === 'coinFlip') renderCoinFlipUI();
+            if (phase === 'egoBan') renderEgoBanPhase();
+            if (['ban', 'pick', 'midBan', 'pick2', 'pick_s2'].includes(phase)) renderIdDraftPhase();
+            updateDraftInstructions();
+            checkPhaseReadiness();
+            updateTimerUI();
+        }
+    }
 }
 
 function renderParticipants() {
@@ -795,6 +792,6 @@ document.addEventListener('DOMContentLoaded', () => {
     cacheDOMElements();
     setupEventListeners();
     connectWebSocket();
-    // Initial view is set here, but updateAllUIs will correct it once data arrives.
+    // Initial view is set here, and it will remain until a lobby is joined/created.
     switchView('mainPage');
 });
