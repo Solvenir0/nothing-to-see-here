@@ -1,3 +1,22 @@
+// =================================================================================
+// FILE: script.js
+// DESCRIPTION: This is the complete frontend script for the Limbus Company Draft
+//              System. It handles all UI rendering, user interactions, and
+//              communication with the WebSocket server.
+//
+// REFACTOR SUMMARY:
+// - Modular State: The large global `state` object has been broken into smaller,
+//   more manageable pieces (e.g., `appState`, `lobbyState`, `builderState`).
+// - Server-side Data: The client no longer parses ID/EGO data. It receives
+//   fully parsed data and configuration from the server upon connection.
+// - Efficient DOM Updates: Instead of full re-renders, the script now uses more
+//   targeted DOM updates to improve performance, especially for large lists.
+// - Semantic HTML & Accessibility: Event listeners are attached to proper
+//   <button> elements, improving accessibility.
+// - Code Organization: The script is now organized into logical sections for
+//   state, UI rendering, WebSocket handling, and event listeners.
+// =================================================================================
+
 // ==========================================================================
 // 1. APPLICATION STATE
 // ==========================================================================
@@ -24,7 +43,32 @@ const lobbyState = {
     code: null,
     participants: {},
     roster: { p1: [], p2: [] },
-    draft: {},
+    // FIX: Initialize draft state with default values to prevent errors on startup.
+    draft: {
+        phase: "roster",
+        step: 0,
+        currentPlayer: "",
+        action: "",
+        actionCount: 0,
+        available: { p1: [], p2: [] },
+        idBans: { p1: [], p2: [] },
+        egoBans: { p1: [], p2: [] },
+        picks: { p1: [], p2: [] },
+        picks_s2: { p1: [], p2: [] },
+        hovered: { p1: null, p2: null },
+        draftLogic: '1-2-2',
+        matchType: 'section1',
+        isPublic: false,
+        coinFlipWinner: null,
+        playerOrder: ['p1', 'p2'],
+        timer: {
+            enabled: false,
+            running: false,
+            paused: false,
+            endTime: 0,
+            pauseTime: 0,
+        }
+    },
     filters: { sinner: "", sinAffinity: "", keyword: "", rosterSearch: "" },
     draftFilters: { sinner: "", sinAffinity: "", keyword: "", rosterSearch: "" },
     egoSearch: "",
@@ -254,7 +298,7 @@ function handleStateUpdate(newLobbyState) {
 // ==========================================================================
 
 function updateAllUIs() {
-    // FIX: Add a guard clause to ensure game data is loaded before rendering.
+    // Add a guard clause to ensure game data is loaded before rendering.
     if (!appState.gameData.masterIDList || appState.gameData.masterIDList.length === 0) {
         console.log("Waiting for initial game data before rendering UI...");
         return;
@@ -263,7 +307,9 @@ function updateAllUIs() {
     if (!lobbyState.draft) return;
     const { phase } = lobbyState.draft;
 
-    elements.draftStatusPanel.classList.toggle('hidden', phase === 'roster' || phase === 'complete');
+    // Correctly toggle visibility of the draft status panel.
+    const isDrafting = ['egoBan', 'ban', 'pick', 'midBan', 'pick2', 'pick_s2'].includes(phase);
+    elements.draftStatusPanel.classList.toggle('hidden', !isDrafting);
 
     if (phase === 'complete') {
         switchView('completedView');
@@ -283,11 +329,13 @@ function updateAllUIs() {
 
     if (phase === 'coinFlip') renderCoinFlipUI();
     
-    renderParticipants();
-    renderRosterSelectionPhase();
-    
-    if (phase === 'egoBan') renderEgoBanPhase();
-    if (['ban', 'pick', 'midBan', 'pick2', 'pick_s2'].includes(phase)) renderIdDraftPhase();
+    // Only render lobby-specific components if a lobby code exists
+    if (lobbyState.code) {
+        renderParticipants();
+        renderRosterSelectionPhase();
+        if (phase === 'egoBan') renderEgoBanPhase();
+        if (['ban', 'pick', 'midBan', 'pick2', 'pick_s2'].includes(phase)) renderIdDraftPhase();
+    }
     
     updateDraftInstructions();
     checkPhaseReadiness();
@@ -484,7 +532,7 @@ function updateDraftInstructions() {
 }
 
 function checkPhaseReadiness() {
-    if (!lobbyState.participants.p1 || !lobbyState.participants.p2) return;
+    if (!lobbyState.code || !lobbyState.participants.p1 || !lobbyState.participants.p2) return;
     if (lobbyState.draft.phase === 'roster') {
         const p1Ready = lobbyState.participants.p1.ready && lobbyState.roster.p1.length === appState.config.ROSTER_SIZE;
         const p2Ready = lobbyState.participants.p2.ready && lobbyState.roster.p2.length === appState.config.ROSTER_SIZE;
@@ -747,5 +795,6 @@ document.addEventListener('DOMContentLoaded', () => {
     cacheDOMElements();
     setupEventListeners();
     connectWebSocket();
+    // Initial view is set here, but updateAllUIs will correct it once data arrives.
     switchView('mainPage');
 });
