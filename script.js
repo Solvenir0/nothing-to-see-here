@@ -218,7 +218,7 @@ let rejoinTimeout;
 function connectWebSocket() {
     const loc = window.location;
     const wsProtocol = loc.protocol === 'https:' ? 'wss:' : 'ws:';
-    const remoteUrl = `${wsProtocol}//${loc.host}/`;
+    const remoteUrl = `${wsProtocol}//${window.location.host}`;
     state.socket = new WebSocket(remoteUrl);
 
     elements.connectionStatus.className = 'connection-status connecting';
@@ -1425,4 +1425,3 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
     connectWebSocket();
     switchView('mainPage');
-});
