@@ -1425,3 +1425,4 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
     connectWebSocket();
     switchView('mainPage');
+}
