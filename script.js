@@ -1,8 +1,8 @@
 // =================================================================================
 // FILE: script.js
-// DESCRIPTION: This version adds UI support for the new reserve timer system
-// and ensures the main timer display updates its style when the reserve
-// timer is active.
+// DESCRIPTION: This version moves the timer to the floating status panel, adds a
+// visibility toggle for the lobby code, and corrects the logic for which
+// pool is displayed during ban phases to avoid confusion.
 // =================================================================================
 // ======================
 // CONSTANTS & CONFIG
@@ -713,12 +713,15 @@ function updateDraftInstructions() {
     if (['ban', 'pick', 'midBan', 'pick2', 'pick_s2'].includes(phase)) {
         const opponent = currentPlayer === 'p1' ? 'p2' : 'p1';
         const isBanAction = phase.includes('ban');
-        const targetPlayer = isBanAction ? opponent : currentPlayer;
 
-        const availableIdList = state.draft.available[targetPlayer];
+        // REVISED LOGIC FOR CLARITY
+        // For a BAN, the player must choose from the OPPONENT's available pool.
+        // For a PICK, the player chooses from their OWN available pool.
+        const poolSourcePlayer = isBanAction ? opponent : currentPlayer;
+        const availableIdList = state.draft.available[poolSourcePlayer];
 
         if (!availableIdList) {
-            console.error(`[Draft Render] ERROR: availableIdList for ${targetPlayer} is undefined!`);
+            console.error(`[Draft Render] ERROR: availableIdList for ${poolSourcePlayer} is undefined!`);
             return;
         }
 
@@ -733,12 +736,15 @@ function updateDraftInstructions() {
         poolEl.style.maxHeight = '60vh';
         elements.draftPoolContainer.appendChild(poolEl);
 
+        // This correctly identifies IDs present in BOTH original rosters.
         const sharedIds = state.roster.p1.filter(id => state.roster.p2.includes(id));
 
+        // RENDER LOGIC
+        // Removed the confusing 'notInRosterSet' property.
+        // 'sharedIdSet' is sufficient to show overlaps.
         renderGroupedView(poolEl, availableObjects, { 
             clickHandler, 
             hoverId: hovered[currentPlayer],
-            notInRosterSet: isBanAction ? state.roster[currentPlayer] : null,
             sharedIdSet: sharedIds
         });
 
@@ -1231,6 +1237,20 @@ function setupEventListeners() {
     elements.confirmSelectionId.addEventListener('click', () => confirmSelection('id'));
     elements.confirmSelectionEgo.addEventListener('click', () => confirmSelection('ego'));
     elements.refTimerControl.addEventListener('click', () => sendMessage({ type: 'timerControl', lobbyCode: state.lobbyCode, action: 'togglePause' }));
+    
+    // Hide/show lobby code
+    elements.toggleCodeVisibility.addEventListener('click', () => {
+        const codeDisplay = elements.lobbyCodeDisplay;
+        const icon = elements.toggleCodeVisibility.querySelector('i');
+        codeDisplay.classList.toggle('hidden');
+        if (codeDisplay.classList.contains('hidden')) {
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+        } else {
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+        }
+    });
 }
 
 function createFilterBarHTML(options = {}) {
@@ -1443,6 +1463,7 @@ function cacheDOMElements() {
         
         // Lobby
         lobbyCodeDisplay: document.getElementById('lobby-code-display'),
+        toggleCodeVisibility: document.getElementById('toggle-code-visibility'),
         participantsList: document.getElementById('participants-list'),
         phaseTimer: document.getElementById('phase-timer'),
         refTimerControl: document.getElementById('ref-timer-control'),
