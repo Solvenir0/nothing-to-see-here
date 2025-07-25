@@ -1,9 +1,8 @@
 // =================================================================================
 // FILE: server.js
-// DESCRIPTION: This version clarifies the ban logic. Bans are now stored
-// against the player who *performs* the ban, making the data structure
-// more intuitive and easier for the client to display correctly.
-// [FIX] Inverts the turn order for the second ban/pick phase.
+// DESCRIPTION: This version implements a reserve timer system, corrects the
+// EGO ban timer to a single 90-second block per player, and ensures
+// multi-pick phases have a correctly combined timer.
 // =================================================================================
 const express = require('express');
 const http = require('http');
@@ -27,7 +26,7 @@ const ROSTER_SIZE = 42;
 const EGO_BAN_COUNT = 5;
 const TIMERS = {
     roster: 90,
-    egoBan: 75, // 15s per ban
+    egoBan: 90, // Corrected to 90 seconds per user request
     pick: 15,
 };
 
@@ -253,8 +252,8 @@ function createNewLobbyState(options = {}) {
         createdAt: new Date().toISOString(),
         lastActivity: new Date().toISOString(),
         participants: {
-            p1: { name: "Player 1", status: "disconnected", ready: false, rejoinToken: null },
-            p2: { name: "Player 2", status: "disconnected", ready: false, rejoinToken: null },
+            p1: { name: "Player 1", status: "disconnected", ready: false, rejoinToken: null, reserveTime: 120 },
+            p2: { name: "Player 2", status: "disconnected", ready: false, rejoinToken: null, reserveTime: 120 },
             ref: { name: name, status: "disconnected", rejoinToken: null }
         },
         roster: { p1: [], p2: [] },
@@ -281,6 +280,8 @@ function createNewLobbyState(options = {}) {
                 paused: false,
                 endTime: 0,
                 pauseTime: 0,
+                isReserve: false,
+                reserveStartTime: 0
             }
         }
     };
@@ -309,29 +310,53 @@ function handleTimer(lobbyCode) {
     let lobbyData = lobbies[lobbyCode];
     if (!lobbyData) return;
 
-    const { hovered, currentPlayer, phase } = lobbyData.draft;
+    const { draft } = lobbyData;
+    const { currentPlayer } = draft;
+    const participant = lobbyData.participants[currentPlayer];
+
+    // --- Reserve Time Logic ---
+    // If the main timer expires, check for reserve time, but only if not already in reserve mode.
+    if (participant && participant.reserveTime > 0 && !draft.timer.isReserve) {
+        console.log(`Main timer expired for ${currentPlayer}. Activating reserve time.`);
+        draft.timer.isReserve = true;
+        draft.timer.reserveStartTime = Date.now();
+        
+        const reserveDuration = participant.reserveTime;
+        draft.timer.running = true;
+        draft.timer.endTime = Date.now() + reserveDuration * 1000;
+
+        // Set a new timeout for the entire duration of the player's remaining reserve time.
+        const timeoutId = setTimeout(() => handleTimer(lobbyCode), reserveDuration * 1000);
+        lobbyTimers[lobbyCode] = { timeoutId };
+        
+        broadcastState(lobbyCode); // Update clients to show reserve timer is active
+        return; // Exit, giving the player their reserve time to act.
+    }
+    
+    // If we reach here, it means either the player had no reserve time, or their reserve time has also expired.
+    // The turn is now truly over.
+    draft.timer.isReserve = false;
+    draft.timer.running = false; // Stop the timer display on clients
+    if (participant) {
+        participant.reserveTime = 0; // Mark their reserve as exhausted
+    }
+
+    const { hovered, phase } = draft;
     const hoveredId = hovered[currentPlayer];
 
-    console.log(`Timer expired for ${lobbyCode}. Player: ${currentPlayer}, Phase: ${phase}, Hovered: ${hoveredId}`);
+    console.log(`Timer fully expired for ${lobbyCode}. Player: ${currentPlayer}, Phase: ${phase}, Hovered: ${hoveredId}`);
     
+    // Auto-confirm if something is hovered as a last resort
     if (hoveredId) {
-        handleDraftConfirm(lobbyCode, lobbyData, null);
+        handleDraftConfirm(lobbyCode, lobbyData, null); // Pass null for ws to bypass role check
         return;
     }
 
-    if (phase === 'egoBan' || phase === 'ban' || phase === 'midBan') {
-        console.log(`${phase} timer expired. No automatic action. This is a mandatory choice.`);
-        lobbyData.draft.timer.running = false; // Stop the timer display
-        broadcastState(lobbyCode);
-        return;
-    }
-
-    if (phase.includes('pick')) {
-        console.log("Pick timer expired with no hover. Skipping turn by advancing phase.");
-        lobbyData = advancePhase(lobbyData);
-        setTimerForLobby(lobbyCode, lobbyData);
-        broadcastState(lobbyCode);
-    }
+    // If nothing is hovered, skip the turn by advancing the phase
+    console.log("Timer expired with no hover. Skipping turn by advancing phase.");
+    lobbyData = advancePhase(lobbyData);
+    setTimerForLobby(lobbyCode, lobbyData); // Set timer for the *next* phase/player
+    broadcastState(lobbyCode);
 }
 
 
@@ -341,6 +366,8 @@ function setTimerForLobby(lobbyCode, lobbyData) {
     }
     
     const { draft } = lobbyData;
+    draft.timer.isReserve = false; // Always reset reserve flag when setting a new normal timer
+
     if (!draft.timer.enabled || draft.phase === 'complete' || draft.timer.paused) {
         draft.timer.running = false;
         return;
@@ -350,11 +377,10 @@ function setTimerForLobby(lobbyCode, lobbyData) {
     if (draft.phase === 'roster') {
         duration = TIMERS.roster;
     } else if (draft.phase === 'egoBan') {
-        const bansMade = draft.egoBans[draft.currentPlayer].length;
-        if (bansMade < EGO_BAN_COUNT) {
-             duration = TIMERS.egoBan - (bansMade * TIMERS.pick);
-        }
+        // Corrected logic: a flat 90 seconds for the entire EGO ban phase for the current player.
+        duration = TIMERS.egoBan;
     } else if (['pick', 'ban', 'midBan', 'pick2', 'pick_s2'].includes(draft.phase)) {
+        // Correct logic for multi-picks: 15 seconds per action.
         duration = TIMERS.pick * draft.actionCount;
     }
 
@@ -371,6 +397,7 @@ function setTimerForLobby(lobbyCode, lobbyData) {
 
 function advancePhase(lobbyData) {
     const { draft } = lobbyData;
+    draft.timer.isReserve = false; // Ensure reserve mode is off when phase advances
     const logic = DRAFT_LOGIC[draft.draftLogic];
     const [firstPlayer, secondPlayer] = draft.playerOrder;
     const getPlayer = (p) => (p === 'p1' ? firstPlayer : secondPlayer);
@@ -413,7 +440,6 @@ function advancePhase(lobbyData) {
                 draft.phase = "midBan";
                 draft.action = "midBan";
                 draft.step = 0;
-                // [FIXED] The second player now starts the mid-draft ban phase.
                 draft.currentPlayer = secondPlayer;
                 draft.actionCount = 1;
             }
@@ -473,11 +499,21 @@ function handleDraftConfirm(lobbyCode, lobbyData, ws) {
     const { draft } = lobbyData;
     const { currentPlayer, hovered, phase } = draft;
     const selectedId = hovered[currentPlayer];
+    const participant = lobbyData.participants[currentPlayer];
 
     if (!selectedId) return;
     
     if (ws) {
         if (ws.userRole !== currentPlayer && ws.userRole !== 'ref') return;
+    }
+
+    // Handle action during reserve time
+    if (draft.timer.isReserve) {
+        if (lobbyTimers[lobbyCode]) clearTimeout(lobbyTimers[lobbyCode].timeoutId); // Stop the long reserve timer
+        const timeUsed = Math.ceil((Date.now() - draft.timer.reserveStartTime) / 1000);
+        participant.reserveTime = Math.max(0, participant.reserveTime - timeUsed);
+        draft.timer.isReserve = false;
+        draft.timer.reserveStartTime = 0;
     }
 
     if (phase === 'egoBan') {
@@ -498,8 +534,6 @@ function handleDraftConfirm(lobbyCode, lobbyData, ws) {
         let listToUpdate;
         const isBanAction = (phase === 'ban' || phase === 'midBan');
 
-        // A ban is an action performed BY the current player.
-        // So we store it in the current player's ban list for clarity.
         if (isBanAction) {
             listToUpdate = draft.idBans[currentPlayer];
         } else if (phase === 'pick' || phase === 'pick2') {
@@ -512,7 +546,6 @@ function handleDraftConfirm(lobbyCode, lobbyData, ws) {
             listToUpdate.push(selectedId);
         }
         
-        // A banned or picked ID is removed from both players' available pools.
         let p1Index = draft.available.p1.indexOf(selectedId);
         if(p1Index > -1) draft.available.p1.splice(p1Index, 1);
         let p2Index = draft.available.p2.indexOf(selectedId);
@@ -528,7 +561,13 @@ function handleDraftConfirm(lobbyCode, lobbyData, ws) {
     draft.hovered[currentPlayer] = null;
 
     updateLobbyActivity(lobbyCode);
-    setTimerForLobby(lobbyCode, lobbyData);
+
+    // Don't reset the timer on a single EGO ban; let it run down.
+    // For all other actions, a new timer should be set for the next step.
+    if (phase !== 'egoBan') {
+        setTimerForLobby(lobbyCode, lobbyData);
+    }
+    
     broadcastState(lobbyCode);
 }
 
@@ -773,13 +812,20 @@ wss.on('connection', (ws) => {
                 if (timer.paused) { // unpausing
                     timer.paused = false;
                     timer.running = true;
-                    timer.endTime = Date.now() + timer.pauseTime;
-                    setTimerForLobby(lobbyCode, lobbyData);
+                    // When unpausing, set a new endTime based on the remaining pauseTime
+                    const newEndTime = Date.now() + timer.pauseTime;
+                    timer.endTime = newEndTime;
+                    
+                    // Re-create the timeout with the remaining duration
+                    const timeoutId = setTimeout(() => handleTimer(lobbyCode), timer.pauseTime);
+                    lobbyTimers[lobbyCode] = { timeoutId };
+
                 } else { // pausing
                     if (lobbyTimers[lobbyCode]) clearTimeout(lobbyTimers[lobbyCode].timeoutId);
                     timer.paused = true;
                     timer.running = false;
-                    timer.pauseTime = timer.endTime - Date.now();
+                    // Store the remaining time when pausing
+                    timer.pauseTime = Math.max(0, timer.endTime - Date.now());
                 }
                 updateLobbyActivity(lobbyCode);
                 broadcastState(lobbyCode);
@@ -801,7 +847,6 @@ wss.on('connection', (ws) => {
     });
 });
 
-// [FIXED] Added lobby cleanup logic
 const LOBBY_TTL = 2 * 60 * 60 * 1000; // 2 hours in milliseconds
 
 function cleanupInactiveLobbies() {
@@ -810,7 +855,6 @@ function cleanupInactiveLobbies() {
         const lastActivity = new Date(lobbies[lobbyCode].lastActivity);
         if (now - lastActivity > LOBBY_TTL) {
             console.log(`Cleaning up inactive lobby: ${lobbyCode}`);
-            // Clean up any associated timers
             if (lobbyTimers[lobbyCode] && lobbyTimers[lobbyCode].timeoutId) {
                 clearTimeout(lobbyTimers[lobbyCode].timeoutId);
                 delete lobbyTimers[lobbyCode];
@@ -820,7 +864,6 @@ function cleanupInactiveLobbies() {
     }
 }
 
-// Run the cleanup function periodically
 setInterval(cleanupInactiveLobbies, 30 * 60 * 1000); // Every 30 minutes
 
 
