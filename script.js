@@ -1,8 +1,8 @@
 // =================================================================================
 // FILE: script.js
-// DESCRIPTION: This version introduces an advanced randomization feature in the
-// Roster Builder with sinner count constraints. It also hides LCB IDs from
-// the builder and fixes various UI bugs.
+// DESCRIPTION: This version adds UI support for the new reserve timer system
+// and ensures the main timer display updates its style when the reserve
+// timer is active.
 // =================================================================================
 // ======================
 // CONSTANTS & CONFIG
@@ -21,8 +21,8 @@ const state = {
     userRole: "",
     rejoinToken: null,
     participants: {
-        p1: { name: "Player 1", status: "disconnected", ready: false },
-        p2: { name: "Player 2", status: "disconnected", ready: false },
+        p1: { name: "Player 1", status: "disconnected", ready: false, reserveTime: 120 },
+        p2: { name: "Player 2", status: "disconnected", ready: false, reserveTime: 120 },
         ref: { name: "Referee", status: "disconnected" }
     },
     roster: { p1: [], p2: [] },
@@ -52,6 +52,7 @@ const state = {
             enabled: false,
             running: false,
             endTime: 0,
+            isReserve: false
         }
     },
     filters: { sinner: "", sinAffinity: "", keyword: "", rosterSearch: "" },
@@ -239,14 +240,13 @@ function connectWebSocket() {
                 rejoinToken: session.rejoinToken
             });
 
-            // Failsafe timeout for rejoin attempt
             rejoinTimeout = setTimeout(() => {
-                if (elements.rejoinOverlay.style.display === 'flex') { // Check if still trying to rejoin
+                if (elements.rejoinOverlay.style.display === 'flex') {
                     elements.rejoinOverlay.style.display = 'none';
                     localStorage.removeItem('limbusDraftSession');
                     showNotification("Failed to rejoin lobby. Session cleared.", true);
                 }
-            }, 10000); // 10-second timeout
+            }, 10000);
         }
     };
     state.socket.onmessage = (event) => handleServerMessage(JSON.parse(event.data));
@@ -477,6 +477,15 @@ function updateAllUIsFromState() {
         }
         el.innerHTML = `<i class="fas ${icon}"></i> ${displayName} ${statusIcon}`;
         elements.participantsList.appendChild(el);
+
+        if ((role === 'p1' || role === 'p2') && p.reserveTime !== undefined) {
+            const reserveTimeEl = document.getElementById(`${role}-reserve-time`);
+            if (reserveTimeEl) {
+                const minutes = Math.floor(p.reserveTime / 60);
+                const seconds = p.reserveTime % 60;
+                reserveTimeEl.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            }
+        }
     });
 
     ['p1', 'p2'].forEach(player => {
@@ -626,8 +635,6 @@ function updateDraftUI() {
         container.scrollTop = scrollTop;
     };
     
-    // With the server logic fixed, this is now a direct mapping.
-    // The bans in a player's column are the bans made BY that player.
     renderCompactIdListChronological(elements.p1IdBans, [...state.draft.idBans.p1].reverse());
     renderCompactIdListChronological(elements.p2IdBans, [...state.draft.idBans.p2].reverse());
     renderCompactIdListChronological(elements.p1Picks, [...state.draft.picks.p1].reverse());
@@ -798,8 +805,6 @@ function renderCompletedView() {
         renderCompactIdList(elements.finalP2S2Picks, state.draft.picks_s2.p2);
     }
 
-    // [FIXED] With server logic corrected, this mapping is now direct and intuitive.
-    // P1's bans are in p1's list, P2's bans are in p2's list.
     renderCompactIdList(elements.finalP1Bans, state.draft.idBans.p1);
     renderCompactIdList(elements.finalP2Bans, state.draft.idBans.p2);
     
@@ -870,6 +875,9 @@ function updateTimerUI() {
     elements.refTimerControl.classList.toggle('hidden', !timer.enabled || state.userRole !== 'ref');
     elements.phaseTimer.classList.toggle('hidden', !timer.enabled);
 
+    // Style the timer differently if the reserve timer is active
+    elements.phaseTimer.classList.toggle('reserve-active', timer.isReserve);
+
     if (!timer.enabled || !timer.running) {
         elements.phaseTimer.textContent = "--:--";
         if(state.timerInterval) clearInterval(state.timerInterval);
@@ -920,7 +928,7 @@ function showRoleSelectionModal(lobby) {
     elements.roleModalLobbyCode.textContent = lobby.code;
     
     const roleOptionsContainer = elements.modalRoleOptions;
-    roleOptionsContainer.innerHTML = ''; // Clear previous options
+    roleOptionsContainer.innerHTML = '';
 
     const roles = {
         p1: { icon: 'fa-user', text: 'Player 1' },
@@ -1085,14 +1093,11 @@ function setupEventListeners() {
     elements.showRulesBtn.addEventListener('click', () => elements.rulesModal.classList.remove('hidden'));
     elements.closeRulesBtn.addEventListener('click', () => elements.rulesModal.classList.add('hidden'));
 
-    // [FIXED] Corrected tab switching logic
     elements.joinTabs.forEach(tab => {
         tab.addEventListener('click', () => {
-            // Deactivate all tabs and content
             elements.joinTabs.forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.join-tab-content').forEach(content => content.classList.remove('active'));
 
-            // Activate the clicked tab and its corresponding content
             tab.classList.add('active');
             const tabName = tab.dataset.tab;
             const targetContentId = tabName === 'browse' ? 'browse-lobbies-tab' : 'code-join-tab';
@@ -1139,7 +1144,7 @@ function setupEventListeners() {
         if (state.socket && state.socket.readyState !== WebSocket.CLOSED) {
             state.socket.close();
         }
-        setTimeout(connectWebSocket, 100); // Reconnect with a fresh state
+        setTimeout(connectWebSocket, 100);
         showNotification("Rejoin attempt cancelled.");
     };
     elements.cancelRejoinBtn.addEventListener('click', cancelRejoinAction);
@@ -1205,11 +1210,9 @@ function setupEventListeners() {
         }
     });
 
-    // Advanced Random
     elements.toggleAdvancedRandom.addEventListener('click', () => {
         elements.advancedRandomOptions.classList.toggle('hidden');
     });
-    // [FIXED] Added event listener for the new function
     elements.builderAdvancedRandom.addEventListener('click', generateAdvancedRandomRoster);
 
 
@@ -1274,7 +1277,6 @@ function createFilterBarHTML(options = {}) {
     `;
 }
 
-// [FIXED] Added this function
 function setupAdvancedRandomUI() {
     const container = elements.sinnerSlidersContainer;
     container.innerHTML = '';
@@ -1339,7 +1341,6 @@ function setupAdvancedRandomUI() {
     updateTotals();
 }
 
-// [FIXED] Added this function
 function generateAdvancedRandomRoster() {
     const constraints = {};
     let totalMin = 0;
@@ -1361,7 +1362,6 @@ function generateAdvancedRandomRoster() {
     let roster = [];
     let availableIDs = [...state.builderMasterIDList];
     
-    // 1. Fulfill minimum requirements
     for (const sinner in constraints) {
         const { min, available } = constraints[sinner];
         if (available.length < min) {
@@ -1373,11 +1373,9 @@ function generateAdvancedRandomRoster() {
         roster.push(...toAdd);
     }
 
-    // Remove added IDs from the general pool
     const rosterSlugs = new Set(roster.map(id => id.id));
     availableIDs = availableIDs.filter(id => !rosterSlugs.has(id.id));
 
-    // 2. Add remaining IDs up to ROSTER_SIZE
     let attempts = 0;
     while (roster.length < ROSTER_SIZE && attempts < 1000) {
         if (availableIDs.length === 0) break;
@@ -1483,6 +1481,7 @@ function cacheDOMElements() {
         totalMinDisplay: document.getElementById('total-min-display'),
         totalMaxDisplay: document.getElementById('total-max-display'),
         builderAdvancedRandom: document.getElementById('builder-advanced-random'),
+        advancedRandomSummary: document.getElementById('advanced-random-summary'),
 
         // EGO Ban Phase
         egoBanPhase: document.getElementById('ego-ban-phase'),
@@ -1513,6 +1512,8 @@ function cacheDOMElements() {
         p1Picks: document.getElementById('p1-picks'), p2Picks: document.getElementById('p2-picks'),
         p1S2PicksContainer: document.getElementById('p1-s2-picks-container'), p2S2PicksContainer: document.getElementById('p2-s2-picks-container'),
         p1S2Picks: document.getElementById('p1-s2-picks'), p2S2Picks: document.getElementById('p2-s2-picks'),
+        p1ReserveTime: document.getElementById('p1-reserve-time'),
+        p2ReserveTime: document.getElementById('p2-reserve-time'),
 
         // Completed View
         finalBannedEgosList: document.getElementById('final-banned-egos-list'),
