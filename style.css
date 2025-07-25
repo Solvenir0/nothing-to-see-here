@@ -435,7 +435,25 @@ input:focus, select:focus {
     color: var(--accent);
     border: 1px solid var(--accent);
     box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
+    transition: filter 0.3s ease;
 }
+
+.code-display.hidden {
+    filter: blur(6px);
+    user-select: none;
+}
+
+.code-display-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+#toggle-code-visibility {
+    padding: 10px 12px;
+}
+
 
 .participants {
     display: flex;
@@ -1359,7 +1377,6 @@ input:focus, select:focus {
 }
 
 
-/* FIX: Larger draft status panel */
 #draft-status-panel {
     position: fixed;
     bottom: 20px;
@@ -1370,17 +1387,25 @@ input:focus, select:focus {
     border: 1px solid var(--border);
     border-top: 3px solid var(--accent);
     border-radius: 12px;
-    padding: 25px;
+    padding: 20px;
     width: auto;
-    min-width: 350px;
-    max-width: 420px;
+    min-width: 380px;
+    max-width: 450px;
     box-shadow: 0 8px 25px rgba(0,0,0,0.5);
     text-align: left;
     transition: all 0.3s ease;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+}
+
+.status-text {
+    flex-grow: 1;
 }
 
 #draft-status-panel #current-phase {
-    font-size: 1.6rem;
+    font-size: 1.4rem;
     margin: 0 0 8px 0;
     padding: 0;
     border: none;
@@ -1389,12 +1414,27 @@ input:focus, select:focus {
 }
 
 #draft-status-panel #draft-action-description {
-    font-size: 1.1rem;
+    font-size: 1.0rem;
     color: #ddd;
     min-height: 0;
     margin: 0;
     line-height: 1.4;
 }
+
+.status-timer {
+    text-align: center;
+}
+
+#draft-status-panel .timer-display {
+    margin: 0;
+    font-size: 2.2rem;
+}
+
+#draft-status-panel #ref-timer-control {
+    padding: 8px 10px;
+    font-size: 0.9rem;
+}
+
 
 .advanced-random-container {
     margin-top: 20px;
