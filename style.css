@@ -26,7 +26,7 @@
     --sin-envy-bg: rgba(128, 0, 128, 255);
     --connected: #4caf50;
     --disconnected: #f44336;
-    --warning: #ffc107;
+    --warning: #ff9800;
     --ready: #4caf50;
     --drafting: #2196F3;
     --hover: #ffeb3b;
@@ -395,6 +395,13 @@ input:focus, select:focus {
     margin-top: 10px;
     min-width: 140px;
     text-align: center;
+    transition: all 0.3s ease;
+}
+
+.timer-display.reserve-active {
+    color: var(--warning);
+    text-shadow: 0 0 10px var(--warning);
+    animation: pulse-warning 1.5s infinite;
 }
 
 .draft-player-column.draft-active, .draft-interaction-hub.draft-active {
@@ -469,6 +476,12 @@ input:focus, select:focus {
     0% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.4); filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.4)); }
     70% { box-shadow: 0 0 0 10px rgba(255, 215, 0, 0); filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.7)); }
     100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.4)); }
+}
+
+@keyframes pulse-warning {
+    0% { box-shadow: 0 0 5px 0px var(--warning); }
+    50% { box-shadow: 0 0 15px 5px var(--warning); }
+    100% { box-shadow: 0 0 5px 0px var(--warning); }
 }
 
 .player-area {
@@ -1125,6 +1138,17 @@ input:focus, select:focus {
     border: 1px solid var(--border);
     height: 100%;
     transition: all 0.3s ease;
+}
+
+.reserve-timer-display {
+    background: rgba(0,0,0,0.2);
+    color: var(--warning);
+    padding: 5px 10px;
+    border-radius: 5px;
+    text-align: center;
+    font-weight: bold;
+    margin: 10px 0;
+    font-size: 1rem;
 }
 
 .draft-interaction-hub {
