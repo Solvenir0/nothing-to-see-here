@@ -449,17 +449,19 @@ function switchView(view) {
     console.log('Switching to view:', view);
     state.currentView = view;
     // Hide all main page views by adding the 'hidden' class
-    ['mainPage', 'lobbyView', 'completedView', 'rosterBuilderPage'].forEach(page => {
-        if (elements[page]) {
-            elements[page].classList.add('hidden');
+    ['mainPage', 'lobbyView', 'completedView', 'rosterBuilderPage'].forEach(pageId => {
+        const el = elements[pageId];
+        if (el) {
+            el.classList.add('hidden');
         } else {
-            console.warn('Element not found for hiding:', page);
+            console.warn('Element not found for hiding:', pageId);
         }
     });
 
     // Show the target view by removing the 'hidden' class
-    if (elements[view]) {
-        elements[view].classList.remove('hidden');
+    const targetEl = elements[view];
+    if (targetEl) {
+        targetEl.classList.remove('hidden');
         console.log('Successfully switched to:', view);
     } else {
         console.error('Target view element not found for showing:', view);
@@ -467,30 +469,38 @@ function switchView(view) {
 }
 
 
+/**
+ * [FIXED] This function is updated to use classList.toggle() for managing visibility
+ * to avoid conflicts with the `!important` rule in the CSS.
+ */
 function updateAllUIsFromState() {
     const { draft } = state;
     const { phase } = draft;
 
-    elements.draftStatusPanel.classList.toggle('hidden', phase === 'roster' || phase === 'complete');
-
+    // Determine the correct primary view
     if (phase === 'complete') {
         switchView('completedView');
         renderCompletedView();
         return;
+    } else if (state.lobbyCode) {
+        switchView('lobbyView');
+    } else if (state.currentView !== 'rosterBuilderPage') {
+        switchView('mainPage');
     }
-    if (state.lobbyCode) switchView('lobbyView');
-    else if (state.currentView !== 'rosterBuilderPage') switchView('mainPage');
 
-
+    // Toggle visibility of phase-specific sections within the lobby view
     elements.rosterPhase.classList.toggle('hidden', phase !== 'roster');
     elements.egoBanPhase.classList.toggle('hidden', phase !== 'egoBan');
     elements.idDraftPhase.classList.toggle('hidden', !['ban', 'pick', 'midBan', 'pick2', 'pick_s2'].includes(phase));
     elements.coinFlipModal.classList.toggle('hidden', phase !== 'coinFlip');
+    elements.draftStatusPanel.classList.toggle('hidden', phase === 'roster' || phase === 'complete');
+
 
     if (phase === 'coinFlip') {
         handleCoinFlipUI();
     }
 
+    // Update participant list and statuses
     elements.participantsList.innerHTML = '';
     ['p1', 'p2', 'ref'].forEach(role => {
         const p = state.participants[role];
@@ -515,6 +525,7 @@ function updateAllUIsFromState() {
         }
     });
 
+    // Update player panels in roster phase
     ['p1', 'p2'].forEach(player => {
         elements[`${player}NameDisplay`].textContent = state.participants[player].name;
         elements[`${player}Counter`].textContent = state.roster[player].length;
@@ -526,15 +537,20 @@ function updateAllUIsFromState() {
         elements[`${player}Panel`].classList.toggle('locked', isReady);
     });
     
-    filterAndRenderRosterSelection();
-    
-    if (phase === 'egoBan') renderEgoBanPhase();
-    if (['ban', 'pick', 'midBan', 'pick2', 'pick_s2'].includes(phase)) updateDraftUI();
+    // Render content for the current phase
+    if (phase === 'roster') {
+        filterAndRenderRosterSelection();
+    } else if (phase === 'egoBan') {
+        renderEgoBanPhase();
+    } else if (['ban', 'pick', 'midBan', 'pick2', 'pick_s2'].includes(phase)) {
+        updateDraftUI();
+    }
     
     updateDraftInstructions();
     checkPhaseReadiness();
     updateTimerUI();
 }
+
 
 function filterAndRenderRosterSelection() {
     const filteredList = filterIDs(state.masterIDList, state.filters);
