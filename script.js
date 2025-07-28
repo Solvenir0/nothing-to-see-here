@@ -439,11 +439,25 @@ function renderGroupedView(container, idObjectList, options = {}) {
 }
 
 function switchView(view) {
+    console.log('Switching to view:', view);
     state.currentView = view;
     ['mainPage', 'lobbyView', 'completedView', 'rosterBuilderPage'].forEach(page => {
-        elements[page].style.display = 'none';
+        if (elements[page]) {
+            elements[page].style.display = 'none';
+        } else {
+            console.warn('Element not found:', page);
+        }
     });
-    if(elements[view]) elements[view].style.display = 'block';
+    if(elements[view]) {
+        elements[view].style.display = 'block';
+        console.log('Successfully switched to:', view);
+        // Additional debug info
+        const rect = elements[view].getBoundingClientRect();
+        console.log('Element dimensions:', rect.width, 'x', rect.height);
+        console.log('Element visible:', elements[view].offsetParent !== null);
+    } else {
+        console.error('Target view element not found:', view);
+    }
 }
 
 function updateAllUIsFromState() {
@@ -1573,29 +1587,50 @@ function cacheDOMElements() {
         goFirstBtn: document.getElementById('go-first-btn'),
         goSecondBtn: document.getElementById('go-second-btn'),
     };
+    
+    // Debug: Check for missing elements
+    const missingElements = Object.keys(elements).filter(key => !elements[key]);
+    if (missingElements.length > 0) {
+        console.warn('Missing DOM elements:', missingElements);
+    }
+    console.log('DOM elements cached successfully. Missing count:', missingElements.length);
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    cacheDOMElements();
-
-    document.getElementById('global-filter-bar-roster').innerHTML = createFilterBarHTML({ showSinnerFilter: true });
-    document.getElementById('global-filter-bar-builder').innerHTML = createFilterBarHTML({ showSinnerFilter: false });
-    document.getElementById('global-filter-bar-draft').innerHTML = createFilterBarHTML({ showSinnerFilter: true });
-    setupFilterBar('global-filter-bar-roster', state.filters);
-    setupFilterBar('global-filter-bar-builder', state.filters);
-    setupFilterBar('global-filter-bar-draft', state.draftFilters);
-
-    state.masterIDList = parseIDCSV(idCsvData);
-    state.builderMasterIDList = state.masterIDList.filter(id => !id.name.includes('LCB Sinner'));
-    state.masterEGOList = parseEGOData(egoData);
-
-    state.idsBySinner = {};
-    SINNER_ORDER.forEach(sinnerName => {
-        state.idsBySinner[sinnerName] = state.builderMasterIDList.filter(id => id.sinner === sinnerName);
-    });
+    console.log('DOM Content Loaded - Starting initialization');
     
-    setupAdvancedRandomUI();
-    setupEventListeners();
-    connectWebSocket();
-    switchView('mainPage');
+    try {
+        cacheDOMElements();
+
+        document.getElementById('global-filter-bar-roster').innerHTML = createFilterBarHTML({ showSinnerFilter: true });
+        document.getElementById('global-filter-bar-builder').innerHTML = createFilterBarHTML({ showSinnerFilter: false });
+        document.getElementById('global-filter-bar-draft').innerHTML = createFilterBarHTML({ showSinnerFilter: true });
+        setupFilterBar('global-filter-bar-roster', state.filters);
+        setupFilterBar('global-filter-bar-builder', state.filters);
+        setupFilterBar('global-filter-bar-draft', state.draftFilters);
+
+        state.masterIDList = parseIDCSV(idCsvData);
+        state.builderMasterIDList = state.masterIDList.filter(id => !id.name.includes('LCB Sinner'));
+        state.masterEGOList = parseEGOData(egoData);
+
+        state.idsBySinner = {};
+        SINNER_ORDER.forEach(sinnerName => {
+            state.idsBySinner[sinnerName] = state.builderMasterIDList.filter(id => id.sinner === sinnerName);
+        });
+        
+        setupAdvancedRandomUI();
+        setupEventListeners();
+        connectWebSocket();
+        console.log('About to switch to mainPage view');
+        switchView('mainPage');
+        console.log('Initialization complete');
+    } catch (error) {
+        console.error('Error during initialization:', error);
+        // Fallback: try to at least show the main page
+        try {
+            switchView('mainPage');
+        } catch (fallbackError) {
+            console.error('Even fallback failed:', fallbackError);
+        }
+    }
 });
