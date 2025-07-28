@@ -439,29 +439,34 @@ function renderGroupedView(container, idObjectList, options = {}) {
 }
 
 /**
- * [FIXED] This function now correctly manages the 'hidden' class on the main view elements.
- * This is necessary because the style.css file uses 'display: none !important', which
- * cannot be overridden by setting the element's style.display property directly.
- * The new logic adds the 'hidden' class to all views, then removes it from the one
- * that should be visible.
+ * [FIXED] This function robustly handles view switching by both removing the '.hidden' class
+ * (which has an !important rule) and setting an inline `display: block` style to override
+ * any ID-based `display: none` rules from the stylesheet.
  */
 function switchView(view) {
     console.log('Switching to view:', view);
     state.currentView = view;
-    // Hide all main page views by adding the 'hidden' class
+    
+    // Hide all main page views
     ['mainPage', 'lobbyView', 'completedView', 'rosterBuilderPage'].forEach(pageId => {
         const el = elements[pageId];
         if (el) {
+            // Add the hidden class back to ensure it's hidden by the !important rule
             el.classList.add('hidden');
+            // Clear any inline style that might have been set to show it
+            el.style.display = '';
         } else {
             console.warn('Element not found for hiding:', pageId);
         }
     });
 
-    // Show the target view by removing the 'hidden' class
+    // Show the target view
     const targetEl = elements[view];
     if (targetEl) {
+        // First, remove the class with the `!important` rule
         targetEl.classList.remove('hidden');
+        // Then, set an inline style to override any ID-based rules in the stylesheet
+        targetEl.style.display = 'block';
         console.log('Successfully switched to:', view);
     } else {
         console.error('Target view element not found for showing:', view);
@@ -469,10 +474,6 @@ function switchView(view) {
 }
 
 
-/**
- * [FIXED] This function is updated to use classList.toggle() for managing visibility
- * to avoid conflicts with the `!important` rule in the CSS.
- */
 function updateAllUIsFromState() {
     const { draft } = state;
     const { phase } = draft;
