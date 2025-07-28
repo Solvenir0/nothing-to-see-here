@@ -11,12 +11,12 @@ const ROSTER_SIZE = 42;
 const EGO_BAN_COUNT = 5;
 const SINNER_ORDER = ["Yi Sang", "Faust", "Don Quixote", "Ryōshū", "Meursault", "Hong Lu", "Heathcliff", "Ishmael", "Rodion", "Sinclair", "Outis", "Gregor"];
 const zayinBanExceptions = [
-    "Bygone Days Yi Sang",
-    "Soda Ryōshū",
-    "Holiday Heathcliff",
-    "Hundred-Footed Death Maggot [蝍蛆殺] Ishmael",
-    "Cavernous Wailing Sinclair",
-    "Legerdemain Gregor"
+    "Bygone Days (Yi Sang)",
+    "Soda (Ryōshū)",
+    "Holiday (Heathcliff)",
+    "Hundred-Footed Death Maggot [蝍蛆殺] (Ishmael)",
+    "Cavernous Wailing (Sinclair)",
+    "Legerdemain (Gregor)"
 ];
 // ======================
 // APPLICATION STATE
@@ -154,11 +154,10 @@ function parseEGOData(data) {
         const sin = parts[2].trim();
         const color = parts[3].trim();
 
-        const sinners = ["Yi Sang", "Faust", "Don Quixote", "Ryōshū", "Meursault", "Hong Lu", "Heathcliff", "Ishmael", "Rodion", "Sinclair", "Outis", "Gregor"];
         let sinner = "Unknown";
         let name = nameAndSinner;
 
-        for (const s of sinners) {
+        for (const s of SINNER_ORDER) {
             if (nameAndSinner.includes(s)) {
                 sinner = s;
                 name = nameAndSinner.replace(s, '').trim();
@@ -550,7 +549,7 @@ function filterIDs(sourceList, filterObject, options = {}) {
 }
 
 function renderEgoBanPhase() {
-    const { currentPlayer, hovered } = state.draft;
+    const { currentPlayer, hovered, egoBans } = state.draft;
     const opponent = currentPlayer === 'p1' ? 'p2' : 'p1';
     
     elements.egoBanTitle.textContent = `EGO Ban Phase - ${state.participants[currentPlayer].name}'s Turn`;
@@ -558,7 +557,19 @@ function renderEgoBanPhase() {
     const clickHandler = (state.userRole === currentPlayer || state.userRole === 'ref') ? hoverEgoToBan : null;
     
     const searchTerm = state.egoSearch.toLowerCase();
-    const availableEg
+    const allBans = [...egoBans.p1, ...egoBans.p2];
+
+    const availableEgos = state.masterEGOList.filter(ego => {
+        if (allBans.includes(ego.id)) return false;
+        const isZayin = ego.rarity === 'ZAYIN';
+        const isException = zayinBanExceptions.includes(ego.name);
+        return !isZayin || isException;
+    });
+
+    const filteredEgos = availableEgos.filter(ego => 
+        ego.name.toLowerCase().includes(searchTerm) || 
+        ego.sinner.toLowerCase().includes(searchTerm)
+    );
 
     const container = elements.egoBanContainer;
     const scrollTop = container.scrollTop;
@@ -573,7 +584,7 @@ function renderEgoBanPhase() {
     container.appendChild(fragment);
     container.scrollTop = scrollTop;
 
-    const currentPlayerBans = state.draft.egoBans[currentPlayer] || [];
+    const currentPlayerBans = egoBans[currentPlayer] || [];
     const bansContainer = elements.currentPlayerEgoBans;
     bansContainer.innerHTML = '';
     const bannedEgoObjects = currentPlayerBans.map(id => state.masterEGOList.find(ego => ego.id === id)).filter(Boolean);
@@ -596,9 +607,9 @@ function renderEgoBanPhase() {
     elements.confirmSelectionEgo.disabled = !hovered[currentPlayer];
 
     const p1BansPreview = elements.p1EgoBansPreview;
-    if (currentPlayer === 'p2' && state.draft.egoBans.p1.length === EGO_BAN_COUNT) {
+    if (currentPlayer === 'p2' && egoBans.p1.length === EGO_BAN_COUNT) {
         p1BansPreview.classList.remove('hidden');
-        const p1BannedObjects = state.draft.egoBans.p1.map(id => state.masterEGOList.find(e => e.id === id)).filter(Boolean);
+        const p1BannedObjects = egoBans.p1.map(id => state.masterEGOList.find(e => e.id === id)).filter(Boolean);
         const listEl = p1BansPreview.querySelector('.banned-egos-list');
         listEl.innerHTML = '';
         p1BannedObjects.forEach(ego => {
