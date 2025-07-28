@@ -1,5 +1,4 @@
 const idCsvData = `Name,Keywords,SinAffinities,Rarity
-"LCB Sinner Yi Sang","Sinking","Gloom,Envy,Sloth","0"
 "Seven Association South Section 6 Yi Sang","Rupture","Gloom,Gluttony,Sloth","00"
 "Molar Office Fixer Yi Sang","Discard,Tremor","Lust,Sloth,Wrath","00"
 "The Pequod First Mate Yi Sang","Bleed,Poise","Pride,Envy,Gluttony","00"
@@ -12,7 +11,6 @@ const idCsvData = `Name,Keywords,SinAffinities,Rarity
 "Lobotomy E.G.O::Solemn Lament Yi Sang","Ammo,Sinking","Pride,Gloom,Sloth","000"
 "Liu Association South Section 3 Yi Sang","Burn","Sloth,Wrath,Envy","000"
 "N Corp. E.G.O::Fell Bullet Yi Sang","Bleed,Poise","Wrath,Lust,Pride","000"
-"LCB Sinner Faust","","Pride,Sloth,Gluttony","0"
 "W Corp. L2 Cleanup Agent Faust","Charge","Envy,Gloom,Wrath","00"
 "Lobotomy Corp. Remnant Faust","Poise,Rupture","Sloth,Gloom,Envy","000"
 "Zwei Association South Section 4 Faust","Aggro","Envy,Gloom,Lust","00"
@@ -24,7 +22,6 @@ const idCsvData = `Name,Keywords,SinAffinities,Rarity
 "MultiCrack Office Rep Faust","Charge","Lust,Envy,Gluttony","000"
 "LCE E.G.O::Ardor Blossom Star Faust","Burn","Sloth,Pride,Wrath","000"
 "Heishou Pack - Mao Branch Adept Faust","Rupture","Sloth,Pride,Gluttony","000"
-"LCB Sinner Don Quixote","Bleed","Lust,Envy,Gluttony","0"
 "Shi Association South Section 5 Director Don Quixote","Poise","Wrath,Envy,Lust","00"
 "N Corp. Mittelhammer Don Quixote","Bleed,Tremor","Lust,Gluttony,Wrath","00"
 "Lobotomy E.G.O::Lantern Don Quixote","Aggro,Rupture","Gluttony,Lust,Gloom","00"
@@ -36,7 +33,6 @@ const idCsvData = `Name,Keywords,SinAffinities,Rarity
 "The Manager of La Manchaland Don Quixote","Bleed","Sloth,Wrath,Lust","000"
 "Cinq Association East Section 3 Don Quixote","Burn,Poise","Gluttony,Wrath,Pride","000"
 "Lobotomy E.G.O::In the Name of Love and Hate Don Quixote","Rupture,Sinking","Wrath,Envy,Envy","000"
-"LCB Sinner Ryōshū","Poise","Gluttony,Lust,Pride","0"
 "Seven Association South Section 6 Ryōshū","Rupture","Sloth,Pride,Gluttony","00"
 "LCCB Assistant Manager Ryōshū","Ammo,Poise,Rupture,Tremor","Lust,Gluttony,Pride","00"
 "Liu Association South Section 4 Ryōshū","Burn","Gluttony,Wrath,Lust","00"
@@ -47,7 +43,6 @@ const idCsvData = `Name,Keywords,SinAffinities,Rarity
 "Edgar Family Chief Butler Ryōshū","Poise","Lust,Pride,Wrath","000"
 "Lobotomy E.G.O::Red Eyes & Penitence Ryōshū","Bleed","Envy,Gloom,Lust","000"
 "Heishou Pack - Mao Branch Ryōshū","Rupture","Lust,Gluttony,Pride","00"
-"LCB Sinner Meursault","Tremor","Sloth,Pride,Gloom","0"
 "Liu Association South Section 6 Meursault","Burn","Lust,Sloth,Wrath","00"
 "Rosespanner Workshop Fixer Meursault","Charge,Tremor","Gloom,Pride,Sloth","00"
 "The Middle Little Brother Meursault","Bleed","Sloth,Envy,Wrath","00"
@@ -59,7 +54,6 @@ const idCsvData = `Name,Keywords,SinAffinities,Rarity
 "Dieci Association South Section 4 Director Meursault","Discard,Sinking","Gluttony,Sloth,Gloom","000"
 "Cinq Association West Section 3 Meursault","Poise,Rupture","Pride,Gluttony,Gloom","000"
 "The Thumb East Capo IIII Meursault","Ammo,Burn,Tremor","Sloth,Lust,Wrath","000"
-"LCB Sinner Hong Lu","Rupture,Sinking","Pride,Sloth,Lust","0"
 "Kurokumo Clan Wakashu Hong Lu","Bleed","Lust,Pride,Sloth","00"
 "Liu Association South Section 5 Hong Lu","Burn","Gloom,Lust,Wrath","00"
 "W Corp. L2 Cleanup Agent Hong Lu","Charge,Rupture","Pride,Wrath,Gluttony","00"
@@ -71,7 +65,6 @@ const idCsvData = `Name,Keywords,SinAffinities,Rarity
 "District 20 Yurodivy Hong Lu","Tremor","Gloom,Sloth,Gluttony","000"
 "Full-Stop Office Rep Hong Lu","Ammo,Poise","Sloth,Gloom,Pride","000"
 "R Corp. 4th Pack Reindeer Hong Lu","Charge,Sinking","Gluttony,Envy,Wrath","000"
-"LCB Sinner Heathcliff","Tremor","Envy,Wrath,Lust","0"
 "Shi Association South Section 5 Heathcliff","Poise","Lust,Wrath,Envy","00"
 "N Corp. Kleinhammer Heathcliff","Bleed","Envy,Gloom,Lust","00"
 "Seven Association South Section 4 Heathcliff","Rupture","Wrath,Envy,Gluttony","00"
@@ -83,7 +76,6 @@ const idCsvData = `Name,Keywords,SinAffinities,Rarity
 "Wild Hunt Heathcliff","Sinking","Wrath,Envy,Gloom","000"
 "Full-Stop Office Fixer Heathcliff","Ammo,Poise","Gloom,Envy,Pride","000"
 "Kurokumo Clan Wakashu Heathcliff","Bleed","Wrath,Pride,Lust","000"
-"LCB Sinner Ishmael","Tremor","Wrath,Gluttony,Gloom","0"
 "Shi Association South Section 5 Ishmael","Poise","Envy,Lust,Wrath","00"
 "LCCB Assistant Manager Ishmael","Aggro,Rupture,Tremor","Gluttony,Gloom,Pride","00"
 "Lobotomy E.G.O::Sloshing Ishmael","Aggro,Rupture,Tremor","Gloom,Wrath,Gluttony","00"
@@ -95,7 +87,6 @@ const idCsvData = `Name,Keywords,SinAffinities,Rarity
 "Zwei Association West Section 3 Ishmael","Aggro,Tremor","Pride,Envy,Gluttony","000"
 "Kurokumo Clan Captain Ishmael","Bleed","Envy,Pride,Lust","000"
 "Family Hierarch Candidate Ishmael","Poise,Rupture","Gloom,Gluttony,Envy","000"
-"LCB Sinner Rodion","Bleed","Gluttony,Pride,Wrath","0"
 "LCCB Assistant Manager Rodion","","Pride,Gluttony,Envy","00"
 "N Corp. Mittelhammer Rodion","Bleed","Pride,Lust,Wrath","00"
 "Zwei Association South Section 5 Rodion","Aggro,Poise","Wrath,Sloth,Gloom","00"
@@ -108,7 +99,6 @@ const idCsvData = `Name,Keywords,SinAffinities,Rarity
 "The Princess of La Manchaland Rodion","Bleed,Rupture","Pride,Envy,Lust","000"
 "Heishou Pack - Si Branch Rodion","Poise,Rupture","Envy,Gluttony,Gloom","000"
 "Lobotomy E.G.O::The Sword Sharpened with Tears Rodion","Sinking","Gloom,Envy,Pride","000"
-"LCB Sinner Sinclair","Rupture","Pride,Wrath,Envy","0"
 "Zwei Association South Section 6 Sinclair","Aggro,Tremor","Gloom,Wrath,Sloth","00"
 "Los Mariachis Jefe Sinclair","Poise,Sinking","Sloth,Envy,Gloom","00"
 "Lobotomy E.G.O::Red Sheet Sinclair","Rupture","Gluttony,Pride,Lust","00"
@@ -121,7 +111,6 @@ const idCsvData = `Name,Keywords,SinAffinities,Rarity
 "Devyat' Association North Section 3 Sinclair","Rupture","Lust,Gluttony,Wrath","000"
 "The Middle Little Brother Sinclair","Aggro,Bleed","Lust,Gluttony,Wrath","000"
 "The Thumb East Soldato II Sinclair","Ammo,Burn,Tremor","Lust,Sloth,Wrath","000"
-"LCB Sinner Outis","Rupture","Sloth,Pride,Gloom","0"
 "Blade Lineage Salsu Outis","Poise","Wrath,Lust,Pride","00"
 "G Corp. Head Manager Outis","Sinking","Sloth,Gluttony,Gloom","00"
 "Cinq Association South Section 4 Outis","Aggro,Poise","Pride,Gloom,Lust","00"
@@ -133,7 +122,6 @@ const idCsvData = `Name,Keywords,SinAffinities,Rarity
 "W Corp. L3 Cleanup Captain Outis","Charge,Rupture","Pride,Envy,Gloom","000"
 "The Barber of La Manchaland Outis","Bleed","Gluttony,Lust,Wrath","000"
 "Heishou Pack - Mao Branch Outis","Rupture","Sloth,Gluttony,Gloom","000"
-"LCB Sinner Gregor","Rupture","Gloom,Gluttony,Sloth","0"
 "Liu Association South Section 6 Gregor","Burn","Wrath,Lust,Sloth","00"
 "R.B. Sous-chef Gregor","Bleed","Lust,Gluttony,Envy","00"
 "Rosespanner Workshop Fixer Gregor","Rupture,Tremor","Gluttony,Envy,Gloom","00"
@@ -220,7 +208,7 @@ Hex Nail Rodion - HE - Envy - Purple
 Sanguine Desire Rodion - HE - Lust - Orange
 Indicant's Trial Rodion - WAW - Wrath - Red
 Branch of Knowledge Sinclair - ZAYIN - Gluttony - Green
-Cavernous Wailing Sinclair - HE - Gloom - Blue
+Cavernous Wailing Sinclair - ZAYIN - Gloom - Blue
 Impending Day Sinclair - TETH - Wrath - Red
 Lifetime Stew Sinclair - TETH - Lust - Orange
 Hex Nail Sinclair - TETH - Envy - Purple
@@ -242,4 +230,5 @@ Bygone Days Gregor - TETH - Gloom - Blue
 AEDD Gregor - HE - Gloom - Blue
 Solemn Lament Gregor - HE - Gloom - Blue
 Christmas Nightmare Gregor - HE - Sloth - Yellow
-Garden of Thorns Gregor - WAW - Lust - Orange`;
+Garden of Thorns Gregor - WAW - Lust - Orange
+`;
