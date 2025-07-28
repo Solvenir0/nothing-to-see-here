@@ -438,27 +438,34 @@ function renderGroupedView(container, idObjectList, options = {}) {
     container.appendChild(fragment);
 }
 
+/**
+ * [FIXED] This function now correctly manages the 'hidden' class on the main view elements.
+ * This is necessary because the style.css file uses 'display: none !important', which
+ * cannot be overridden by setting the element's style.display property directly.
+ * The new logic adds the 'hidden' class to all views, then removes it from the one
+ * that should be visible.
+ */
 function switchView(view) {
     console.log('Switching to view:', view);
     state.currentView = view;
+    // Hide all main page views by adding the 'hidden' class
     ['mainPage', 'lobbyView', 'completedView', 'rosterBuilderPage'].forEach(page => {
         if (elements[page]) {
-            elements[page].style.display = 'none';
+            elements[page].classList.add('hidden');
         } else {
-            console.warn('Element not found:', page);
+            console.warn('Element not found for hiding:', page);
         }
     });
-    if(elements[view]) {
-        elements[view].style.display = 'block';
+
+    // Show the target view by removing the 'hidden' class
+    if (elements[view]) {
+        elements[view].classList.remove('hidden');
         console.log('Successfully switched to:', view);
-        // Additional debug info
-        const rect = elements[view].getBoundingClientRect();
-        console.log('Element dimensions:', rect.width, 'x', rect.height);
-        console.log('Element visible:', elements[view].offsetParent !== null);
     } else {
-        console.error('Target view element not found:', view);
+        console.error('Target view element not found for showing:', view);
     }
 }
+
 
 function updateAllUIsFromState() {
     const { draft } = state;
