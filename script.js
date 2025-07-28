@@ -10,7 +10,14 @@
 const ROSTER_SIZE = 42;
 const EGO_BAN_COUNT = 5;
 const SINNER_ORDER = ["Yi Sang", "Faust", "Don Quixote", "Ryōshū", "Meursault", "Hong Lu", "Heathcliff", "Ishmael", "Rodion", "Sinclair", "Outis", "Gregor"];
-
+const zayinBanExceptions = [
+    "Bygone Days Yi Sang",
+    "Soda Ryōshū",
+    "Holiday Heathcliff",
+    "Hundred-Footed Death Maggot [蝍蛆殺] Ishmael",
+    "Cavernous Wailing Sinclair",
+    "Legerdemain Gregor"
+];
 // ======================
 // APPLICATION STATE
 // ======================
@@ -551,9 +558,7 @@ function renderEgoBanPhase() {
     const clickHandler = (state.userRole === currentPlayer || state.userRole === 'ref') ? hoverEgoToBan : null;
     
     const searchTerm = state.egoSearch.toLowerCase();
-    const filteredEgos = state.masterEGOList.filter(ego => 
-        ego.rarity !== 'ZAYIN' && (!searchTerm || ego.name.toLowerCase().includes(searchTerm))
-    );
+    const availableEg
 
     const container = elements.egoBanContainer;
     const scrollTop = container.scrollTop;
