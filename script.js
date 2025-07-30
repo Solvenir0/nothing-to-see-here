@@ -1,8 +1,10 @@
 // =================================================================================
 // FILE: script.js
-// DESCRIPTION: This version moves the timer to the floating status panel, adds a
-// visibility toggle for the lobby code, and corrects the logic for which
-// pool is displayed during ban phases to avoid confusion.
+// DESCRIPTION: This version includes two key fixes:
+// 1. [FIX] Corrects the logic for the mid-draft ban phase to ensure the
+//    current player is always shown the OPPONENT's roster to ban from.
+// 2. [FIX] Updates the "Draft Complete" screen to show picked and banned IDs
+//    in chronological order (pick/ban order) instead of sorting them.
 // =================================================================================
 // ======================
 // CONSTANTS & CONFIG
@@ -766,9 +768,15 @@ function updateDraftInstructions() {
 
     if (['ban', 'pick', 'midBan', 'pick2', 'pick_s2'].includes(phase)) {
         const opponent = currentPlayer === 'p1' ? 'p2' : 'p1';
-        const isBanAction = phase.includes('ban');
+        
+        // =======================================================================
+        // [FIX 1/2] Corrected ban phase logic.
+        // This explicitly checks if the phase is 'ban' or 'midBan' to determine
+        // if it's a banning action. This is more robust than `phase.includes('ban')`
+        // and ensures the correct (opponent's) roster is always shown for banning.
+        // =======================================================================
+        const isBanAction = (phase === 'ban' || phase === 'midBan');
 
-        // REVISED LOGIC FOR CLARITY
         // For a BAN, the player must choose from the OPPONENT's available pool.
         // For a PICK, the player chooses from their OWN available pool.
         const poolSourcePlayer = isBanAction ? opponent : currentPlayer;
@@ -793,9 +801,6 @@ function updateDraftInstructions() {
         // This correctly identifies IDs present in BOTH original rosters.
         const sharedIds = state.roster.p1.filter(id => state.roster.p2.includes(id));
 
-        // RENDER LOGIC
-        // Removed the confusing 'notInRosterSet' property.
-        // 'sharedIdSet' is sufficient to show overlaps.
         renderGroupedView(poolEl, availableObjects, { 
             clickHandler, 
             hoverId: hovered[currentPlayer],
@@ -839,10 +844,17 @@ function handleCoinFlipUI() {
 }
 
 function renderCompletedView() {
+    // =======================================================================
+    // [FIX 2/2] Corrected final screen sorting.
+    // The nested function `renderCompactIdList` is modified to render IDs in
+    // the order they are received, which is chronological pick/ban order.
+    // The call to `sortIdsByMasterList` has been removed.
+    // =======================================================================
     const renderCompactIdList = (container, idList) => {
         container.innerHTML = '';
-        const sortedIdList = sortIdsByMasterList(idList);
-        const idObjects = sortedIdList.map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
+        // The original `idList` is already in chronological order from the server.
+        // We map it directly to get the full ID objects without re-sorting.
+        const idObjects = idList.map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
         const fragment = document.createDocumentFragment();
         idObjects.forEach(idData => {
             const element = createIdElement(idData, {});
