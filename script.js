@@ -681,6 +681,10 @@ function renderBannedEgosDisplay() {
 }
 
 function updateDraftUI() {
+    // [UI FIX] Update the draft column names every time the draft UI is rendered.
+    elements.p1DraftName.textContent = state.participants.p1.name;
+    elements.p2DraftName.textContent = state.participants.p2.name;
+
     const renderCompactIdListChronological = (container, idList) => {
         const scrollTop = container.scrollTop;
         const idObjects = idList.map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
@@ -1644,4 +1648,3 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Even fallback failed:', fallbackError);
         }
     }
-});
