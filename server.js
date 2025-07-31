@@ -1,9 +1,8 @@
 // =================================================================================
 // FILE: server.js
-// DESCRIPTION: This version implements the user's suggested fix. If P2 chooses
-// to go first, all P1 and P2 data is swapped on the backend. This makes the
-// draft flow static and resolves the persistent mid-ban turn order issue.
-// The snake draft logic has also been corrected.
+// DESCRIPTION: This version implements dynamic roster sizes (42 or 52) as a lobby
+// setting. It also introduces an alternate draft flow for the "All Sections"
+// match type, featuring more bans and picks as requested.
 // =================================================================================
 const express = require('express');
 const http = require('http');
@@ -23,7 +22,6 @@ app.get('/_ah/health', (req, res) => res.status(200).send('OK'));
 
 const wss = new WebSocket.Server({ server });
 
-const ROSTER_SIZE = 42;
 const EGO_BAN_COUNT = 5;
 const TIMERS = {
     roster: 90,
@@ -40,12 +38,34 @@ const DRAFT_LOGIC = {
         pick2: [{ p: 'p2', c: 1 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 1 }],
         pick_s2: [{ p: 'p1', c: 1 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 1 }]
     },
+    '1-2-2-extended': { // For "All Sections" matches
+        ban1Steps: 8,
+        pick1: [{ p: 'p1', c: 1 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 1 }],
+        midBanSteps: 8, // Increased to 8
+        pick2: [ // Increased to 12 picks per player
+            { p: 'p2', c: 1 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 },
+            { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 },
+            { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 },
+            { p: 'p2', c: 1 }
+        ],
+    },
     '2-3-2': {
         ban1Steps: 8,
         pick1: [{ p: 'p1', c: 2 }, { p: 'p2', c: 3 }, { p: 'p1', c: 2 }, { p: 'p2', c: 3 }, { p: 'p1', c: 2 }],
         midBanSteps: 6,
         pick2: [{ p: 'p2', c: 2 }, { p: 'p1', c: 3 }, { p: 'p2', c: 2 }, { p: 'p1', c: 3 }, { p: 'p2', c: 2 }],
         pick_s2: [{ p: 'p1', c: 1 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 1 }]
+    },
+    '2-3-2-extended': { // For "All Sections" matches
+        ban1Steps: 8,
+        pick1: [{ p: 'p1', c: 2 }, { p: 'p2', c: 3 }, { p: 'p1', c: 2 }, { p: 'p2', c: 3 }, { p: 'p1', c: 2 }],
+        midBanSteps: 8, // Increased to 8
+        pick2: [ // Increased to 12 picks per player
+            { p: 'p2', c: 1 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 },
+            { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 },
+            { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 },
+            { p: 'p2', c: 1 }
+        ],
     }
 };
 
@@ -235,7 +255,7 @@ function generateUniqueLobbyCode() {
 }
 
 function createNewLobbyState(options = {}) {
-    const { draftLogic = '1-2-2', timerEnabled = false, isPublic = false, name = 'Referee', matchType = 'section1' } = options;
+    const { draftLogic = '1-2-2', timerEnabled = false, isPublic = false, name = 'Referee', matchType = 'section1', rosterSize = 42 } = options;
     return {
         hostName: name,
         createdAt: new Date().toISOString(),
@@ -256,10 +276,11 @@ function createNewLobbyState(options = {}) {
             idBans: { p1: [], p2: [] },
             egoBans: { p1: [], p2: [] },
             picks: { p1: [], p2: [] },
-            picks_s2: { p1: [], p2: [] },
+            picks_s2: { p1: [], p2: [] }, // Note: This is now unused for extended logic but kept for compatibility
             hovered: { p1: null, p2: null },
             draftLogic,
             matchType,
+            rosterSize: parseInt(rosterSize, 10),
             isPublic,
             coinFlipWinner: null,
             timer: {
@@ -371,7 +392,7 @@ function setTimerForLobby(lobbyCode, lobbyData) {
         duration = TIMERS.roster;
     } else if (draft.phase === 'egoBan') {
         duration = TIMERS.egoBan;
-    } else if (['pick', 'ban', 'midBan', 'pick2', 'pick_s2'].includes(draft.phase)) {
+    } else if (['pick', 'ban', 'midBan', 'pick2'].includes(draft.phase)) {
         duration = TIMERS.pick * draft.actionCount;
     }
 
@@ -389,7 +410,10 @@ function setTimerForLobby(lobbyCode, lobbyData) {
 function advancePhase(lobbyData) {
     const { draft } = lobbyData;
     draft.timer.isReserve = false;
-    const logic = DRAFT_LOGIC[draft.draftLogic];
+    
+    const logicKey = draft.matchType === 'allSections' ? `${draft.draftLogic}-extended` : draft.draftLogic;
+    const logic = DRAFT_LOGIC[logicKey] || DRAFT_LOGIC[draft.draftLogic];
+
 
     switch (draft.phase) {
         case "egoBan":
@@ -429,7 +453,6 @@ function advancePhase(lobbyData) {
                 draft.phase = "midBan";
                 draft.action = "midBan";
                 draft.step = 0;
-                // [SNAKE DRAFT FIX] The player who goes second (p2) starts the mid-ban phase.
                 draft.currentPlayer = 'p2';
                 draft.actionCount = 1;
             }
@@ -444,7 +467,7 @@ function advancePhase(lobbyData) {
                 draft.action = "pick2";
                 draft.step = 0;
                 const next = logic.pick2[0];
-                draft.currentPlayer = next.p; // This sequence correctly starts with p2
+                draft.currentPlayer = next.p;
                 draft.actionCount = next.c;
             }
             break;
@@ -455,7 +478,7 @@ function advancePhase(lobbyData) {
                 draft.currentPlayer = next.p;
                 draft.actionCount = next.c;
             } else {
-                 if (draft.matchType === 'allSections') {
+                 if (draft.matchType !== 'allSections' && logic.pick_s2) {
                     draft.phase = "pick_s2";
                     draft.action = "pick_s2";
                     draft.step = 0;
@@ -469,7 +492,7 @@ function advancePhase(lobbyData) {
                 }
             }
             break;
-        case "pick_s2":
+        case "pick_s2": // This is now only for non-extended logic
             if (draft.step < logic.pick_s2.length - 1) {
                 draft.step++;
                 const next = logic.pick_s2[draft.step];
@@ -674,7 +697,7 @@ wss.on('connection', (ws) => {
                 if (!lobbyData || lobbyData.participants[player].ready) return;
                 const currentRoster = lobbyData.roster[player];
                 const index = currentRoster.indexOf(id);
-                if (index === -1) { if (currentRoster.length < ROSTER_SIZE) currentRoster.push(id); } 
+                if (index === -1) { if (currentRoster.length < lobbyData.draft.rosterSize) currentRoster.push(id); } 
                 else { currentRoster.splice(index, 1); }
                 updateLobbyActivity(lobbyCode);
                 broadcastState(lobbyCode);
@@ -683,7 +706,7 @@ wss.on('connection', (ws) => {
             
             case 'rosterSet': {
                 if (!lobbyData || lobbyData.participants[player].ready) return;
-                if (Array.isArray(roster) && roster.length === ROSTER_SIZE) {
+                if (Array.isArray(roster) && roster.length === lobbyData.draft.rosterSize) {
                     lobbyData.roster[player] = roster;
                     updateLobbyActivity(lobbyCode);
                     broadcastState(lobbyCode);
@@ -694,7 +717,7 @@ wss.on('connection', (ws) => {
             case 'rosterRandomize': {
                 if (!lobbyData || lobbyData.participants[player].ready) return;
                 const shuffled = [...allIds].sort(() => 0.5 - Math.random());
-                lobbyData.roster[player] = shuffled.slice(0, ROSTER_SIZE);
+                lobbyData.roster[player] = shuffled.slice(0, lobbyData.draft.rosterSize);
                 updateLobbyActivity(lobbyCode);
                 broadcastState(lobbyCode);
                 break;
@@ -703,7 +726,7 @@ wss.on('connection', (ws) => {
             case 'updateReady': {
                 if (!lobbyData) return;
                 const currentReadyState = lobbyData.participants[player].ready;
-                if (!currentReadyState && lobbyData.roster[player].length !== ROSTER_SIZE) return;
+                if (!currentReadyState && lobbyData.roster[player].length !== lobbyData.draft.rosterSize) return;
                 lobbyData.participants[player].ready = !currentReadyState;
                 updateLobbyActivity(lobbyCode);
                 broadcastState(lobbyCode);
