@@ -1,7 +1,8 @@
 // =================================================================================
 // FILE: script.js
-// DESCRIPTION: This version updates the "Draft Complete" view to show picked and
-// banned IDs in chronological (pick/ban) order instead of a default sort.
+// DESCRIPTION: This version is updated to handle the role-swapping logic from
+// the server. It listens for a 'newRole' property in state updates and adjusts
+// the client's identity and localStorage accordingly.
 // =================================================================================
 // ======================
 // CONSTANTS & CONFIG
@@ -274,7 +275,22 @@ function handleServerMessage(message) {
     switch (message.type) {
         case 'lobbyCreated': handleLobbyCreated(message); break;
         case 'lobbyJoined': handleLobbyJoined(message); break;
-        case 'stateUpdate': handleStateUpdate(message); break;
+        case 'stateUpdate':
+            // [ROLE SWAP FIX] Check if the server has assigned a new role
+            if (message.newRole && message.newRole !== state.userRole) {
+                console.log(`Role updated by server from ${state.userRole} to ${message.newRole}`);
+                state.userRole = message.newRole;
+                
+                // Update the session storage so rejoining works correctly
+                const session = JSON.parse(localStorage.getItem('limbusDraftSession'));
+                if (session) {
+                    session.userRole = message.newRole;
+                    localStorage.setItem('limbusDraftSession', JSON.stringify(session));
+                    console.log('Updated session storage with new role.');
+                }
+            }
+            handleStateUpdate(message);
+            break;
         case 'publicLobbiesList': renderPublicLobbies(message.lobbies); break;
         case 'lobbyInfo': showRoleSelectionModal(message.lobby); break;
         case 'notification': showNotification(message.text); break;
@@ -437,34 +453,23 @@ function renderGroupedView(container, idObjectList, options = {}) {
     container.appendChild(fragment);
 }
 
-/**
- * [FIXED] This function robustly handles view switching by both removing the '.hidden' class
- * (which has an !important rule) and setting an inline `display: block` style to override
- * any ID-based `display: none` rules from the stylesheet.
- */
 function switchView(view) {
     console.log('Switching to view:', view);
     state.currentView = view;
     
-    // Hide all main page views
     ['mainPage', 'lobbyView', 'completedView', 'rosterBuilderPage'].forEach(pageId => {
         const el = elements[pageId];
         if (el) {
-            // Add the hidden class back to ensure it's hidden by the !important rule
             el.classList.add('hidden');
-            // Clear any inline style that might have been set to show it
             el.style.display = '';
         } else {
             console.warn('Element not found for hiding:', pageId);
         }
     });
 
-    // Show the target view
     const targetEl = elements[view];
     if (targetEl) {
-        // First, remove the class with the `!important` rule
         targetEl.classList.remove('hidden');
-        // Then, set an inline style to override any ID-based rules in the stylesheet
         targetEl.style.display = 'block';
         console.log('Successfully switched to:', view);
     } else {
@@ -477,7 +482,6 @@ function updateAllUIsFromState() {
     const { draft } = state;
     const { phase } = draft;
 
-    // Determine the correct primary view
     if (phase === 'complete') {
         switchView('completedView');
         renderCompletedView();
@@ -488,7 +492,6 @@ function updateAllUIsFromState() {
         switchView('mainPage');
     }
 
-    // Toggle visibility of phase-specific sections within the lobby view
     elements.rosterPhase.classList.toggle('hidden', phase !== 'roster');
     elements.egoBanPhase.classList.toggle('hidden', phase !== 'egoBan');
     elements.idDraftPhase.classList.toggle('hidden', !['ban', 'pick', 'midBan', 'pick2', 'pick_s2'].includes(phase));
@@ -500,7 +503,6 @@ function updateAllUIsFromState() {
         handleCoinFlipUI();
     }
 
-    // Update participant list and statuses
     elements.participantsList.innerHTML = '';
     ['p1', 'p2', 'ref'].forEach(role => {
         const p = state.participants[role];
@@ -525,7 +527,6 @@ function updateAllUIsFromState() {
         }
     });
 
-    // Update player panels in roster phase
     ['p1', 'p2'].forEach(player => {
         elements[`${player}NameDisplay`].textContent = state.participants[player].name;
         elements[`${player}Counter`].textContent = state.roster[player].length;
@@ -537,7 +538,6 @@ function updateAllUIsFromState() {
         elements[`${player}Panel`].classList.toggle('locked', isReady);
     });
     
-    // Render content for the current phase
     if (phase === 'roster') {
         filterAndRenderRosterSelection();
     } else if (phase === 'egoBan') {
@@ -767,9 +767,6 @@ function updateDraftInstructions() {
         const opponent = currentPlayer === 'p1' ? 'p2' : 'p1';
         const isBanAction = phase.includes('ban');
 
-        // REVISED LOGIC FOR CLARITY
-        // For a BAN, the player must choose from the OPPONENT's available pool.
-        // For a PICK, the player chooses from their OWN available pool.
         const poolSourcePlayer = isBanAction ? opponent : currentPlayer;
         const availableIdList = state.draft.available[poolSourcePlayer];
 
@@ -789,12 +786,8 @@ function updateDraftInstructions() {
         poolEl.style.maxHeight = '60vh';
         elements.draftPoolContainer.appendChild(poolEl);
 
-        // This correctly identifies IDs present in BOTH original rosters.
         const sharedIds = state.roster.p1.filter(id => state.roster.p2.includes(id));
 
-        // RENDER LOGIC
-        // Removed the confusing 'notInRosterSet' property.
-        // 'sharedIdSet' is sufficient to show overlaps.
         renderGroupedView(poolEl, availableObjects, { 
             clickHandler, 
             hoverId: hovered[currentPlayer],
@@ -837,12 +830,9 @@ function handleCoinFlipUI() {
     }
 }
 
-// [FIXED] This function now renders picked and banned IDs in chronological order.
 function renderCompletedView() {
-    // Helper function to render lists chronologically without sorting
     const renderChronologicalIdList = (container, idList) => {
         container.innerHTML = '';
-        // Directly map the provided list, which is already in chronological order from the server
         const idObjects = idList.map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
         const fragment = document.createDocumentFragment();
         idObjects.forEach(idData => {
@@ -855,7 +845,6 @@ function renderCompletedView() {
     elements.finalP1Name.textContent = `${state.participants.p1.name}'s Roster`;
     elements.finalP2Name.textContent = `${state.participants.p2.name}'s Roster`;
 
-    // Render picks and bans using the chronological helper
     renderChronologicalIdList(elements.finalP1Picks, state.draft.picks.p1);
     renderChronologicalIdList(elements.finalP2Picks, state.draft.picks.p2);
 
@@ -938,7 +927,6 @@ function updateTimerUI() {
     elements.refTimerControl.classList.toggle('hidden', !timer.enabled || state.userRole !== 'ref');
     elements.phaseTimer.classList.toggle('hidden', !timer.enabled);
 
-    // Style the timer differently if the reserve timer is active
     elements.phaseTimer.classList.toggle('reserve-active', timer.isReserve);
 
     if (!timer.enabled || !timer.running) {
@@ -1615,12 +1603,10 @@ function cacheDOMElements() {
         goSecondBtn: document.getElementById('go-second-btn'),
     };
     
-    // Debug: Check for missing elements
     const missingElements = Object.keys(elements).filter(key => !elements[key]);
     if (missingElements.length > 0) {
         console.warn('Missing DOM elements:', missingElements);
     }
-    console.log('DOM elements cached successfully. Missing count:', missingElements.length);
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -1648,12 +1634,10 @@ document.addEventListener('DOMContentLoaded', () => {
         setupAdvancedRandomUI();
         setupEventListeners();
         connectWebSocket();
-        console.log('About to switch to mainPage view');
         switchView('mainPage');
         console.log('Initialization complete');
     } catch (error) {
         console.error('Error during initialization:', error);
-        // Fallback: try to at least show the main page
         try {
             switchView('mainPage');
         } catch (fallbackError) {
