@@ -1,8 +1,8 @@
 // =================================================================================
 // FILE: script.js
-// DESCRIPTION: This version is updated to handle the role-swapping logic from
-// the server. It listens for a 'newRole' property in state updates and adjusts
-// the client's identity and localStorage accordingly.
+// DESCRIPTION: This version fixes a syntax error caused by a missing closing
+// brace in the cacheDOMElements function. It also ensures the player names in
+// the draft view are correctly updated after a potential role swap.
 // =================================================================================
 // ======================
 // CONSTANTS & CONFIG
@@ -1607,10 +1607,12 @@ function cacheDOMElements() {
         goSecondBtn: document.getElementById('go-second-btn'),
     };
     
+    // Debug: Check for missing elements
     const missingElements = Object.keys(elements).filter(key => !elements[key]);
     if (missingElements.length > 0) {
         console.warn('Missing DOM elements:', missingElements);
     }
+    console.log('DOM elements cached successfully. Missing count:', missingElements.length);
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -1648,3 +1650,4 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Even fallback failed:', fallbackError);
         }
     }
+});
