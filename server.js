@@ -1,8 +1,8 @@
 // =================================================================================
 // FILE: server.js
-// DESCRIPTION: This version corrects the draft flow according to standard snake
-// draft rules. The second player (P2) now correctly initiates the
-// mid-ban phase and the second pick phase.
+// DESCRIPTION: This version implements the definitive fix for the mid-ban phase
+// turn order. The player who picks last in the first pick phase will now
+// correctly start the mid-ban phase, adhering to standard snake draft rules.
 // =================================================================================
 const express = require('express');
 const http = require('http');
@@ -31,7 +31,6 @@ const TIMERS = {
 };
 
 // --- DRAFT LOGIC SEQUENCES ---
-// [FIXED] The pick2 sequences have been corrected to start with P2 for a proper snake draft.
 const DRAFT_LOGIC = {
     '1-2-2': {
         ban1Steps: 8,
@@ -429,14 +428,17 @@ function advancePhase(lobbyData) {
                 draft.phase = "midBan";
                 draft.action = "midBan";
                 draft.step = 0;
-                // [FIXED] The second player (P2) now correctly starts the mid-ban phase for a snake draft.
-                draft.currentPlayer = secondPlayer;
+                // [CRITICAL FIX] In a snake draft, the player who picked last in the previous
+                // round starts the next round. The last pick in 'pick1' is always the
+                // first player in the turn order.
+                draft.currentPlayer = firstPlayer;
                 draft.actionCount = 1;
             }
             break;
         case "midBan":
              if (draft.step < logic.midBanSteps - 1) {
                 draft.step++;
+                // The ban phase alternates between the two players.
                 draft.currentPlayer = draft.currentPlayer === firstPlayer ? secondPlayer : firstPlayer;
                 draft.actionCount = 1;
             } else {
@@ -444,6 +446,8 @@ function advancePhase(lobbyData) {
                 draft.action = "pick2";
                 draft.step = 0;
                 const next = logic.pick2[0];
+                // The second pick phase is also a snake, so it starts with the player
+                // who did NOT start the first pick phase.
                 draft.currentPlayer = getPlayer(next.p);
                 draft.actionCount = next.c;
             }
