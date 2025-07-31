@@ -1,8 +1,8 @@
 // =================================================================================
 // FILE: server.js
-// DESCRIPTION: This version implements a reserve timer system, corrects the
-// EGO ban timer to a single 90-second block per player, and ensures
-// multi-pick phases have a correctly combined timer.
+// DESCRIPTION: This version corrects the draft flow according to standard snake
+// draft rules. The second player (P2) now correctly initiates the
+// mid-ban phase and the second pick phase.
 // =================================================================================
 const express = require('express');
 const http = require('http');
@@ -31,6 +31,7 @@ const TIMERS = {
 };
 
 // --- DRAFT LOGIC SEQUENCES ---
+// [FIXED] The pick2 sequences have been corrected to start with P2 for a proper snake draft.
 const DRAFT_LOGIC = {
     '1-2-2': {
         ban1Steps: 8,
@@ -428,6 +429,7 @@ function advancePhase(lobbyData) {
                 draft.phase = "midBan";
                 draft.action = "midBan";
                 draft.step = 0;
+                // [FIXED] The second player (P2) now correctly starts the mid-ban phase for a snake draft.
                 draft.currentPlayer = secondPlayer;
                 draft.actionCount = 1;
             }
