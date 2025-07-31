@@ -1,8 +1,9 @@
 // =================================================================================
 // FILE: server.js
-// DESCRIPTION: This version implements the definitive fix for the mid-ban phase
-// turn order. The player who picks last in the first pick phase will now
-// correctly start the mid-ban phase, adhering to standard snake draft rules.
+// DESCRIPTION: This version implements the user's suggested fix. If P2 chooses
+// to go first, all P1 and P2 data is swapped on the backend. This makes the
+// draft flow static and resolves the persistent mid-ban turn order issue.
+// The snake draft logic has also been corrected.
 // =================================================================================
 const express = require('express');
 const http = require('http');
@@ -26,7 +27,7 @@ const ROSTER_SIZE = 42;
 const EGO_BAN_COUNT = 5;
 const TIMERS = {
     roster: 90,
-    egoBan: 90, // Corrected to 90 seconds per user request
+    egoBan: 90,
     pick: 15,
 };
 
@@ -261,7 +262,6 @@ function createNewLobbyState(options = {}) {
             matchType,
             isPublic,
             coinFlipWinner: null,
-            playerOrder: ['p1', 'p2'],
             timer: {
                 enabled: timerEnabled,
                 running: false,
@@ -275,15 +275,26 @@ function createNewLobbyState(options = {}) {
     };
 }
 
-function broadcastState(lobbyCode) {
+function broadcastState(lobbyCode, rolesSwapped = false) {
     const lobbyData = lobbies[lobbyCode];
     if (!lobbyData) return;
 
-    const message = JSON.stringify({ type: 'stateUpdate', state: lobbyData });
-
     wss.clients.forEach(client => {
         if (client.lobbyCode === lobbyCode && client.readyState === WebSocket.OPEN) {
-            client.send(message);
+            const message = {
+                type: 'stateUpdate',
+                state: lobbyData
+            };
+
+            // If roles were swapped, we need to tell the clients their new roles
+            if (rolesSwapped) {
+                if (client.initialUserRole === 'p1') {
+                    message.newRole = 'p2';
+                } else if (client.initialUserRole === 'p2') {
+                    message.newRole = 'p1';
+                }
+            }
+            client.send(JSON.stringify(message));
         }
     });
 }
@@ -303,7 +314,6 @@ function handleTimer(lobbyCode) {
     const participant = lobbyData.participants[currentPlayer];
 
     // --- Reserve Time Logic ---
-    // If the main timer expires, check for reserve time, but only if not already in reserve mode.
     if (participant && participant.reserveTime > 0 && !draft.timer.isReserve) {
         console.log(`Main timer expired for ${currentPlayer}. Activating reserve time.`);
         draft.timer.isReserve = true;
@@ -313,20 +323,17 @@ function handleTimer(lobbyCode) {
         draft.timer.running = true;
         draft.timer.endTime = Date.now() + reserveDuration * 1000;
 
-        // Set a new timeout for the entire duration of the player's remaining reserve time.
         const timeoutId = setTimeout(() => handleTimer(lobbyCode), reserveDuration * 1000);
         lobbyTimers[lobbyCode] = { timeoutId };
         
-        broadcastState(lobbyCode); // Update clients to show reserve timer is active
-        return; // Exit, giving the player their reserve time to act.
+        broadcastState(lobbyCode);
+        return;
     }
     
-    // If we reach here, it means either the player had no reserve time, or their reserve time has also expired.
-    // The turn is now truly over.
     draft.timer.isReserve = false;
-    draft.timer.running = false; // Stop the timer display on clients
+    draft.timer.running = false;
     if (participant) {
-        participant.reserveTime = 0; // Mark their reserve as exhausted
+        participant.reserveTime = 0;
     }
 
     const { hovered, phase } = draft;
@@ -334,16 +341,14 @@ function handleTimer(lobbyCode) {
 
     console.log(`Timer fully expired for ${lobbyCode}. Player: ${currentPlayer}, Phase: ${phase}, Hovered: ${hoveredId}`);
     
-    // Auto-confirm if something is hovered as a last resort
     if (hoveredId) {
-        handleDraftConfirm(lobbyCode, lobbyData, null); // Pass null for ws to bypass role check
+        handleDraftConfirm(lobbyCode, lobbyData, null);
         return;
     }
 
-    // If nothing is hovered, skip the turn by advancing the phase
     console.log("Timer expired with no hover. Skipping turn by advancing phase.");
     lobbyData = advancePhase(lobbyData);
-    setTimerForLobby(lobbyCode, lobbyData); // Set timer for the *next* phase/player
+    setTimerForLobby(lobbyCode, lobbyData);
     broadcastState(lobbyCode);
 }
 
@@ -354,7 +359,7 @@ function setTimerForLobby(lobbyCode, lobbyData) {
     }
     
     const { draft } = lobbyData;
-    draft.timer.isReserve = false; // Always reset reserve flag when setting a new normal timer
+    draft.timer.isReserve = false;
 
     if (!draft.timer.enabled || draft.phase === 'complete' || draft.timer.paused) {
         draft.timer.running = false;
@@ -365,10 +370,8 @@ function setTimerForLobby(lobbyCode, lobbyData) {
     if (draft.phase === 'roster') {
         duration = TIMERS.roster;
     } else if (draft.phase === 'egoBan') {
-        // Corrected logic: a flat 90 seconds for the entire EGO ban phase for the current player.
         duration = TIMERS.egoBan;
     } else if (['pick', 'ban', 'midBan', 'pick2', 'pick_s2'].includes(draft.phase)) {
-        // Correct logic for multi-picks: 15 seconds per action.
         duration = TIMERS.pick * draft.actionCount;
     }
 
@@ -385,20 +388,18 @@ function setTimerForLobby(lobbyCode, lobbyData) {
 
 function advancePhase(lobbyData) {
     const { draft } = lobbyData;
-    draft.timer.isReserve = false; // Ensure reserve mode is off when phase advances
+    draft.timer.isReserve = false;
     const logic = DRAFT_LOGIC[draft.draftLogic];
-    const [firstPlayer, secondPlayer] = draft.playerOrder;
-    const getPlayer = (p) => (p === 'p1' ? firstPlayer : secondPlayer);
 
     switch (draft.phase) {
         case "egoBan":
-            if (draft.currentPlayer === firstPlayer) {
-                draft.currentPlayer = secondPlayer;
-            } else { // Current player is the second player
+            if (draft.currentPlayer === 'p1') {
+                draft.currentPlayer = 'p2';
+            } else {
                 draft.phase = "ban";
                 draft.action = "ban";
                 draft.step = 0;
-                draft.currentPlayer = firstPlayer;
+                draft.currentPlayer = 'p1';
                 draft.actionCount = 1;
                 draft.available.p1 = [...lobbyData.roster.p1];
                 draft.available.p2 = [...lobbyData.roster.p2];
@@ -407,14 +408,14 @@ function advancePhase(lobbyData) {
         case "ban":
             if (draft.step < logic.ban1Steps - 1) {
                 draft.step++;
-                draft.currentPlayer = draft.currentPlayer === firstPlayer ? secondPlayer : firstPlayer;
+                draft.currentPlayer = draft.currentPlayer === 'p1' ? 'p2' : 'p1';
                 draft.actionCount = 1;
             } else {
                 draft.phase = "pick";
                 draft.action = "pick";
                 draft.step = 0;
                 const next = logic.pick1[0];
-                draft.currentPlayer = getPlayer(next.p);
+                draft.currentPlayer = next.p;
                 draft.actionCount = next.c;
             }
             break;
@@ -422,33 +423,28 @@ function advancePhase(lobbyData) {
             if (draft.step < logic.pick1.length - 1) {
                 draft.step++;
                 const next = logic.pick1[draft.step];
-                draft.currentPlayer = getPlayer(next.p);
+                draft.currentPlayer = next.p;
                 draft.actionCount = next.c;
             } else {
                 draft.phase = "midBan";
                 draft.action = "midBan";
                 draft.step = 0;
-                // [CRITICAL FIX] In a snake draft, the player who picked last in the previous
-                // round starts the next round. The last pick in 'pick1' is always the
-                // first player in the turn order.
-                draft.currentPlayer = firstPlayer;
+                // [SNAKE DRAFT FIX] The player who goes second (p2) starts the mid-ban phase.
+                draft.currentPlayer = 'p2';
                 draft.actionCount = 1;
             }
             break;
         case "midBan":
              if (draft.step < logic.midBanSteps - 1) {
                 draft.step++;
-                // The ban phase alternates between the two players.
-                draft.currentPlayer = draft.currentPlayer === firstPlayer ? secondPlayer : firstPlayer;
+                draft.currentPlayer = draft.currentPlayer === 'p1' ? 'p2' : 'p1';
                 draft.actionCount = 1;
             } else {
                 draft.phase = "pick2";
                 draft.action = "pick2";
                 draft.step = 0;
                 const next = logic.pick2[0];
-                // The second pick phase is also a snake, so it starts with the player
-                // who did NOT start the first pick phase.
-                draft.currentPlayer = getPlayer(next.p);
+                draft.currentPlayer = next.p; // This sequence correctly starts with p2
                 draft.actionCount = next.c;
             }
             break;
@@ -456,7 +452,7 @@ function advancePhase(lobbyData) {
             if (draft.step < logic.pick2.length - 1) {
                 draft.step++;
                 const next = logic.pick2[draft.step];
-                draft.currentPlayer = getPlayer(next.p);
+                draft.currentPlayer = next.p;
                 draft.actionCount = next.c;
             } else {
                  if (draft.matchType === 'allSections') {
@@ -464,7 +460,7 @@ function advancePhase(lobbyData) {
                     draft.action = "pick_s2";
                     draft.step = 0;
                     const next = logic.pick_s2[0];
-                    draft.currentPlayer = getPlayer(next.p);
+                    draft.currentPlayer = next.p;
                     draft.actionCount = next.c;
                 } else {
                     draft.phase = "complete";
@@ -477,7 +473,7 @@ function advancePhase(lobbyData) {
             if (draft.step < logic.pick_s2.length - 1) {
                 draft.step++;
                 const next = logic.pick_s2[draft.step];
-                draft.currentPlayer = getPlayer(next.p);
+                draft.currentPlayer = next.p;
                 draft.actionCount = next.c;
             } else {
                 draft.phase = "complete";
@@ -497,13 +493,10 @@ function handleDraftConfirm(lobbyCode, lobbyData, ws) {
 
     if (!selectedId) return;
     
-    if (ws) {
-        if (ws.userRole !== currentPlayer && ws.userRole !== 'ref') return;
-    }
+    if (ws && ws.userRole !== currentPlayer && ws.userRole !== 'ref') return;
 
-    // Handle action during reserve time
     if (draft.timer.isReserve) {
-        if (lobbyTimers[lobbyCode]) clearTimeout(lobbyTimers[lobbyCode].timeoutId); // Stop the long reserve timer
+        if (lobbyTimers[lobbyCode]) clearTimeout(lobbyTimers[lobbyCode].timeoutId);
         const timeUsed = Math.ceil((Date.now() - draft.timer.reserveStartTime) / 1000);
         participant.reserveTime = Math.max(0, participant.reserveTime - timeUsed);
         draft.timer.isReserve = false;
@@ -520,10 +513,7 @@ function handleDraftConfirm(lobbyCode, lobbyData, ws) {
             playerBans.push(selectedId);
         }
     } else if (['ban', 'pick', 'midBan', 'pick2', 'pick_s2'].includes(phase)) {
-        if (draft.actionCount <= 0) {
-            console.log(`[Draft Confirm] Player ${currentPlayer} has no actions left, but tried to confirm.`);
-            return;
-        }
+        if (draft.actionCount <= 0) return;
 
         let listToUpdate;
         const isBanAction = (phase === 'ban' || phase === 'midBan');
@@ -536,9 +526,7 @@ function handleDraftConfirm(lobbyCode, lobbyData, ws) {
             listToUpdate = draft.picks_s2[currentPlayer];
         }
 
-        if (listToUpdate) {
-            listToUpdate.push(selectedId);
-        }
+        if (listToUpdate) listToUpdate.push(selectedId);
         
         let p1Index = draft.available.p1.indexOf(selectedId);
         if(p1Index > -1) draft.available.p1.splice(p1Index, 1);
@@ -553,11 +541,8 @@ function handleDraftConfirm(lobbyCode, lobbyData, ws) {
     }
 
     draft.hovered[currentPlayer] = null;
-
     updateLobbyActivity(lobbyCode);
 
-    // Don't reset the timer on a single EGO ban; let it run down.
-    // For all other actions, a new timer should be set for the next step.
     if (phase !== 'egoBan') {
         setTimerForLobby(lobbyCode, lobbyData);
     }
@@ -584,6 +569,7 @@ wss.on('connection', (ws) => {
                 const newLobbyState = createNewLobbyState(options);
                 ws.lobbyCode = newLobbyCode;
                 ws.userRole = 'ref';
+                ws.initialUserRole = 'ref';
                 const rejoinToken = crypto.randomUUID();
                 
                 newLobbyState.participants.ref.status = "connected";
@@ -632,11 +618,12 @@ wss.on('connection', (ws) => {
                 const participant = lobbyData.participants[role];
 
                 if (participant && (participant.status === 'connected' || participant.rejoinToken)) {
-                    return ws.send(JSON.stringify({ type: 'error', message: `Role ${role.toUpperCase()} is taken or reserved. Try rejoining if this is you.` }));
+                    return ws.send(JSON.stringify({ type: 'error', message: `Role ${role.toUpperCase()} is taken or reserved.` }));
                 }
                 
                 ws.lobbyCode = lobbyCode;
                 ws.userRole = role;
+                ws.initialUserRole = role; // Store the initial role for swapping
                 const rejoinToken = crypto.randomUUID();
 
                 lobbyData.participants[role].status = 'connected';
@@ -664,6 +651,7 @@ wss.on('connection', (ws) => {
                 if (participant && participant.rejoinToken === incomingData.rejoinToken) {
                     ws.lobbyCode = lobbyCode;
                     ws.userRole = role;
+                    ws.initialUserRole = role;
 
                     lobbyData.participants[role].status = 'connected';
                     updateLobbyActivity(lobbyCode);
@@ -677,14 +665,13 @@ wss.on('connection', (ws) => {
                     }));
                     broadcastState(lobbyCode);
                 } else {
-                    ws.send(JSON.stringify({ type: 'error', message: 'Failed to rejoin. The session might be invalid.' }));
+                    ws.send(JSON.stringify({ type: 'error', message: 'Failed to rejoin. Session might be invalid.' }));
                 }
                 break;
             }
 
             case 'rosterSelect': {
-                if (!lobbyData) return;
-                if (lobbyData.participants[player].ready) return;
+                if (!lobbyData || lobbyData.participants[player].ready) return;
                 const currentRoster = lobbyData.roster[player];
                 const index = currentRoster.indexOf(id);
                 if (index === -1) { if (currentRoster.length < ROSTER_SIZE) currentRoster.push(id); } 
@@ -695,8 +682,7 @@ wss.on('connection', (ws) => {
             }
             
             case 'rosterSet': {
-                if (!lobbyData) return;
-                if (lobbyData.participants[player].ready) return;
+                if (!lobbyData || lobbyData.participants[player].ready) return;
                 if (Array.isArray(roster) && roster.length === ROSTER_SIZE) {
                     lobbyData.roster[player] = roster;
                     updateLobbyActivity(lobbyCode);
@@ -706,8 +692,7 @@ wss.on('connection', (ws) => {
             }
 
             case 'rosterRandomize': {
-                if (!lobbyData) return;
-                if (lobbyData.participants[player].ready) return;
+                if (!lobbyData || lobbyData.participants[player].ready) return;
                 const shuffled = [...allIds].sort(() => 0.5 - Math.random());
                 lobbyData.roster[player] = shuffled.slice(0, ROSTER_SIZE);
                 updateLobbyActivity(lobbyCode);
@@ -735,26 +720,35 @@ wss.on('connection', (ws) => {
             }
 
             case 'setTurnOrder': {
-                if (!lobbyData) return;
+                if (!lobbyData || (ws.userRole !== lobbyData.draft.coinFlipWinner && ws.userRole !== 'ref')) return;
+                
                 const { draft } = lobbyData;
+                let rolesSwapped = false;
+                const needsSwap = (draft.coinFlipWinner === 'p2' && choice === 'first') || (draft.coinFlipWinner === 'p1' && choice === 'second');
 
-                if (ws.userRole !== draft.coinFlipWinner && ws.userRole !== 'ref') return;
+                if (needsSwap) {
+                    console.log(`[${lobbyCode}] Swapping P1 and P2 roles and data.`);
+                    rolesSwapped = true;
+                    // Swap participant and roster data
+                    [lobbyData.participants.p1, lobbyData.participants.p2] = [lobbyData.participants.p2, lobbyData.participants.p1];
+                    [lobbyData.roster.p1, lobbyData.roster.p2] = [lobbyData.roster.p2, lobbyData.roster.p1];
 
-                if (choice === 'second') {
-                    if (draft.coinFlipWinner === 'p1') draft.playerOrder = ['p2', 'p1'];
-                    else draft.playerOrder = ['p1', 'p2'];
-                } else { // 'first'
-                    if (draft.coinFlipWinner === 'p2') draft.playerOrder = ['p2', 'p1'];
-                    else draft.playerOrder = ['p1', 'p2'];
+                    // Update the roles on the WebSocket connections themselves
+                    wss.clients.forEach(client => {
+                        if (client.lobbyCode === lobbyCode) {
+                            if (client.userRole === 'p1') client.userRole = 'p2';
+                            else if (client.userRole === 'p2') client.userRole = 'p1';
+                        }
+                    });
                 }
                 
                 draft.phase = 'egoBan';
                 draft.action = 'egoBan';
-                draft.currentPlayer = draft.playerOrder[0];
+                draft.currentPlayer = 'p1'; // The first player is now always p1
 
                 updateLobbyActivity(lobbyCode);
                 setTimerForLobby(lobbyCode, lobbyData);
-                broadcastState(lobbyCode);
+                broadcastState(lobbyCode, rolesSwapped); // Pass swap status
                 break;
             }
 
@@ -765,11 +759,7 @@ wss.on('connection', (ws) => {
                 const { currentPlayer } = draft;
                 if (ws.userRole !== currentPlayer && ws.userRole !== 'ref') return;
 
-                if (draft.hovered[currentPlayer] === hoveredId) {
-                    draft.hovered[currentPlayer] = null;
-                } else {
-                    draft.hovered[currentPlayer] = hoveredId;
-                }
+                draft.hovered[currentPlayer] = (draft.hovered[currentPlayer] === hoveredId) ? null : hoveredId;
                 updateLobbyActivity(lobbyCode);
                 broadcastState(lobbyCode);
                 break;
@@ -782,7 +772,7 @@ wss.on('connection', (ws) => {
             }
 
             case 'draftControl': {
-                if (!lobbyData) return;
+                if (!lobbyData || ws.userRole !== 'ref') return;
 
                 if (action === 'confirmEgoBans') {
                      const { currentPlayer } = lobbyData.draft;
@@ -806,11 +796,8 @@ wss.on('connection', (ws) => {
                 if (timer.paused) { // unpausing
                     timer.paused = false;
                     timer.running = true;
-                    // When unpausing, set a new endTime based on the remaining pauseTime
-                    const newEndTime = Date.now() + timer.pauseTime;
-                    timer.endTime = newEndTime;
+                    timer.endTime = Date.now() + timer.pauseTime;
                     
-                    // Re-create the timeout with the remaining duration
                     const timeoutId = setTimeout(() => handleTimer(lobbyCode), timer.pauseTime);
                     lobbyTimers[lobbyCode] = { timeoutId };
 
@@ -818,7 +805,6 @@ wss.on('connection', (ws) => {
                     if (lobbyTimers[lobbyCode]) clearTimeout(lobbyTimers[lobbyCode].timeoutId);
                     timer.paused = true;
                     timer.running = false;
-                    // Store the remaining time when pausing
                     timer.pauseTime = Math.max(0, timer.endTime - Date.now());
                 }
                 updateLobbyActivity(lobbyCode);
@@ -833,15 +819,22 @@ wss.on('connection', (ws) => {
         const { lobbyCode, userRole } = ws;
         if (lobbyCode && userRole && lobbies[lobbyCode]) {
             const lobbyData = lobbies[lobbyCode];
-            lobbyData.participants[userRole].status = 'disconnected';
-            lobbyData.participants[userRole].ready = false;
-            updateLobbyActivity(lobbyCode);
-            broadcastState(lobbyCode);
+            // Find the correct participant slot even if roles were swapped
+            const currentRole = Object.keys(lobbyData.participants).find(
+                r => lobbyData.participants[r].rejoinToken === ws.rejoinToken
+            ) || userRole;
+            
+            if (lobbyData.participants[currentRole]) {
+                lobbyData.participants[currentRole].status = 'disconnected';
+                lobbyData.participants[currentRole].ready = false;
+                updateLobbyActivity(lobbyCode);
+                broadcastState(lobbyCode);
+            }
         }
     });
 });
 
-const LOBBY_TTL = 2 * 60 * 60 * 1000; // 2 hours in milliseconds
+const LOBBY_TTL = 2 * 60 * 60 * 1000; // 2 hours
 
 function cleanupInactiveLobbies() {
     const now = new Date();
@@ -858,7 +851,7 @@ function cleanupInactiveLobbies() {
     }
 }
 
-setInterval(cleanupInactiveLobbies, 30 * 60 * 1000); // Every 30 minutes
+setInterval(cleanupInactiveLobbies, 30 * 60 * 1000);
 
 
 const PORT = process.env.PORT || 8080;
