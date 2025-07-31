@@ -1,10 +1,7 @@
 // =================================================================================
 // FILE: script.js
-// DESCRIPTION: This version includes two key fixes:
-// 1. [FIX] Corrects the logic for the mid-draft ban phase to ensure the
-//    current player is always shown the OPPONENT's roster to ban from.
-// 2. [FIX] Updates the "Draft Complete" screen to show picked and banned IDs
-//    in chronological order (pick/ban order) instead of sorting them.
+// DESCRIPTION: This version updates the "Draft Complete" view to show picked and
+// banned IDs in chronological (pick/ban) order instead of a default sort.
 // =================================================================================
 // ======================
 // CONSTANTS & CONFIG
@@ -768,15 +765,9 @@ function updateDraftInstructions() {
 
     if (['ban', 'pick', 'midBan', 'pick2', 'pick_s2'].includes(phase)) {
         const opponent = currentPlayer === 'p1' ? 'p2' : 'p1';
-        
-        // =======================================================================
-        // [FIX 1/2] Corrected ban phase logic.
-        // This explicitly checks if the phase is 'ban' or 'midBan' to determine
-        // if it's a banning action. This is more robust than `phase.includes('ban')`
-        // and ensures the correct (opponent's) roster is always shown for banning.
-        // =======================================================================
-        const isBanAction = (phase === 'ban' || phase === 'midBan');
+        const isBanAction = phase.includes('ban');
 
+        // REVISED LOGIC FOR CLARITY
         // For a BAN, the player must choose from the OPPONENT's available pool.
         // For a PICK, the player chooses from their OWN available pool.
         const poolSourcePlayer = isBanAction ? opponent : currentPlayer;
@@ -801,6 +792,9 @@ function updateDraftInstructions() {
         // This correctly identifies IDs present in BOTH original rosters.
         const sharedIds = state.roster.p1.filter(id => state.roster.p2.includes(id));
 
+        // RENDER LOGIC
+        // Removed the confusing 'notInRosterSet' property.
+        // 'sharedIdSet' is sufficient to show overlaps.
         renderGroupedView(poolEl, availableObjects, { 
             clickHandler, 
             hoverId: hovered[currentPlayer],
@@ -843,17 +837,12 @@ function handleCoinFlipUI() {
     }
 }
 
+// [FIXED] This function now renders picked and banned IDs in chronological order.
 function renderCompletedView() {
-    // =======================================================================
-    // [FIX 2/2] Corrected final screen sorting.
-    // The nested function `renderCompactIdList` is modified to render IDs in
-    // the order they are received, which is chronological pick/ban order.
-    // The call to `sortIdsByMasterList` has been removed.
-    // =======================================================================
-    const renderCompactIdList = (container, idList) => {
+    // Helper function to render lists chronologically without sorting
+    const renderChronologicalIdList = (container, idList) => {
         container.innerHTML = '';
-        // The original `idList` is already in chronological order from the server.
-        // We map it directly to get the full ID objects without re-sorting.
+        // Directly map the provided list, which is already in chronological order from the server
         const idObjects = idList.map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
         const fragment = document.createDocumentFragment();
         idObjects.forEach(idData => {
@@ -866,22 +855,24 @@ function renderCompletedView() {
     elements.finalP1Name.textContent = `${state.participants.p1.name}'s Roster`;
     elements.finalP2Name.textContent = `${state.participants.p2.name}'s Roster`;
 
-    renderCompactIdList(elements.finalP1Picks, state.draft.picks.p1);
-    renderCompactIdList(elements.finalP2Picks, state.draft.picks.p2);
+    // Render picks and bans using the chronological helper
+    renderChronologicalIdList(elements.finalP1Picks, state.draft.picks.p1);
+    renderChronologicalIdList(elements.finalP2Picks, state.draft.picks.p2);
 
     const isAllSections = state.draft.matchType === 'allSections';
     elements.finalP1S2PicksContainer.classList.toggle('hidden', !isAllSections);
     elements.finalP2S2PicksContainer.classList.toggle('hidden', !isAllSections);
     if (isAllSections) {
-        renderCompactIdList(elements.finalP1S2Picks, state.draft.picks_s2.p1);
-        renderCompactIdList(elements.finalP2S2Picks, state.draft.picks_s2.p2);
+        renderChronologicalIdList(elements.finalP1S2Picks, state.draft.picks_s2.p1);
+        renderChronologicalIdList(elements.finalP2S2Picks, state.draft.picks_s2.p2);
     }
 
-    renderCompactIdList(elements.finalP1Bans, state.draft.idBans.p1);
-    renderCompactIdList(elements.finalP2Bans, state.draft.idBans.p2);
+    renderChronologicalIdList(elements.finalP1Bans, state.draft.idBans.p1);
+    renderChronologicalIdList(elements.finalP2Bans, state.draft.idBans.p2);
     
     renderBannedEgosDisplay();
 }
+
 
 function checkPhaseReadiness() {
     if (state.draft.phase === 'roster') {
