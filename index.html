@@ -45,7 +45,7 @@
                 <p>To apply for this tournament, participants must have successfully cleared RR6 (Refraction Railway 6) with a total turn count of at most 55 turns. Proof of this clear may be requested upon application.</p>
                 
                 <p><strong>1. Roster Submission</strong></p>
-                <p>Each player must submit a 42-ID Roster before the match. Players may only draft IDs listed in their roster.</p>
+                <p>Each player must submit a roster (default 42 IDs, can be changed by Referee) before the match. Players may only draft IDs listed in their roster.</p>
                 <p><em>Banned IDs:</em><br>
                 - Lobotomy E.G.O::The Sword Sharpened with Tears Rodion<br>
                 - Heishou Pack - Mao Branch Adept Faust</p>
@@ -71,13 +71,22 @@
                 - P2: Ban 4 ID (alternating)</p>
                 <p><strong>Pick Phase - Round 1 (6 IDs per player)</strong><br>
                 - P1: Pick 1, P2: Pick 2, P1: Pick 2, P2: Pick 2, P1: Pick 2, P2: Pick 2, P1: Pick 1</p>
+                
+                <p><strong>--- Draft structure below depends on Match Type ---</strong></p>
+                <p><strong>For "Section 1 Only" Matches:</strong></p>
                 <p><strong>Mid-Draft ID Ban Phase (6 total bans)</strong><br>
-                - P1: Ban 3 ID (alternating)<br>
-                - P2: Ban 3 ID (alternating)</p>
+                - P2: Ban 3 ID (alternating)<br>
+                - P1: Ban 3 ID (alternating)</p>
                 <p><strong>Pick Phase - Round 2 (6 more IDs per player to reach 12 total)</strong><br>
                 - P2: Pick 1, P1: Pick 2, P2: Pick 2, P1: Pick 2, P2: Pick 2, P1: Pick 2, P2: Pick 1</p>
-                 <p><strong>"All Sections" Mode - Pick Phase 3 (6 additional IDs per player)</strong><br>
-                - If the "All Sections" match type is selected, a third pick phase occurs. These 6 IDs are for use in Sections 2 and 3 only and cannot be used in Section 1.</p>
+
+                <p><strong>For "All Sections" Matches:</strong></p>
+                <p><strong>Mid-Draft ID Ban Phase (8 total bans)</strong><br>
+                - P2: Ban 4 ID (alternating)<br>
+                - P1: Ban 4 ID (alternating)</p>
+                <p><strong>Pick Phase - Round 2 (12 more IDs per player to reach 18 total)</strong><br>
+                - A snake draft follows to select the remaining 12 IDs each.</p>
+                 
                 <p><strong>Post-Draft:</strong> A 60-second match preparation period follows the draft.</p>
 
                 <p><strong>5. Win Condition</strong></p>
@@ -134,7 +143,7 @@
                 <div class="action-card">
                     <div class="action-icon"><i class="fas fa-users-cog"></i></div>
                     <h3 class="action-title">Roster Builder</h3>
-                     <p class="action-description">Create a 42-ID roster and generate a shareable code for quick loading during a match.</p>
+                     <p class="action-description" id="builder-roster-description">Create a 42 or 52-ID roster and generate a shareable code for quick loading.</p>
                     <button class="btn btn-secondary btn-large" id="go-to-builder"><i class="fas fa-wrench"></i> Open Builder</button>
                 </div>
 
@@ -156,6 +165,13 @@
                                 <option value="1-2-2" selected>Standard (1-2-2)</option>
                                 <option value="2-3-2">Alternate (2-3-2)</option>
                              </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="roster-size-select">Roster Size</label>
+                            <select id="roster-size-select">
+                                <option value="42" selected>42 IDs</option>
+                                <option value="52">52 IDs</option>
+                            </select>
                         </div>
                         <div class="form-group">
                             <label for="timer-toggle">Enable Timer</label>
@@ -231,8 +247,7 @@
                 
                 <!-- Roster Selection Phase -->
                  <div id="roster-phase" class="phase-section">
-                    <h2>Roster Selection Phase</h2>
-                    <p>Each player must select 42 IDs. When both are ready, the Referee can start the coin flip.</p>
+                    <h2 id="roster-phase-title">Roster Selection Phase</h2>
                     <div class="filter-bar" id="global-filter-bar-roster">
                         <!-- Filters are now globally defined and rendered by JS -->
                     </div>
@@ -242,7 +257,7 @@
                                 <div class="player-name" id="p1-name-display">Player 1</div>
                                  <div class="player-status status-waiting" id="p1-status">Selecting</div>
                             </div>
-                            <div class="counter"><i class="fas fa-users"></i> Selected: <strong id="p1-counter">0</strong> / 42 IDs</div>
+                            <div class="counter"><i class="fas fa-users"></i> Selected: <strong id="p1-counter">0</strong> / <span id="p1-roster-size">42</span> IDs</div>
                              <div class="roster-load-form">
                                 <input type="text" id="p1-roster-code-input" placeholder="Paste Roster Code...">
                                 <button class="btn btn-secondary" id="p1-roster-load"><i class="fas fa-upload"></i> Load</button>
@@ -259,7 +274,7 @@
                                 <div class="player-name" id="p2-name-display">Player 2</div>
                                 <div class="player-status status-waiting" id="p2-status">Selecting</div>
                              </div>
-                            <div class="counter"><i class="fas fa-users"></i> Selected: <strong id="p2-counter">0</strong> / 42 IDs</div>
+                             <div class="counter"><i class="fas fa-users"></i> Selected: <strong id="p2-counter">0</strong> / <span id="p2-roster-size">42</span> IDs</div>
                             <div class="roster-load-form">
                                  <input type="text" id="p2-roster-code-input" placeholder="Paste Roster Code...">
                                 <button class="btn btn-secondary" id="p2-roster-load"><i class="fas fa-upload"></i> Load</button>
@@ -397,7 +412,11 @@
                          </div>
                     </div>
                     <div class="builder-side-panel">
-                        <h3>Your Roster (<span id="builder-counter">0</span>/42)</h3>
+                        <div class="builder-roster-size-selector" id="builder-roster-size-selector">
+                            <button class="btn btn-small active" data-size="42">42-ID Roster</button>
+                            <button class="btn btn-small" data-size="52">52-ID Roster</button>
+                        </div>
+                        <h3>Your Roster (<span id="builder-counter">0</span>/<span id="builder-roster-size">42</span>)</h3>
                         <div class="sinner-grouped-roster" id="builder-selected-roster"></div>
                         <div class="controls" style="margin-top: 10px;">
                             <button class="btn" id="builder-random"><i class="fas fa-random"></i> Simple Random</button>
@@ -409,14 +428,14 @@
                             </button>
                             <div id="advanced-random-options" class="hidden">
                                 <h4>Sinner Count Constraints</h4>
-                                <p>Set the min/max number of IDs for each sinner. The total must be 42.</p>
+                                <p>Set the min/max number of IDs for each sinner. The total must be <span class="advanced-random-roster-size">42</span>.</p>
                                 <div id="sinner-sliders-container">
                                     <!-- Sliders will be generated by JS -->
                                 </div>
                                 <div id="advanced-random-summary" class="advanced-random-summary">
-                                    Total Min: <span id="total-min-display">0</span> / 42
+                                    Total Min: <span id="total-min-display">0</span> / <span class="advanced-random-roster-size">42</span>
                                     <br>
-                                    Total Max: <span id="total-max-display">0</span> / 42
+                                    Total Max: <span id="total-max-display">0</span> / <span class="advanced-random-roster-size">42</span>
                                 </div>
                                 <button class="btn btn-primary" id="builder-advanced-random" style="width: 100%; margin-top: 15px;">
                                     <i class="fas fa-cogs"></i> Generate Roster
@@ -453,7 +472,7 @@
             <div class="final-rosters-container">
                 <div class="final-player-panel">
                     <h2 id="final-p1-name">Player 1's Roster</h2>
-                    <h4>Picked IDs (Section 1)</h4>
+                    <h4>Picked IDs</h4>
                     <div class="final-picks" id="final-p1-picks"></div>
                     <div id="final-p1-s2-picks-container" class="hidden">
                         <h4>Picked IDs (Sections 2 & 3)</h4>
@@ -464,7 +483,7 @@
                 </div>
                 <div class="final-player-panel">
                     <h2 id="final-p2-name">Player 2's Roster</h2>
-                    <h4>Picked IDs (Section 1)</h4>
+                    <h4>Picked IDs</h4>
                     <div class="final-picks" id="final-p2-picks"></div>
                     <div id="final-p2-s2-picks-container" class="hidden">
                         <h4>Picked IDs (Sections 2 & 3)</h4>
