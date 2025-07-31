@@ -1,13 +1,13 @@
 // =================================================================================
 // FILE: script.js
-// DESCRIPTION: This version fixes a syntax error caused by a missing closing
-// brace in the cacheDOMElements function. It also ensures the player names in
-// the draft view are correctly updated after a potential role swap.
+// DESCRIPTION: This version adds UI controls and logic for selecting a roster
+// size (42 or 52) in both the lobby creation and the roster builder. It also
+// updates the UI dynamically to reflect the current roster size and handles
+// loading/generating variable-sized roster codes.
 // =================================================================================
 // ======================
 // CONSTANTS & CONFIG
 // ======================
-const ROSTER_SIZE = 42;
 const EGO_BAN_COUNT = 5;
 const SINNER_ORDER = ["Yi Sang", "Faust", "Don Quixote", "Ryōshū", "Meursault", "Hong Lu", "Heathcliff", "Ishmael", "Rodion", "Sinclair", "Outis", "Gregor"];
 const zayinBanExceptions = [
@@ -34,6 +34,7 @@ const state = {
     },
     roster: { p1: [], p2: [] },
     builderRoster: [],
+    builderRosterSize: 42,
     masterIDList: [],
     builderMasterIDList: [],
     masterEGOList: [],
@@ -53,6 +54,7 @@ const state = {
         hovered: { p1: null, p2: null },
         draftLogic: '1-2-2',
         matchType: 'section1',
+        rosterSize: 42,
         coinFlipWinner: null,
         turnOrderDecided: false,
         timer: {
@@ -178,7 +180,7 @@ function parseEGOData(data) {
 // ROSTER CODE SYSTEM
 // ======================
 function generateRosterCode() {
-    if (state.builderRoster.length !== ROSTER_SIZE) return null;
+    if (state.builderRoster.length !== state.builderRosterSize) return null;
     try {
         const indices = state.builderRoster.map(slug => {
             const index = state.masterIDList.findIndex(id => id.id === slug);
@@ -196,16 +198,19 @@ function generateRosterCode() {
 function loadRosterFromCode(code) {
     try {
         const binaryString = atob(code);
-        if (binaryString.length !== ROSTER_SIZE) {
-            showNotification("Invalid roster code: incorrect length.", true);
+        const rosterSize = binaryString.length;
+
+        if (rosterSize !== 42 && rosterSize !== 52) {
+            showNotification(`Invalid roster code: unsupported size (${rosterSize}).`, true);
             return null;
         }
+
         const uint8Array = new Uint8Array(binaryString.split('').map(c => c.charCodeAt(0)));
         const rosterSlugs = Array.from(uint8Array).map(index => {
             return (index < state.masterIDList.length) ? state.masterIDList[index].id : null;
         }).filter(Boolean);
 
-        if (rosterSlugs.length !== ROSTER_SIZE) {
+        if (rosterSlugs.length !== rosterSize) {
             showNotification("Invalid roster code: contains invalid ID data.", true);
             return null;
         }
@@ -276,12 +281,10 @@ function handleServerMessage(message) {
         case 'lobbyCreated': handleLobbyCreated(message); break;
         case 'lobbyJoined': handleLobbyJoined(message); break;
         case 'stateUpdate':
-            // [ROLE SWAP FIX] Check if the server has assigned a new role
             if (message.newRole && message.newRole !== state.userRole) {
                 console.log(`Role updated by server from ${state.userRole} to ${message.newRole}`);
                 state.userRole = message.newRole;
                 
-                // Update the session storage so rejoining works correctly
                 const session = JSON.parse(localStorage.getItem('limbusDraftSession'));
                 if (session) {
                     session.userRole = message.newRole;
@@ -480,7 +483,7 @@ function switchView(view) {
 
 function updateAllUIsFromState() {
     const { draft } = state;
-    const { phase } = draft;
+    const { phase, rosterSize } = draft;
 
     if (phase === 'complete') {
         switchView('completedView');
@@ -530,6 +533,7 @@ function updateAllUIsFromState() {
     ['p1', 'p2'].forEach(player => {
         elements[`${player}NameDisplay`].textContent = state.participants[player].name;
         elements[`${player}Counter`].textContent = state.roster[player].length;
+        elements[`${player}RosterSize`].textContent = rosterSize;
         const isReady = state.participants[player].ready;
         elements[`${player}Ready`].innerHTML = isReady ? '<i class="fas fa-times"></i> Unready' : `<i class="fas fa-check"></i> Ready`;
         elements[`${player}Ready`].classList.toggle('btn-ready', isReady);
@@ -539,6 +543,7 @@ function updateAllUIsFromState() {
     });
     
     if (phase === 'roster') {
+        elements.rosterPhaseTitle.textContent = `Roster Selection Phase (${rosterSize} IDs)`;
         filterAndRenderRosterSelection();
     } else if (phase === 'egoBan') {
         renderEgoBanPhase();
@@ -681,7 +686,6 @@ function renderBannedEgosDisplay() {
 }
 
 function updateDraftUI() {
-    // [UI FIX] Update the draft column names every time the draft UI is rendered.
     elements.p1DraftName.textContent = state.participants.p1.name;
     elements.p2DraftName.textContent = state.participants.p2.name;
 
@@ -701,6 +705,13 @@ function updateDraftUI() {
     elements.p1S2PicksContainer.classList.toggle('hidden', !isAllSections);
     elements.p2S2PicksContainer.classList.toggle('hidden', !isAllSections);
     if (isAllSections) {
+        // In the new logic, S2 picks are just part of the main picks.
+        // This section might need adjustment based on how we want to display the 18 picks.
+        // For now, let's assume they all go into the main pick list.
+        elements.p1S2Picks.innerHTML = '';
+        elements.p2S2Picks.innerHTML = '';
+    } else {
+        // Handle old logic for section1 only matches with a potential pick_s2 phase
         renderCompactIdListChronological(elements.p1S2Picks, [...state.draft.picks_s2.p1].reverse());
         renderCompactIdListChronological(elements.p2S2Picks, [...state.draft.picks_s2.p2].reverse());
     }
@@ -721,7 +732,7 @@ function updateDraftUI() {
 
 function updateDraftInstructions() {
     let phaseText = "", actionDesc = "";
-    const { phase, currentPlayer, action, actionCount, egoBans, hovered } = state.draft;
+    const { phase, currentPlayer, action, actionCount, egoBans, hovered, matchType } = state.draft;
     
     const hub = elements.draftInteractionHub;
     const existingPool = hub.querySelector('.sinner-grouped-roster');
@@ -732,7 +743,7 @@ function updateDraftInstructions() {
     switch(phase) {
         case "roster": 
             phaseText = "Roster Selection";
-            actionDesc = "Players select 42 IDs. Referee starts the draft when both are ready.";
+            actionDesc = `Players select ${state.draft.rosterSize} IDs. Referee starts the draft when both are ready.`;
             break;
         case "coinFlip":
             phaseText = "Coin Flip";
@@ -749,10 +760,10 @@ function updateDraftInstructions() {
         case "pick2":
         case "pick_s2":
             let displayAction = phase;
-            if (phase === 'midBan') displayAction = 'Mid-Draft Ban';
-            if (phase === 'pick') displayAction = 'Pick Phase 1';
-            if (phase === 'pick2') displayAction = 'Pick Phase 2';
-            if (phase === 'pick_s2') displayAction = 'Pick Phase 3 (Sec 2/3)';
+            if (phase === 'midBan') displayAction = `Mid-Draft Ban (${matchType === 'allSections' ? 4 : 3} each)`;
+            if (phase === 'pick') displayAction = 'Pick Phase 1 (6 each)';
+            if (phase === 'pick2') displayAction = `Pick Phase 2 (${matchType === 'allSections' ? 12 : 6} each)`;
+            if (phase === 'pick_s2') displayAction = 'Pick Phase 3 (Sec 2/3 - 6 each)';
 
             phaseText = `${displayAction.charAt(0).toUpperCase() + displayAction.slice(1)}`;
             
@@ -853,9 +864,13 @@ function renderCompletedView() {
     renderChronologicalIdList(elements.finalP2Picks, state.draft.picks.p2);
 
     const isAllSections = state.draft.matchType === 'allSections';
-    elements.finalP1S2PicksContainer.classList.toggle('hidden', !isAllSections);
-    elements.finalP2S2PicksContainer.classList.toggle('hidden', !isAllSections);
-    if (isAllSections) {
+    // The new logic puts all picks into the main `picks` array.
+    // The S2 container is only for the old logic.
+    const showS2Container = !isAllSections && (state.draft.picks_s2.p1.length > 0 || state.draft.picks_s2.p2.length > 0);
+
+    elements.finalP1S2PicksContainer.classList.toggle('hidden', !showS2Container);
+    elements.finalP2S2PicksContainer.classList.toggle('hidden', !showS2Container);
+    if (showS2Container) {
         renderChronologicalIdList(elements.finalP1S2Picks, state.draft.picks_s2.p1);
         renderChronologicalIdList(elements.finalP2S2Picks, state.draft.picks_s2.p2);
     }
@@ -869,8 +884,9 @@ function renderCompletedView() {
 
 function checkPhaseReadiness() {
     if (state.draft.phase === 'roster') {
-        const p1Ready = state.participants.p1.ready && state.roster.p1.length === ROSTER_SIZE;
-        const p2Ready = state.participants.p2.ready && state.roster.p2.length === ROSTER_SIZE;
+        const { rosterSize } = state.draft;
+        const p1Ready = state.participants.p1.ready && state.roster.p1.length === rosterSize;
+        const p2Ready = state.participants.p2.ready && state.roster.p2.length === rosterSize;
         if (state.userRole === 'ref') {
             elements.startCoinFlip.disabled = !(p1Ready && p2Ready);
         }
@@ -915,13 +931,14 @@ function renderRosterBuilder() {
     });
 
     elements.builderCounter.textContent = state.builderRoster.length;
+    elements.builderRosterSize.textContent = state.builderRosterSize;
     
-    if(state.builderRoster.length === ROSTER_SIZE) {
+    if(state.builderRoster.length === state.builderRosterSize) {
         const code = generateRosterCode();
         elements.builderRosterCodeDisplay.textContent = code || "Error generating code.";
         elements.builderCopyCode.disabled = !code;
     } else {
-        elements.builderRosterCodeDisplay.textContent = `Select ${ROSTER_SIZE - state.builderRoster.length} more IDs to generate a code.`;
+        elements.builderRosterCodeDisplay.textContent = `Select ${state.builderRosterSize - state.builderRoster.length} more IDs to generate a code.`;
         elements.builderCopyCode.disabled = true;
     }
 }
@@ -1042,10 +1059,10 @@ function toggleBuilderIdSelection(id) {
     if (index > -1) {
         state.builderRoster.splice(index, 1);
     } else {
-        if (state.builderRoster.length < ROSTER_SIZE) {
+        if (state.builderRoster.length < state.builderRosterSize) {
             state.builderRoster.push(id);
         } else {
-            showNotification(`You can only select ${ROSTER_SIZE} IDs.`);
+            showNotification(`You can only select ${state.builderRosterSize} IDs.`);
         }
     }
     renderRosterBuilder();
@@ -1134,7 +1151,8 @@ function setupEventListeners() {
             draftLogic: elements.draftLogicSelect.value,
             matchType: elements.matchTypeSelect.value,
             timerEnabled: elements.timerToggle.value === 'true',
-            isPublic: elements.publicLobbyToggle.value === 'true'
+            isPublic: elements.publicLobbyToggle.value === 'true',
+            rosterSize: elements.rosterSizeSelect.value
         };
         sendMessage({ type: 'createLobby', options });
     });
@@ -1221,7 +1239,7 @@ function setupEventListeners() {
         elements[`${player}Clear`].addEventListener('click', () => (state.userRole === player || state.userRole === 'ref') && sendMessage({ type: 'rosterClear', lobbyCode: state.lobbyCode, player }));
         elements[`${player}Ready`].addEventListener('click', () => {
             if (state.userRole === player || state.userRole === 'ref') {
-                 if (state.roster[player].length !== ROSTER_SIZE && !state.participants[player].ready) return showNotification(`Must select ${ROSTER_SIZE} IDs.`, true);
+                 if (state.roster[player].length !== state.draft.rosterSize && !state.participants[player].ready) return showNotification(`Must select ${state.draft.rosterSize} IDs.`, true);
                 sendMessage({ type: 'updateReady', lobbyCode: state.lobbyCode, player });
             }
         });
@@ -1230,6 +1248,10 @@ function setupEventListeners() {
                 const code = elements[`${player}RosterCodeInput`].value.trim();
                 const roster = loadRosterFromCode(code);
                 if (roster) {
+                    if (roster.length !== state.draft.rosterSize) {
+                        showNotification(`Roster code is for ${roster.length} IDs, but lobby requires ${state.draft.rosterSize}.`, true);
+                        return;
+                    }
                     setPlayerRoster(player, roster);
                     showNotification("Roster loaded successfully!");
                 }
@@ -1238,9 +1260,23 @@ function setupEventListeners() {
     });
     
     // Roster Builder Controls
+    elements.builderRosterSizeSelector.addEventListener('click', (e) => {
+        const button = e.target.closest('button');
+        if (button && button.dataset.size) {
+            const newSize = parseInt(button.dataset.size, 10);
+            if (newSize !== state.builderRosterSize) {
+                state.builderRosterSize = newSize;
+                state.builderRoster = []; // Clear roster on size change
+                elements.builderRosterSizeSelector.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                renderRosterBuilder();
+                setupAdvancedRandomUI(); // Re-setup sliders with new roster size
+            }
+        }
+    });
     elements.builderRandom.addEventListener('click', () => {
         const shuffled = [...state.builderMasterIDList].sort(() => 0.5 - Math.random());
-        state.builderRoster = shuffled.slice(0, ROSTER_SIZE).map(id => id.id);
+        state.builderRoster = shuffled.slice(0, state.builderRosterSize).map(id => id.id);
         renderRosterBuilder();
     });
     elements.builderClear.addEventListener('click', () => {
@@ -1260,8 +1296,15 @@ function setupEventListeners() {
         const roster = loadRosterFromCode(code);
         if (roster) {
             state.builderRoster = roster;
+            state.builderRosterSize = roster.length;
+            
+            elements.builderRosterSizeSelector.querySelectorAll('button').forEach(btn => {
+                btn.classList.toggle('active', parseInt(btn.dataset.size) === state.builderRosterSize);
+            });
+
             renderRosterBuilder();
-            showNotification("Roster loaded successfully!");
+            setupAdvancedRandomUI();
+            showNotification(`Roster for ${roster.length} IDs loaded successfully!`);
         }
     });
 
@@ -1349,6 +1392,7 @@ function createFilterBarHTML(options = {}) {
 function setupAdvancedRandomUI() {
     const container = elements.sinnerSlidersContainer;
     container.innerHTML = '';
+    const rosterSize = state.builderRosterSize;
 
     const updateTotals = () => {
         let totalMin = 0, totalMax = 0;
@@ -1358,7 +1402,8 @@ function setupAdvancedRandomUI() {
         });
         elements.totalMinDisplay.textContent = totalMin;
         elements.totalMaxDisplay.textContent = totalMax;
-        const possible = totalMin <= ROSTER_SIZE && totalMax >= ROSTER_SIZE;
+        elements.advancedRandomRosterSize.forEach(el => el.textContent = rosterSize);
+        const possible = totalMin <= rosterSize && totalMax >= rosterSize;
         elements.builderAdvancedRandom.disabled = !possible;
         elements.advancedRandomSummary.style.color = possible ? 'var(--text)' : 'var(--primary)';
     };
@@ -1414,6 +1459,7 @@ function generateAdvancedRandomRoster() {
     const constraints = {};
     let totalMin = 0;
     let totalMax = 0;
+    const rosterSize = state.builderRosterSize;
 
     SINNER_ORDER.forEach(sinner => {
         const min = parseInt(document.getElementById(`slider-${sinner}-min`).value, 10);
@@ -1423,8 +1469,8 @@ function generateAdvancedRandomRoster() {
         totalMax += max;
     });
 
-    if (totalMin > ROSTER_SIZE || totalMax < ROSTER_SIZE) {
-        showNotification("Constraints are impossible. Total Min must be <= 42 and Total Max must be >= 42.", true);
+    if (totalMin > rosterSize || totalMax < rosterSize) {
+        showNotification(`Constraints are impossible. Total Min must be <= ${rosterSize} and Total Max must be >= ${rosterSize}.`, true);
         return;
     }
 
@@ -1446,7 +1492,7 @@ function generateAdvancedRandomRoster() {
     availableIDs = availableIDs.filter(id => !rosterSlugs.has(id.id));
 
     let attempts = 0;
-    while (roster.length < ROSTER_SIZE && attempts < 1000) {
+    while (roster.length < rosterSize && attempts < 1000) {
         if (availableIDs.length === 0) break;
 
         const randomIndex = Math.floor(Math.random() * availableIDs.length);
@@ -1461,7 +1507,7 @@ function generateAdvancedRandomRoster() {
         attempts++;
     }
 
-    if (roster.length === ROSTER_SIZE) {
+    if (roster.length === rosterSize) {
         state.builderRoster = roster.map(id => id.id);
         renderRosterBuilder();
         showNotification("Advanced random roster generated!");
@@ -1488,12 +1534,14 @@ function cacheDOMElements() {
         matchTypeSelect: document.getElementById('match-type-select'),
         timerToggle: document.getElementById('timer-toggle'),
         publicLobbyToggle: document.getElementById('public-lobby-toggle'),
+        rosterSizeSelect: document.getElementById('roster-size-select'),
         showRulesBtn: document.getElementById('show-rules-btn'),
         joinTabs: document.querySelectorAll('.join-tab-btn'),
         refreshLobbiesBtn: document.getElementById('refresh-lobbies-btn'),
         publicLobbiesList: document.getElementById('public-lobbies-list'),
         lobbyCodeInput: document.getElementById('lobby-code-input'),
         enterLobbyByCode: document.getElementById('enter-lobby-by-code'),
+        builderRosterDescription: document.getElementById('builder-roster-description'),
 
         // Modals
         rulesModal: document.getElementById('rules-modal'),
@@ -1522,9 +1570,11 @@ function cacheDOMElements() {
         
         // Roster Phase (Lobby)
         rosterPhase: document.getElementById('roster-phase'),
+        rosterPhaseTitle: document.getElementById('roster-phase-title'),
         p1Panel: document.getElementById('p1-panel'), p2Panel: document.getElementById('p2-panel'),
         p1Roster: document.getElementById('p1-roster'), p2Roster: document.getElementById('p2-roster'),
         p1Counter: document.getElementById('p1-counter'), p2Counter: document.getElementById('p2-counter'),
+        p1RosterSize: document.getElementById('p1-roster-size'), p2RosterSize: document.getElementById('p2-roster-size'),
         p1Random: document.getElementById('p1-random'), p2Random: document.getElementById('p2-random'),
         p1Clear: document.getElementById('p1-clear'), p2Clear: document.getElementById('p2-clear'),
         p1Ready: document.getElementById('p1-ready'), p2Ready: document.getElementById('p2-ready'),
@@ -1539,6 +1589,8 @@ function cacheDOMElements() {
         builderIdPool: document.getElementById('builder-id-pool'),
         builderSelectedRoster: document.getElementById('builder-selected-roster'),
         builderCounter: document.getElementById('builder-counter'),
+        builderRosterSize: document.getElementById('builder-roster-size'),
+        builderRosterSizeSelector: document.getElementById('builder-roster-size-selector'),
         builderRandom: document.getElementById('builder-random'),
         builderClear: document.getElementById('builder-clear'),
         builderRosterCodeDisplay: document.getElementById('builder-roster-code-display'),
@@ -1550,6 +1602,7 @@ function cacheDOMElements() {
         sinnerSlidersContainer: document.getElementById('sinner-sliders-container'),
         totalMinDisplay: document.getElementById('total-min-display'),
         totalMaxDisplay: document.getElementById('total-max-display'),
+        advancedRandomRosterSize: document.querySelectorAll('.advanced-random-roster-size'),
         builderAdvancedRandom: document.getElementById('builder-advanced-random'),
         advancedRandomSummary: document.getElementById('advanced-random-summary'),
 
@@ -1607,7 +1660,6 @@ function cacheDOMElements() {
         goSecondBtn: document.getElementById('go-second-btn'),
     };
     
-    // Debug: Check for missing elements
     const missingElements = Object.keys(elements).filter(key => !elements[key]);
     if (missingElements.length > 0) {
         console.warn('Missing DOM elements:', missingElements);
