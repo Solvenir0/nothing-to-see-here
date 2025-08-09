@@ -1389,7 +1389,7 @@ function setupEventListeners() {
         const targetElement = e.target.closest('.compact-id-list .id-item, .final-picks .id-item, .final-bans .id-item, #draft-pool-container .id-item');
         if (targetElement) {
             clearTimeout(tooltipTimer);
-            tooltipTimer = setTimeout(() => showTooltip(targetElement), 1000);
+            tooltipTimer = setTimeout(() => showTooltip(targetElement), 500);
         }
     });
 
