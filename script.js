@@ -1,9 +1,8 @@
 // =================================================================================
 // FILE: script.js
-// DESCRIPTION: This version adds UI controls and logic for selecting a roster
-// size (42 or 52) in both the lobby creation and the roster builder. It also
-// updates the UI dynamically to reflect the current roster size and handles
-// loading/generating variable-sized roster codes.
+// DESCRIPTION: This version adds a tooltip feature. When a user hovers over an
+// ID icon in a view where the name is hidden (like the draft screen or the final
+// summary), the full ID name will appear in a tooltip after a 1-second delay.
 // =================================================================================
 // ======================
 // CONSTANTS & CONFIG
@@ -1343,6 +1342,65 @@ function setupEventListeners() {
             icon.classList.add('fa-eye');
         }
     });
+
+    // Tooltip Logic
+    let tooltipTimer = null;
+
+    const showTooltip = (element) => {
+        if (document.getElementById('id-tooltip')) return;
+
+        const idSlug = element.dataset.id;
+        const idData = state.masterIDList.find(id => id.id === idSlug);
+        if (!idData) return;
+
+        const tooltip = document.createElement('div');
+        tooltip.id = 'id-tooltip';
+        tooltip.textContent = idData.name;
+        document.body.appendChild(tooltip);
+
+        const rect = element.getBoundingClientRect();
+        let top = rect.top - tooltip.offsetHeight - 5;
+        let left = rect.left + rect.width / 2 - tooltip.offsetWidth / 2;
+
+        if (top < 0) {
+            top = rect.bottom + 5;
+        }
+        if (left < 0) {
+            left = 5;
+        }
+        if (left + tooltip.offsetWidth > window.innerWidth) {
+            left = window.innerWidth - tooltip.offsetWidth - 5;
+        }
+
+        tooltip.style.top = `${top}px`;
+        tooltip.style.left = `${left}px`;
+        tooltip.style.opacity = '1';
+    };
+
+    const hideTooltip = () => {
+        clearTimeout(tooltipTimer);
+        const tooltip = document.getElementById('id-tooltip');
+        if (tooltip) {
+            tooltip.remove();
+        }
+    };
+
+    document.body.addEventListener('mouseover', (e) => {
+        const targetElement = e.target.closest('.compact-id-list .id-item, .final-picks .id-item, .final-bans .id-item, #draft-pool-container .id-item');
+        if (targetElement) {
+            clearTimeout(tooltipTimer);
+            tooltipTimer = setTimeout(() => showTooltip(targetElement), 1000);
+        }
+    });
+
+    document.body.addEventListener('mouseout', (e) => {
+        const targetElement = e.target.closest('.compact-id-list .id-item, .final-picks .id-item, .final-bans .id-item, #draft-pool-container .id-item');
+        if (targetElement) {
+            hideTooltip();
+        }
+    });
+
+    window.addEventListener('scroll', hideTooltip, true);
 }
 
 function createFilterBarHTML(options = {}) {
