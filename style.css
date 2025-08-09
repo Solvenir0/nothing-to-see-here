@@ -1505,6 +1505,23 @@ input:focus, select:focus {
     font-weight: bold;
 }
 
+/* Tooltip Style */
+#id-tooltip {
+    position: fixed;
+    background-color: #000;
+    color: var(--accent);
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--accent);
+    font-size: 0.95rem;
+    font-weight: bold;
+    z-index: 10001;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+    white-space: nowrap;
+}
+
 
 /* Medium screens and up */
 @media (min-width: 992px) {
