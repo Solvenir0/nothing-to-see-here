@@ -1,9 +1,9 @@
 // =================================================================================
 // FILE: server.js
-// DESCRIPTION: This version fixes a bug where "Section 1 Only" matches were
-// incorrectly entering an extra picking phase, forcing players to pick 18 IDs
-// instead of the correct 12. The draft now correctly completes after the
-// second pick phase for both match types.
+// DESCRIPTION: This version adds basic security hardening for public use.
+// 1. Input Sanitization: Player names are now sanitized to prevent XSS attacks.
+// 2. Rate Limiting: A simple in-memory rate limit is added to the lobby
+//    creation process to prevent spam and abuse.
 // =================================================================================
 const express = require('express');
 const http = require('http');
@@ -71,6 +71,21 @@ const DRAFT_LOGIC = {
 };
 
 const lobbyTimers = {}; // Store { lobbyCode: { timeoutId, unpauseFn } }
+
+// --- SECURITY UTILITIES ---
+function sanitize(text) {
+    if (!text) return "";
+    return text.toString()
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+const rateLimit = {};
+const RATE_LIMIT_WINDOW = 60000; // 1 minute
+const RATE_LIMIT_MAX_REQUESTS = 10; // Max 10 lobby creations per minute per IP
 
 function createSlug(name) {
     if (!name) return '';
@@ -258,13 +273,13 @@ function generateUniqueLobbyCode() {
 function createNewLobbyState(options = {}) {
     const { draftLogic = '1-2-2', timerEnabled = false, isPublic = false, name = 'Referee', matchType = 'section1', rosterSize = 42 } = options;
     return {
-        hostName: name,
+        hostName: sanitize(name), // Sanitize name on creation
         createdAt: new Date().toISOString(),
         lastActivity: new Date().toISOString(),
         participants: {
             p1: { name: "Player 1", status: "disconnected", ready: false, rejoinToken: null, reserveTime: 120 },
             p2: { name: "Player 2", status: "disconnected", ready: false, rejoinToken: null, reserveTime: 120 },
-            ref: { name: name, status: "disconnected", rejoinToken: null }
+            ref: { name: sanitize(name), status: "disconnected", rejoinToken: null }
         },
         roster: { p1: [], p2: [] },
         draft: {
@@ -277,7 +292,7 @@ function createNewLobbyState(options = {}) {
             idBans: { p1: [], p2: [] },
             egoBans: { p1: [], p2: [] },
             picks: { p1: [], p2: [] },
-            picks_s2: { p1: [], p2: [] }, // Note: This is now unused for extended logic but kept for compatibility
+            picks_s2: { p1: [], p2: [] },
             hovered: { p1: null, p2: null },
             draftLogic,
             matchType,
@@ -308,7 +323,6 @@ function broadcastState(lobbyCode, rolesSwapped = false) {
                 state: lobbyData
             };
 
-            // If roles were swapped, we need to tell the clients their new roles
             if (rolesSwapped) {
                 if (client.initialUserRole === 'p1') {
                     message.newRole = 'p2';
@@ -335,7 +349,6 @@ function handleTimer(lobbyCode) {
     const { currentPlayer } = draft;
     const participant = lobbyData.participants[currentPlayer];
 
-    // --- Reserve Time Logic ---
     if (participant && participant.reserveTime > 0 && !draft.timer.isReserve) {
         console.log(`Main timer expired for ${currentPlayer}. Activating reserve time.`);
         draft.timer.isReserve = true;
@@ -479,14 +492,12 @@ function advancePhase(lobbyData) {
                 draft.currentPlayer = next.p;
                 draft.actionCount = next.c;
             } else {
-                // The draft is now complete for both "Section 1" and "All Sections" matches
-                // after their respective 'pick2' phases have concluded.
                 draft.phase = "complete";
                 draft.action = "complete";
                 draft.currentPlayer = "";
             }
             break;
-        case "pick_s2": // This case is now legacy and should not be reached.
+        case "pick_s2":
             if (draft.step < logic.pick_s2.length - 1) {
                 draft.step++;
                 const next = logic.pick_s2[draft.step];
@@ -568,8 +579,10 @@ function handleDraftConfirm(lobbyCode, lobbyData, ws) {
 }
 
 // --- MAIN WEBSOCKET LOGIC ---
-wss.on('connection', (ws) => {
-    console.log('Client connected');
+wss.on('connection', (ws, req) => {
+    // Use the remote address from the underlying socket for rate limiting
+    ws.remoteAddress = req.socket.remoteAddress;
+    console.log(`Client connected from ${ws.remoteAddress}`);
 
     ws.on('message', (message) => {
         let incomingData;
@@ -582,6 +595,15 @@ wss.on('connection', (ws) => {
 
         switch (incomingData.type) {
             case 'createLobby': {
+                const ip = ws.remoteAddress;
+                const now = Date.now();
+                rateLimit[ip] = (rateLimit[ip] || []).filter(timestamp => now - timestamp < RATE_LIMIT_WINDOW);
+
+                if (rateLimit[ip].length >= RATE_LIMIT_MAX_REQUESTS) {
+                    return ws.send(JSON.stringify({ type: 'error', message: 'You are creating lobbies too quickly. Please wait.' }));
+                }
+                rateLimit[ip].push(now);
+
                 const newLobbyCode = generateUniqueLobbyCode();
                 const newLobbyState = createNewLobbyState(options);
                 ws.lobbyCode = newLobbyCode;
@@ -645,7 +667,7 @@ wss.on('connection', (ws) => {
 
                 lobbyData.participants[role].status = 'connected';
                 lobbyData.participants[role].rejoinToken = rejoinToken;
-                if (name) lobbyData.participants[role].name = name;
+                if (name) lobbyData.participants[role].name = sanitize(name); // Sanitize name on join
                 
                 updateLobbyActivity(lobbyCode);
                 
@@ -746,11 +768,9 @@ wss.on('connection', (ws) => {
                 if (needsSwap) {
                     console.log(`[${lobbyCode}] Swapping P1 and P2 roles and data.`);
                     rolesSwapped = true;
-                    // Swap participant and roster data
                     [lobbyData.participants.p1, lobbyData.participants.p2] = [lobbyData.participants.p2, lobbyData.participants.p1];
                     [lobbyData.roster.p1, lobbyData.roster.p2] = [lobbyData.roster.p2, lobbyData.roster.p1];
 
-                    // Update the roles on the WebSocket connections themselves
                     wss.clients.forEach(client => {
                         if (client.lobbyCode === lobbyCode) {
                             if (client.userRole === 'p1') client.userRole = 'p2';
@@ -761,11 +781,11 @@ wss.on('connection', (ws) => {
                 
                 draft.phase = 'egoBan';
                 draft.action = 'egoBan';
-                draft.currentPlayer = 'p1'; // The first player is now always p1
+                draft.currentPlayer = 'p1';
 
                 updateLobbyActivity(lobbyCode);
                 setTimerForLobby(lobbyCode, lobbyData);
-                broadcastState(lobbyCode, rolesSwapped); // Pass swap status
+                broadcastState(lobbyCode, rolesSwapped);
                 break;
             }
 
@@ -832,11 +852,10 @@ wss.on('connection', (ws) => {
     });
 
     ws.on('close', () => {
-        console.log('Client disconnected');
+        console.log(`Client disconnected from ${ws.remoteAddress}`);
         const { lobbyCode, userRole } = ws;
         if (lobbyCode && userRole && lobbies[lobbyCode]) {
             const lobbyData = lobbies[lobbyCode];
-            // Find the correct participant slot even if roles were swapped
             const currentRole = Object.keys(lobbyData.participants).find(
                 r => lobbyData.participants[r].rejoinToken === ws.rejoinToken
             ) || userRole;
