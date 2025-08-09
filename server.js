@@ -1,8 +1,9 @@
 // =================================================================================
 // FILE: server.js
-// DESCRIPTION: This version implements dynamic roster sizes (42 or 52) as a lobby
-// setting. It also introduces an alternate draft flow for the "All Sections"
-// match type, featuring more bans and picks as requested.
+// DESCRIPTION: This version fixes a bug where "Section 1 Only" matches were
+// incorrectly entering an extra picking phase, forcing players to pick 18 IDs
+// instead of the correct 12. The draft now correctly completes after the
+// second pick phase for both match types.
 // =================================================================================
 const express = require('express');
 const http = require('http');
@@ -478,21 +479,14 @@ function advancePhase(lobbyData) {
                 draft.currentPlayer = next.p;
                 draft.actionCount = next.c;
             } else {
-                 if (draft.matchType !== 'allSections' && logic.pick_s2) {
-                    draft.phase = "pick_s2";
-                    draft.action = "pick_s2";
-                    draft.step = 0;
-                    const next = logic.pick_s2[0];
-                    draft.currentPlayer = next.p;
-                    draft.actionCount = next.c;
-                } else {
-                    draft.phase = "complete";
-                    draft.action = "complete";
-                    draft.currentPlayer = "";
-                }
+                // The draft is now complete for both "Section 1" and "All Sections" matches
+                // after their respective 'pick2' phases have concluded.
+                draft.phase = "complete";
+                draft.action = "complete";
+                draft.currentPlayer = "";
             }
             break;
-        case "pick_s2": // This is now only for non-extended logic
+        case "pick_s2": // This case is now legacy and should not be reached.
             if (draft.step < logic.pick_s2.length - 1) {
                 draft.step++;
                 const next = logic.pick_s2[draft.step];
