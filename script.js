@@ -530,15 +530,19 @@ function updateAllUIsFromState() {
     });
 
     ['p1', 'p2'].forEach(player => {
+        const isReady = state.participants[player].ready;
         elements[`${player}NameDisplay`].textContent = state.participants[player].name;
         elements[`${player}Counter`].textContent = state.roster[player].length;
         elements[`${player}RosterSize`].textContent = rosterSize;
-        const isReady = state.participants[player].ready;
         elements[`${player}Ready`].innerHTML = isReady ? '<i class="fas fa-times"></i> Unready' : `<i class="fas fa-check"></i> Ready`;
         elements[`${player}Ready`].classList.toggle('btn-ready', isReady);
         elements[`${player}Status`].textContent = isReady ? 'Ready' : 'Selecting';
         elements[`${player}Status`].className = `player-status ${isReady ? 'status-ready' : 'status-waiting'}`;
         elements[`${player}Panel`].classList.toggle('locked', isReady);
+
+        // FIX: Disable/enable buttons based on ready state
+        elements[`${player}Random`].disabled = isReady;
+        elements[`${player}Clear`].disabled = isReady;
     });
     
     if (phase === 'roster') {
