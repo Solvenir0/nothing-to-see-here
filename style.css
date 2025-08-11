@@ -1214,6 +1214,44 @@ input:focus, select:focus {
     justify-content: center;
     backdrop-filter: blur(5px);
 }
+/* Responsive tweaks */
+@media (max-width: 1200px) {
+    #main-page { max-width: 100%; padding: 0 10px; }
+    .action-container { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+    .draft-interaction-hub { min-width: 320px; }
+}
+
+@media (max-width: 992px) {
+    .player-area { flex-direction: column; }
+    .draft-interaction-hub, .draft-player-column { min-width: unset; width: 100%; }
+    .triptych-layout { flex-direction: column; }
+    .ego-ban-layout { flex-direction: column; }
+    .builder-content-wrapper { flex-direction: column; }
+    .filter-bar { gap: 10px; padding: 10px; }
+    .controls { gap: 8px; }
+}
+
+@media (max-width: 768px) {
+    h1 { font-size: clamp(1.8rem, 5vw, 2.6rem); }
+    h2 { font-size: clamp(1.4rem, 3.5vw, 1.8rem); }
+    .btn { padding: 12px 18px; font-size: 1rem; }
+    .controls .btn { min-width: 120px; }
+    .id-icon { width: 48px; height: 48px; }
+    .id-name { font-size: 0.9rem; }
+    .roster-selection { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+    .builder-id-pool { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+    .draft-interaction-hub { padding: 15px; }
+}
+
+@media (max-width: 576px) {
+    body { padding: 12px; }
+    .top-left-controls { top: 10px; left: 10px; }
+    .btn-small { padding: 6px 10px; font-size: 0.85rem; }
+    .roster-load-form { flex-direction: column; align-items: stretch; }
+    .roster-load-form input { width: 100%; }
+    .filter-group { min-width: 120px; }
+    .slider-row { grid-template-columns: 26px 1fr 22px; }
+}
 .modal-content {
     background: var(--panel);
     padding: 40px;
