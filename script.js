@@ -92,6 +92,24 @@ function showNotification(text, isError = false) {
     setTimeout(() => { elements.notification.classList.remove('show'); }, 3000);
 }
 
+function showSideChangeNotification(oldRole, newRole) {
+    const oldSide = oldRole === 'p1' ? 'LEFT' : 'RIGHT';
+    const newSide = newRole === 'p1' ? 'LEFT' : 'RIGHT';
+    const message = `Position Changed! You are now on the ${newSide} side (was ${oldSide})`;
+    
+    // Show special notification with different styling
+    elements.notification.innerHTML = `<i class="fas fa-exchange-alt"></i> ${message}`;
+    elements.notification.style.background = 'var(--warning)';
+    elements.notification.style.fontWeight = 'bold';
+    elements.notification.classList.add('show');
+    
+    // Keep it visible longer for side changes
+    setTimeout(() => { 
+        elements.notification.classList.remove('show'); 
+        elements.notification.style.fontWeight = ''; // Reset
+    }, 5000);
+}
+
 function createSlug(name) {
     if (!name) return '';
     let slug = name.toLowerCase();
@@ -731,8 +749,22 @@ function renderBannedEgosDisplay() {
 }
 
 function updateDraftUI() {
-    elements.p1DraftName.textContent = state.participants.p1.name;
-    elements.p2DraftName.textContent = state.participants.p2.name;
+    // Update player names with side indicators
+    const userRole = state.userRole;
+    const p1Name = state.participants.p1.name;
+    const p2Name = state.participants.p2.name;
+    
+    if (userRole === 'p1') {
+        elements.p1DraftName.innerHTML = `${p1Name} <span class="your-side-indicator">YOUR SIDE</span>`;
+        elements.p2DraftName.textContent = p2Name;
+    } else if (userRole === 'p2') {
+        elements.p1DraftName.textContent = p1Name;
+        elements.p2DraftName.innerHTML = `${p2Name} <span class="your-side-indicator">YOUR SIDE</span>`;
+    } else {
+        // Referee view - no side indicators
+        elements.p1DraftName.textContent = p1Name;
+        elements.p2DraftName.textContent = p2Name;
+    }
 
     const renderCompactIdListChronological = (container, idList) => {
         const scrollTop = container.scrollTop;
@@ -1147,6 +1179,11 @@ function handleLobbyJoined(message) {
 }
 
 function handleStateUpdate(message) {
+    // Check for role swapping before updating state
+    const wasUserRole = state.userRole;
+    const newUserRole = message.newRole || state.userRole;
+    const rolesSwapped = message.state?.rolesSwapped || false;
+    
     Object.assign(state.participants, message.state.participants);
     Object.assign(state.roster, message.state.roster);
     
@@ -1162,6 +1199,11 @@ function handleStateUpdate(message) {
                 state.draft[key] = message.state.draft[key];
             }
         });
+    }
+    
+    // Handle role swapping notification
+    if (rolesSwapped && wasUserRole && wasUserRole !== newUserRole) {
+        showSideChangeNotification(wasUserRole, newUserRole);
     }
     
     elements.lobbyCodeDisplay.textContent = state.lobbyCode;

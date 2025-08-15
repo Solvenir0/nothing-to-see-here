@@ -638,6 +638,52 @@ All improvements preserve the existing meticulously crafted draft logic. The cha
 
 ---
 
+## Pending Code Improvements Checklist
+
+### Client-Side (script.js) Improvements
+- [ ] **Extract magic numbers to constants** - Replace hardcoded values like `150` for max character count
+- [ ] **Consolidate duplicate DOM queries** - Cache frequently accessed DOM elements
+- [ ] **Improve error handling in async functions** - Add proper try-catch blocks where missing
+- [ ] **Extract repeated validation logic** - The character validation is repeated in multiple places
+- [ ] **Improve function naming** - Some functions like `updateCharacterCount` could be more descriptive
+- [ ] **Add debouncing to search functionality** - Prevent excessive API calls during typing
+
+### Code Organization Improvements
+- [ ] **Move validation functions to separate module** - Extract roster validation logic to a utility file
+- [ ] **Create constants file** - Move all magic numbers and strings to a shared constants file
+- [ ] **Improve comment documentation** - Add JSDoc comments to functions
+- [ ] **Standardize variable naming** - Some variables use different naming conventions
+
+### Security & Performance Improvements
+- [ ] **Add rate limiting** - Prevent spam requests to endpoints
+- [ ] **Improve file upload validation** - Add more robust file type and size validation
+- [ ] **Add CORS configuration** - Properly configure CORS instead of allowing all origins
+- [ ] **Optimize image serving** - Add proper cache headers for static files
+
+### Error Handling Improvements
+- [ ] **Standardize error response format** - All endpoints should return consistent error objects
+- [ ] **Add global error handler** - Catch unhandled errors gracefully
+- [ ] **Improve client-side error feedback** - Better user feedback for various error states
+
+### Code Quality Improvements
+- [ ] **Remove unused variables** - Clean up any unused declarations
+- [ ] **Improve code formatting consistency** - Standardize indentation and spacing
+- [ ] **Add input validation helpers** - Create reusable validation functions
+
+### Implementation Priority
+1. **High Priority**: Client-side improvements (magic numbers, DOM caching, error handling)
+2. **Medium Priority**: Security & performance (rate limiting, CORS, file validation)
+3. **Low Priority**: Code organization (constants file, JSDoc comments, formatting)
+
+### Notes for Implementation
+- Each improvement should be implemented and tested individually
+- Preserve all existing functionality and user experience
+- Focus on maintainability and developer experience
+- Consider backward compatibility for any API changes
+- Test thoroughly after each change to ensure no regressions
+
+---
+
 ## Testing Scenarios
 
 ### Core Functionality

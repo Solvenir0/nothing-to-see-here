@@ -407,7 +407,7 @@ function broadcastState(lobbyCode, rolesSwapped = false) {
         if (client.lobbyCode === lobbyCode && client.readyState === WebSocket.OPEN) {
             const message = {
                 type: 'stateUpdate',
-                state: lobbyData
+                state: { ...lobbyData, rolesSwapped }
             };
 
             if (rolesSwapped) {
