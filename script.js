@@ -785,11 +785,25 @@ function updateDraftInstructions() {
         const opponent = currentPlayer === 'p1' ? 'p2' : 'p1';
         const isBanAction = phase.includes('ban');
 
-        const poolSourcePlayer = isBanAction ? opponent : currentPlayer;
-        const availableIdList = state.draft.available[poolSourcePlayer];
+        let availableIdList;
+        if (isBanAction) {
+            // Show the FULL opponent roster (minus already banned/picked IDs)
+            const opponentRoster = state.roster[opponent] || [];
+            const blocked = new Set([
+                ...state.draft.idBans.p1,
+                ...state.draft.idBans.p2,
+                ...state.draft.picks.p1,
+                ...state.draft.picks.p2,
+                ...state.draft.picks_s2.p1,
+                ...state.draft.picks_s2.p2
+            ]);
+            availableIdList = opponentRoster.filter(id => !blocked.has(id));
+        } else {
+            availableIdList = state.draft.available[currentPlayer] || [];
+        }
 
         if (!availableIdList) {
-            console.error(`[Draft Render] ERROR: availableIdList for ${poolSourcePlayer} is undefined!`);
+            console.error(`[Draft Render] ERROR: availableIdList for draft pool render`);
             return;
         }
 
@@ -805,7 +819,6 @@ function updateDraftInstructions() {
         elements.draftPoolContainer.appendChild(poolEl);
 
         const sharedIds = state.roster.p1.filter(id => state.roster.p2.includes(id));
-
         renderGroupedView(poolEl, availableObjects, { 
             clickHandler, 
             hoverId: hovered[currentPlayer],

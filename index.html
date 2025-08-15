@@ -189,13 +189,6 @@
                                 <option value="true">On</option>
                              </select>
                         </div>
-                        <div class="form-group">
-                            <label for="public-lobby-toggle">Visibility</label>
-                             <select id="public-lobby-toggle">
-                                <option value="false" selected>Private (Code Only)</option>
-                                <option value="true">Public (In Browser)</option>
-                             </select>
-                        </div>
                     </div>
                     <button class="btn btn-primary btn-large" id="create-lobby"><i class="fas fa-plus"></i> Create Lobby</button>
                  </div>
@@ -203,27 +196,12 @@
                 <div class="action-card" id="join-lobby-card">
                     <div class="action-icon"><i class="fas fa-sign-in-alt"></i></div>
                     <h3 class="action-title">Join a Lobby</h3>
-                     <div class="join-tabs">
-                        <button class="join-tab-btn active" data-tab="browse">Browse Public Lobbies</button>
-                        <button class="join-tab-btn" data-tab="code">Join with Code</button>
-                    </div>
-                
-                    <div id="browse-lobbies-tab" class="join-tab-content active">
-                        <div class="public-lobbies-header">
-                            <h4>Available Public Lobbies</h4>
-                             <button id="refresh-lobbies-btn" class="btn btn-small"><i class="fas fa-sync"></i> Refresh</button>
-                        </div>
-                        <div id="public-lobbies-list">
-                            <p>Click "Refresh" to find public lobbies.</p>
-                        </div>
-                    </div>
-                
-                    <div id="code-join-tab" class="join-tab-content">
-                         <div class="form-group">
+                    <div class="join-tab-content active" id="code-join-tab">
+                        <div class="form-group">
                             <label for="lobby-code-input">Lobby Code:</label>
                             <input type="text" id="lobby-code-input" placeholder="Enter 6-character code" maxlength="6">
                         </div>
-                         <button class="btn btn-primary" id="enter-lobby-by-code"><i class="fas fa-play"></i> Find Lobby</button>
+                        <button class="btn btn-primary" id="enter-lobby-by-code"><i class="fas fa-play"></i> Find Lobby</button>
                     </div>
                 </div>
             </div>

@@ -280,7 +280,7 @@ function generateUniqueLobbyCode() {
 }
 
 function createNewLobbyState(options = {}) {
-    const { draftLogic = '1-2-2', timerEnabled = false, isPublic = false, name = 'Referee', matchType = 'section1', rosterSize = 42 } = options;
+    const { draftLogic = '1-2-2', timerEnabled = false, name = 'Referee', matchType = 'section1', rosterSize = 42 } = options;
     return {
         hostName: sanitize(name), // Sanitize name on creation
         createdAt: new Date().toISOString(),
@@ -306,7 +306,6 @@ function createNewLobbyState(options = {}) {
             draftLogic,
             matchType,
             rosterSize: parseInt(rosterSize, 10),
-            isPublic,
             coinFlipWinner: null,
             timer: {
                 enabled: timerEnabled,
@@ -540,10 +539,23 @@ function handleDraftConfirm(lobbyCode, lobbyData, ws) {
     // For ID phases, ensure the selection is currently available from the right pool
     if (['ban', 'pick', 'midBan', 'pick2', 'pick_s2'].includes(phase)) {
         const isBanAction = (phase === 'ban' || phase === 'midBan');
-        const sourcePlayer = isBanAction ? (currentPlayer === 'p1' ? 'p2' : 'p1') : currentPlayer;
-        const sourceList = draft.available[sourcePlayer] || [];
-        if (!sourceList.includes(selectedId)) {
-            return; // Invalid selection, ignore
+        if (isBanAction) {
+            const targetPlayer = currentPlayer === 'p1' ? 'p2' : 'p1';
+            const opponentRoster = lobbyData.roster[targetPlayer] || [];
+            const blocked = new Set([
+                ...draft.idBans.p1,
+                ...draft.idBans.p2,
+                ...draft.picks.p1,
+                ...draft.picks.p2,
+                ...draft.picks_s2.p1,
+                ...draft.picks_s2.p2
+            ]);
+            if (!opponentRoster.includes(selectedId) || blocked.has(selectedId)) {
+                return; // Invalid ban attempt
+            }
+        } else {
+            const sourceList = draft.available[currentPlayer] || [];
+            if (!sourceList.includes(selectedId)) return;
         }
     }
 
@@ -578,12 +590,15 @@ function handleDraftConfirm(lobbyCode, lobbyData, ws) {
             listToUpdate = draft.picks_s2[currentPlayer];
         }
 
-        if (listToUpdate) listToUpdate.push(selectedId);
-        
-        let p1Index = draft.available.p1.indexOf(selectedId);
-        if(p1Index > -1) draft.available.p1.splice(p1Index, 1);
-        let p2Index = draft.available.p2.indexOf(selectedId);
-        if(p2Index > -1) draft.available.p2.splice(p2Index, 1);
+    if (listToUpdate) listToUpdate.push(selectedId);
+    // For pick phases, remove globally. For ban phases, don't shrink both lists—display logic derives from rosters.
+    const isBanRemoval = (phase === 'ban' || phase === 'midBan');
+    if (!isBanRemoval) {
+            let p1Index = draft.available.p1.indexOf(selectedId);
+            if(p1Index > -1) draft.available.p1.splice(p1Index, 1);
+            let p2Index = draft.available.p2.indexOf(selectedId);
+            if(p2Index > -1) draft.available.p2.splice(p2Index, 1);
+        }
         
         draft.actionCount--;
 
@@ -647,22 +662,6 @@ wss.on('connection', (ws, req) => {
                 break;
             }
 
-            case 'getPublicLobbies': {
-                const validPhases = ['roster', 'coinFlip', 'egoBan', 'ban', 'pick', 'midBan', 'pick2', 'pick_s2'];
-                const publicLobbies = Object.entries(lobbies)
-                    .filter(([, lobby]) => lobby.draft.isPublic && validPhases.includes(lobby.draft.phase))
-                    .map(([code, lobby]) => ({
-                        code,
-                        hostName: lobby.hostName,
-                        participants: lobby.participants,
-                        draftLogic: lobby.draft.draftLogic,
-                    }))
-                    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-                    .slice(0, 50);
-
-                ws.send(JSON.stringify({ type: 'publicLobbiesList', lobbies: publicLobbies }));
-                break;
-            }
             
             case 'getLobbyInfo': {
                 if (!lobbyData) return ws.send(JSON.stringify({ type: 'error', message: 'Lobby not found.' }));
