@@ -642,6 +642,15 @@ input:focus, select:focus {
 .compact-id-list .id-item:hover {
     transform: none;
 }
+.compact-id-list .id-item:hover .id-icon,
+.compact-id-list .id-item.hovered .id-icon {
+    border-color: var(--hover) !important;
+    box-shadow: 0 0 8px var(--hover);
+}
+.compact-id-list .id-item.selected .id-icon {
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 8px var(--accent);
+}
 .compact-id-list .id-item .id-name {
     display: none;
 }
@@ -683,9 +692,26 @@ input:focus, select:focus {
     border-color: var(--accent) !important;
     box-shadow: 0 0 10px var(--accent);
 }
+/* Override selected styling for compact contexts - apply to icon instead */
+.compact-id-list .id-item.selected,
+.final-picks .id-item.selected,
+.final-bans .id-item.selected,
+#draft-pool-container .id-item.selected {
+    background: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+}
 .id-item.hovered {
     border-color: var(--hover) !important;
     box-shadow: 0 0 10px var(--hover);
+}
+/* Override hovered styling for compact contexts - apply to icon instead */
+.compact-id-list .id-item.hovered,
+.final-picks .id-item.hovered,
+.final-bans .id-item.hovered,
+#draft-pool-container .id-item.hovered {
+    border-color: transparent !important;
+    box-shadow: none !important;
 }
 
 .shared-icon {
@@ -867,6 +893,21 @@ input:focus, select:focus {
     padding: 0;
     background: transparent;
     border: none;
+}
+.final-picks .id-item:hover .id-icon,
+.final-picks .id-item.hovered .id-icon,
+.final-bans .id-item:hover .id-icon,
+.final-bans .id-item.hovered .id-icon,
+#draft-pool-container .id-item:hover .id-icon,
+#draft-pool-container .id-item.hovered .id-icon {
+    border-color: var(--hover) !important;
+    box-shadow: 0 0 8px var(--hover);
+}
+.final-picks .id-item.selected .id-icon,
+.final-bans .id-item.selected .id-icon,
+#draft-pool-container .id-item.selected .id-icon {
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 8px var(--accent);
 }
 .final-picks .id-item .id-name, .final-bans .id-item .id-name {
     display: none;
