@@ -539,6 +539,13 @@ function computeBanPools(lobbyData) {
     const { draft, roster } = lobbyData;
     const banned = new Set([...draft.idBans.p1, ...draft.idBans.p2]);
     const pools = { p1: [], p2: [] };
+    
+    console.log(`[Server Ban Pools Debug] Computing ban pools`);
+    console.log(`[Server Ban Pools Debug] P1 roster (${roster.p1?.length || 0} IDs):`, roster.p1?.slice(0, 5), '...');
+    console.log(`[Server Ban Pools Debug] P2 roster (${roster.p2?.length || 0} IDs):`, roster.p2?.slice(0, 5), '...');
+    console.log(`[Server Ban Pools Debug] P1 roster Yi Sang count:`, roster.p1?.filter(id => id.includes('yi-sang')).length || 0);
+    console.log(`[Server Ban Pools Debug] P2 roster Yi Sang count:`, roster.p2?.filter(id => id.includes('yi-sang')).length || 0);
+    
     ['p1','p2'].forEach(player => {
         const opponent = player === 'p1' ? 'p2' : 'p1';
         const blocked = new Set([
@@ -547,6 +554,8 @@ function computeBanPools(lobbyData) {
             ...draft.picks_s2[opponent]
         ]);
         pools[player] = (roster[opponent] || []).filter(id => !blocked.has(id));
+        
+        console.log(`[Server Ban Pools Debug] ${player} can ban from ${opponent} (${pools[player].length} IDs, ${pools[player].filter(id => id.includes('yi-sang')).length} Yi Sang)`);
     });
     draft.banPools = pools;
     
