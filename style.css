@@ -617,12 +617,13 @@ input:focus, select:focus {
     background: rgba(0, 0, 0, 0.3);
     border-radius: 8px;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(80px, 80px));
     gap: 8px;
     min-height: 90px;
     align-content: start;
     max-height: 40vh;
     overflow-y: auto;
+    justify-content: start;
 }
 
 .compact-id-list.section2-picks {
@@ -1277,6 +1278,12 @@ input:focus, select:focus {
     .roster-selection { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
     .builder-id-pool { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
     .draft-interaction-hub { padding: 15px; }
+    
+    /* Adjust compact ID list for smaller screens */
+    .compact-id-list {
+        grid-template-columns: repeat(auto-fill, minmax(70px, 70px));
+        gap: 6px;
+    }
 }
 
 @media (max-width: 576px) {
@@ -1287,6 +1294,12 @@ input:focus, select:focus {
     .roster-load-form input { width: 100%; }
     .filter-group { min-width: 120px; }
     .slider-row { grid-template-columns: 26px 1fr 22px; }
+    
+    /* Further adjust for very small screens */
+    .compact-id-list {
+        grid-template-columns: repeat(auto-fill, minmax(60px, 60px));
+        gap: 4px;
+    }
 }
 .modal-content {
     background: var(--panel);
