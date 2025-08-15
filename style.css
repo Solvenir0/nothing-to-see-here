@@ -655,12 +655,12 @@ input:focus, select:focus {
     display: none;
 }
 .compact-id-list .id-item .id-icon {
-    width: 96px; /* Fixed width slightly smaller than container */
-    height: 96px; /* Fixed height to maintain aspect ratio */
+    width: 100px; /* Full width to match container */
+    height: 100px; /* Full height to maintain aspect ratio */
     aspect-ratio: 1 / 1;
     border-radius: 8px;
     border: 2px solid var(--border);
-    max-width: 96px; /* Prevent icon from exceeding intended size */
+    max-width: 100px; /* Prevent icon from exceeding intended size */
     object-fit: cover; /* Ensure image fits properly */
 }
 
@@ -1198,7 +1198,7 @@ input:focus, select:focus {
 }
 .sinner-grouped-roster .sinner-id-container {
     display: grid;
-    grid-template-columns: repeat(auto-fill, 80px);
+    grid-template-columns: repeat(auto-fill, 100px);
     gap: 5px;
     justify-content: center;
 }
@@ -1214,10 +1214,10 @@ input:focus, select:focus {
     display: none; /* Hide the name */
 }
 .sinner-grouped-roster .id-item .id-icon {
-    width: 76px; /* Slightly smaller than container */
-    height: 76px; /* Slightly smaller than container */
-    max-width: 76px; /* Prevent icon from exceeding intended size */
-    max-height: 76px; /* Prevent icon from exceeding intended size */
+    width: 96px; /* Slightly smaller than 100px container for border/padding */
+    height: 96px; /* Slightly smaller than 100px container for border/padding */
+    max-width: 96px; /* Prevent icon from exceeding intended size */
+    max-height: 96px; /* Prevent icon from exceeding intended size */
     object-fit: cover; /* Ensure image fits properly */
 }
 .sinner-grouped-roster .id-item:hover {
@@ -1330,7 +1330,7 @@ input:focus, select:focus {
     
     /* Adjust compact ID list for smaller screens */
     .compact-id-list {
-        grid-template-columns: repeat(auto-fill, 80px);
+        grid-template-columns: repeat(auto-fill, 90px);
     }
 }
 
