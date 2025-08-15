@@ -1759,10 +1759,8 @@ function cacheDOMElements() {
         draftLogicSelect: document.getElementById('draft-logic-select'),
         matchTypeSelect: document.getElementById('match-type-select'),
         timerToggle: document.getElementById('timer-toggle'),
-    publicLobbyToggle: document.getElementById('public-lobby-toggle'), // may be null
         rosterSizeSelect: document.getElementById('roster-size-select'),
         showRulesBtn: document.getElementById('show-rules-btn'),
-    // Removed public lobby browsing elements
         lobbyCodeInput: document.getElementById('lobby-code-input'),
         enterLobbyByCode: document.getElementById('enter-lobby-by-code'),
         builderRosterDescription: document.getElementById('builder-roster-description'),
@@ -1892,7 +1890,12 @@ function cacheDOMElements() {
         idTooltip: null
     };
     
-    const missingElements = Object.keys(elements).filter(key => !elements[key]);
+    // Elements that are intentionally null or optional
+    const optionalElements = ['idTooltip'];
+    
+    const missingElements = Object.keys(elements)
+        .filter(key => !elements[key] && !optionalElements.includes(key));
+    
     if (missingElements.length > 0) {
         console.warn('Missing DOM elements:', missingElements);
     }
