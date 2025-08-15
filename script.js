@@ -17,6 +17,27 @@ const zayinBanExceptions = [
     "Cavernous Wailing (Sinclair)",
     "Legerdemain (Gregor)"
 ];
+
+// Timing constants (in milliseconds)
+const TIMING = {
+    NOTIFICATION_HIDE_DELAY: 3000,
+    CONNECTION_ERROR_DELAY: 5000,
+    RECONNECT_ATTEMPT_DELAY: 10000,
+    WEBSOCKET_RETRY_DELAY: 100,
+    TOOLTIP_SHOW_DELAY: 500,
+    TIMER_UPDATE_INTERVAL: 1000,
+    KEEP_ALIVE_INTERVAL: 4 * 60 * 1000  // 4 minutes
+};
+
+// Game configuration constants
+const GAME_CONFIG = {
+    DEFAULT_RESERVE_TIME: 120,  // seconds
+    SECTION1_ROSTER_SIZE: 42,
+    ALL_SECTIONS_ROSTER_SIZE: 72,
+    USER_ID_LENGTH: 9,
+    USER_ID_START_POS: 2,
+    MAX_GENERATION_ATTEMPTS: 1000
+};
 // ======================
 // APPLICATION STATE
 // ======================
@@ -27,13 +48,13 @@ const state = {
     userRole: "",
     rejoinToken: null,
     participants: {
-        p1: { name: "Player 1", status: "disconnected", ready: false, reserveTime: 120 },
-        p2: { name: "Player 2", status: "disconnected", ready: false, reserveTime: 120 },
+        p1: { name: "Player 1", status: "disconnected", ready: false, reserveTime: GAME_CONFIG.DEFAULT_RESERVE_TIME },
+        p2: { name: "Player 2", status: "disconnected", ready: false, reserveTime: GAME_CONFIG.DEFAULT_RESERVE_TIME },
         ref: { name: "Referee", status: "disconnected" }
     },
     roster: { p1: [], p2: [] },
     builderRoster: [],
-    builderRosterSize: 42,
+    builderRosterSize: GAME_CONFIG.SECTION1_ROSTER_SIZE,
     masterIDList: [],
     builderMasterIDList: [],
     masterEGOList: [],
@@ -54,7 +75,7 @@ const state = {
         banPools: { p1: [], p2: [] },
         draftLogic: '1-2-2',
         matchType: 'section1',
-        rosterSize: 42,
+        rosterSize: GAME_CONFIG.SECTION1_ROSTER_SIZE,
         coinFlipWinner: null,
         turnOrderDecided: false,
         timer: {
@@ -79,17 +100,75 @@ const state = {
 let elements = {};
 
 // ======================
+// DOM ELEMENT MANAGEMENT
+// ======================
+/**
+ * Helper function to get reserve time element for a specific role
+ * @param {string} role - Player role (p1, p2)
+ * @returns {HTMLElement|null} The reserve time element
+ */
+function getReserveTimeElement(role) {
+    const elementKey = `${role}ReserveTime`;
+    if (!elements[elementKey]) {
+        elements[elementKey] = document.getElementById(`${role}-reserve-time`);
+    }
+    return elements[elementKey];
+}
+
+/**
+ * Helper function to get slider elements for advanced random generation
+ * @param {string} sinner - Sinner name
+ * @returns {object} Object containing slider elements
+ */
+function getSliderElements(sinner) {
+    const cacheKey = `sliders_${sinner.replace(/\s+/g, '_')}`;
+    if (!elements[cacheKey]) {
+        elements[cacheKey] = {
+            minSlider: document.getElementById(`slider-${sinner}-min`),
+            maxSlider: document.getElementById(`slider-${sinner}-max`),
+            minVal: document.getElementById(`slider-val-${sinner}-min`),
+            maxVal: document.getElementById(`slider-val-${sinner}-max`)
+        };
+    }
+    return elements[cacheKey];
+}
+
+/**
+ * Helper function to manage tooltip element
+ * @returns {HTMLElement} The tooltip element
+ */
+function getTooltipElement() {
+    if (!elements.idTooltip) {
+        elements.idTooltip = document.getElementById('id-tooltip');
+    }
+    return elements.idTooltip;
+}
+
+/**
+ * Clear cached dynamic elements when they're removed from DOM
+ */
+function clearDynamicElementCache() {
+    elements.idTooltip = null;
+    // Clear any slider caches if needed
+    Object.keys(elements).forEach(key => {
+        if (key.startsWith('sliders_')) {
+            delete elements[key];
+        }
+    });
+}
+
+// ======================
 // UTILITY & CORE
 // ======================
 function generateUserId() {
-    return 'user-' + Math.random().toString(36).substr(2, 9);
+    return 'user-' + Math.random().toString(36).substr(GAME_CONFIG.USER_ID_START_POS, GAME_CONFIG.USER_ID_LENGTH);
 }
 
 function showNotification(text, isError = false) {
     elements.notification.textContent = text;
     elements.notification.style.background = isError ? 'var(--disconnected)' : 'var(--primary)';
     elements.notification.classList.add('show');
-    setTimeout(() => { elements.notification.classList.remove('show'); }, 3000);
+    setTimeout(() => { elements.notification.classList.remove('show'); }, TIMING.NOTIFICATION_HIDE_DELAY);
 }
 
 function showSideChangeNotification(oldRole, newRole) {
@@ -107,7 +186,7 @@ function showSideChangeNotification(oldRole, newRole) {
     setTimeout(() => { 
         elements.notification.classList.remove('show'); 
         elements.notification.style.fontWeight = ''; // Reset
-    }, 5000);
+    }, TIMING.CONNECTION_ERROR_DELAY);
 }
 
 function createSlug(name) {
@@ -133,7 +212,7 @@ function startKeepAlive() {
             console.log('Sending keep-alive message to prevent server sleep');
             sendMessage({ type: 'keepAlive', lobbyCode: state.lobbyCode });
         }
-    }, 4 * 60 * 1000); // 4 minutes
+    }, TIMING.KEEP_ALIVE_INTERVAL);
 }
 
 function stopKeepAlive() {
@@ -312,7 +391,7 @@ function connectWebSocket() {
                     localStorage.removeItem('limbusDraftSession');
                     showNotification("Failed to rejoin lobby. Session cleared.", true);
                 }
-            }, 10000);
+            }, TIMING.RECONNECT_ATTEMPT_DELAY);
         }
     };
     state.socket.onmessage = (event) => handleServerMessage(JSON.parse(event.data));
@@ -580,7 +659,7 @@ function updateAllUIsFromState() {
         elements.participantsList.appendChild(el);
 
         if ((role === 'p1' || role === 'p2') && p.reserveTime !== undefined) {
-            const reserveTimeEl = document.getElementById(`${role}-reserve-time`);
+            const reserveTimeEl = getReserveTimeElement(role);
             if (reserveTimeEl) {
                 const minutes = Math.floor(p.reserveTime / 60);
                 const seconds = p.reserveTime % 60;
@@ -1064,10 +1143,10 @@ function updateTimerUI() {
     }
 
     if (!state.timerInterval) {
-        state.timerInterval = setInterval(updateTimerUI, 1000);
+        state.timerInterval = setInterval(updateTimerUI, TIMING.TIMER_UPDATE_INTERVAL);
     }
 
-    const remaining = Math.max(0, Math.round((timer.endTime - Date.now()) / 1000));
+    const remaining = Math.max(0, Math.round((timer.endTime - Date.now()) / TIMING.TIMER_UPDATE_INTERVAL));
     const minutes = Math.floor(remaining / 60);
     const seconds = remaining % 60;
     elements.phaseTimer.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
@@ -1298,7 +1377,7 @@ function setupEventListeners() {
         if (state.socket && state.socket.readyState !== WebSocket.CLOSED) {
             state.socket.close();
         }
-        setTimeout(connectWebSocket, 100);
+        setTimeout(connectWebSocket, TIMING.WEBSOCKET_RETRY_DELAY);
         showNotification("Rejoin attempt cancelled.");
     };
     elements.cancelRejoinBtn.addEventListener('click', cancelRejoinAction);
@@ -1431,7 +1510,7 @@ function setupEventListeners() {
     let tooltipTimer = null;
 
     const showTooltip = (element) => {
-        if (document.getElementById('id-tooltip')) return;
+        if (getTooltipElement()) return; // Tooltip already exists
 
         const idSlug = element.dataset.id;
         const idData = state.masterIDList.find(id => id.id === idSlug);
@@ -1441,6 +1520,9 @@ function setupEventListeners() {
         tooltip.id = 'id-tooltip';
         tooltip.textContent = idData.name;
         document.body.appendChild(tooltip);
+        
+        // Cache the newly created tooltip
+        elements.idTooltip = tooltip;
 
         const rect = element.getBoundingClientRect();
         let top = rect.top - tooltip.offsetHeight - 5;
@@ -1463,9 +1545,10 @@ function setupEventListeners() {
 
     const hideTooltip = () => {
         clearTimeout(tooltipTimer);
-        const tooltip = document.getElementById('id-tooltip');
+        const tooltip = getTooltipElement();
         if (tooltip) {
             tooltip.remove();
+            elements.idTooltip = null; // Clear cache when removed
         }
     };
 
@@ -1473,7 +1556,7 @@ function setupEventListeners() {
         const targetElement = e.target.closest('.compact-id-list .id-item, .final-picks .id-item, .final-bans .id-item, #draft-pool-container .id-item');
         if (targetElement) {
             clearTimeout(tooltipTimer);
-            tooltipTimer = setTimeout(() => showTooltip(targetElement), 500);
+            tooltipTimer = setTimeout(() => showTooltip(targetElement), TIMING.TOOLTIP_SHOW_DELAY);
         }
     });
 
@@ -1534,13 +1617,15 @@ function createFilterBarHTML(options = {}) {
 function setupAdvancedRandomUI() {
     const container = elements.sinnerSlidersContainer;
     container.innerHTML = '';
+    clearDynamicElementCache(); // Clear cached slider elements
     const rosterSize = state.builderRosterSize;
 
     const updateTotals = () => {
         let totalMin = 0, totalMax = 0;
         SINNER_ORDER.forEach(sinner => {
-            totalMin += parseInt(document.getElementById(`slider-${sinner}-min`).value, 10);
-            totalMax += parseInt(document.getElementById(`slider-${sinner}-max`).value, 10);
+            const sliders = getSliderElements(sinner);
+            totalMin += parseInt(sliders.minSlider?.value || 0, 10);
+            totalMax += parseInt(sliders.maxSlider?.value || 0, 10);
         });
         elements.totalMinDisplay.textContent = totalMin;
         elements.totalMaxDisplay.textContent = totalMax;
@@ -1572,10 +1657,8 @@ function setupAdvancedRandomUI() {
         `;
         container.appendChild(group);
 
-        const minSlider = document.getElementById(`slider-${sinner}-min`);
-        const maxSlider = document.getElementById(`slider-${sinner}-max`);
-        const minVal = document.getElementById(`slider-val-${sinner}-min`);
-        const maxVal = document.getElementById(`slider-val-${sinner}-max`);
+        const sliders = getSliderElements(sinner);
+        const { minSlider, maxSlider, minVal, maxVal } = sliders;
 
         minSlider.addEventListener('input', () => {
             minVal.textContent = minSlider.value;
@@ -1604,8 +1687,9 @@ function generateAdvancedRandomRoster() {
     const rosterSize = state.builderRosterSize;
 
     SINNER_ORDER.forEach(sinner => {
-        const min = parseInt(document.getElementById(`slider-${sinner}-min`).value, 10);
-        const max = parseInt(document.getElementById(`slider-${sinner}-max`).value, 10);
+        const sliders = getSliderElements(sinner);
+        const min = parseInt(sliders.minSlider?.value || 0, 10);
+        const max = parseInt(sliders.maxSlider?.value || 0, 10);
         constraints[sinner] = { min, max, available: state.idsBySinner[sinner] || [] };
         totalMin += min;
         totalMax += max;
@@ -1634,7 +1718,7 @@ function generateAdvancedRandomRoster() {
     availableIDs = availableIDs.filter(id => !rosterSlugs.has(id.id));
 
     let attempts = 0;
-    while (roster.length < rosterSize && attempts < 1000) {
+    while (roster.length < rosterSize && attempts < GAME_CONFIG.MAX_GENERATION_ATTEMPTS) {
         if (availableIDs.length === 0) break;
 
         const randomIndex = Math.floor(Math.random() * availableIDs.length);
@@ -1798,6 +1882,14 @@ function cacheDOMElements() {
         turnChoiceButtons: document.getElementById('turn-choice-buttons'),
         goFirstBtn: document.getElementById('go-first-btn'),
         goSecondBtn: document.getElementById('go-second-btn'),
+
+        // Frequently accessed filter bars
+        globalFilterBarRoster: document.getElementById('global-filter-bar-roster'),
+        globalFilterBarBuilder: document.getElementById('global-filter-bar-builder'),
+        globalFilterBarDraft: document.getElementById('global-filter-bar-draft'),
+
+        // Dynamic tooltip element (will be created/destroyed)
+        idTooltip: null
     };
     
     const missingElements = Object.keys(elements).filter(key => !elements[key]);
@@ -1813,9 +1905,9 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
         cacheDOMElements();
 
-        document.getElementById('global-filter-bar-roster').innerHTML = createFilterBarHTML({ showSinnerFilter: true });
-        document.getElementById('global-filter-bar-builder').innerHTML = createFilterBarHTML({ showSinnerFilter: false });
-        document.getElementById('global-filter-bar-draft').innerHTML = createFilterBarHTML({ showSinnerFilter: true });
+        elements.globalFilterBarRoster.innerHTML = createFilterBarHTML({ showSinnerFilter: true });
+        elements.globalFilterBarBuilder.innerHTML = createFilterBarHTML({ showSinnerFilter: false });
+        elements.globalFilterBarDraft.innerHTML = createFilterBarHTML({ showSinnerFilter: true });
         setupFilterBar('global-filter-bar-roster', state.filters);
         setupFilterBar('global-filter-bar-builder', state.filters);
         setupFilterBar('global-filter-bar-draft', state.draftFilters);
