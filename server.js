@@ -542,13 +542,15 @@ function handleDraftConfirm(lobbyCode, lobbyData, ws) {
         if (isBanAction) {
             const targetPlayer = currentPlayer === 'p1' ? 'p2' : 'p1';
             const opponentRoster = lobbyData.roster[targetPlayer] || [];
+            // For ban visibility/validation we only need to exclude IDs already banned by either side
+            // or already picked by the OPPONENT (can't ban something they've locked in). We no longer
+            // exclude IDs the current player has picked; showing them in the list helps satisfy the
+            // requirement to display the opponent's full remaining roster (even if banning them is redundant).
             const blocked = new Set([
                 ...draft.idBans.p1,
                 ...draft.idBans.p2,
-                ...draft.picks.p1,
-                ...draft.picks.p2,
-                ...draft.picks_s2.p1,
-                ...draft.picks_s2.p2
+                ...draft.picks[targetPlayer],
+                ...draft.picks_s2[targetPlayer]
             ]);
             if (!opponentRoster.includes(selectedId) || blocked.has(selectedId)) {
                 return; // Invalid ban attempt

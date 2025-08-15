@@ -788,13 +788,14 @@ function updateDraftInstructions() {
         if (isBanAction) {
             // Show the FULL opponent roster (minus already banned/picked IDs)
             const opponentRoster = state.roster[opponent] || [];
+            // Only exclude IDs that are already banned by either player, or that the OPPONENT has picked/locked.
+            // We still show IDs the current player has picked (can't be banned but should appear for full roster visibility);
+            // those will simply be non-interactive due to validation on confirm.
             const blocked = new Set([
                 ...state.draft.idBans.p1,
                 ...state.draft.idBans.p2,
-                ...state.draft.picks.p1,
-                ...state.draft.picks.p2,
-                ...state.draft.picks_s2.p1,
-                ...state.draft.picks_s2.p2
+                ...state.draft.picks[opponent],
+                ...state.draft.picks_s2[opponent]
             ]);
             availableIdList = opponentRoster.filter(id => !blocked.has(id));
         } else {
