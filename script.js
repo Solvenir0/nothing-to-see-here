@@ -293,7 +293,6 @@ function handleServerMessage(message) {
             }
             handleStateUpdate(message);
             break;
-        case 'publicLobbiesList': renderPublicLobbies(message.lobbies); break;
         case 'lobbyInfo': showRoleSelectionModal(message.lobby); break;
         case 'notification': showNotification(message.text); break;
         case 'error':
@@ -983,33 +982,6 @@ function updateTimerUI() {
     elements.phaseTimer.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
 
-function renderPublicLobbies(lobbies) {
-    const listEl = elements.publicLobbiesList;
-    listEl.innerHTML = '';
-
-    if (!lobbies || lobbies.length === 0) {
-        listEl.innerHTML = '<p style="text-align: center; padding: 20px;">No public lobbies found. Why not create one?</p>';
-        return;
-    }
-
-    lobbies.forEach(lobby => {
-        const item = document.createElement('div');
-        item.className = 'public-lobby-item';
-        
-        const takenRoles = Object.entries(lobby.participants)
-            .filter(([, p]) => p.status === 'connected')
-            .map(([role]) => role);
-        const playerCount = takenRoles.filter(r => r !== 'ref').length;
-
-        item.innerHTML = `
-            <div class="lobby-item-name">${lobby.hostName || 'Unnamed Lobby'}</div>
-            <div class="lobby-item-players"><i class="fas fa-users"></i> ${playerCount}/2 Players</div>
-            <div class="lobby-item-mode"><i class="fas fa-cogs"></i> ${lobby.draftLogic}</div>
-            <button class="btn btn-primary btn-small join-from-browser-btn" data-lobby-code="${lobby.code}">Join</button>
-        `;
-        listEl.appendChild(item);
-    });
-}
 
 function showRoleSelectionModal(lobby) {
     state.joinTarget.lobbyCode = lobby.code;
@@ -1167,7 +1139,7 @@ function setupEventListeners() {
             draftLogic: elements.draftLogicSelect.value,
             matchType: elements.matchTypeSelect.value,
             timerEnabled: elements.timerToggle.value === 'true',
-            isPublic: elements.publicLobbyToggle.value === 'true',
+            // Public lobbies removed
             rosterSize: elements.rosterSizeSelect.value
         };
         sendMessage({ type: 'createLobby', options });
@@ -1182,31 +1154,7 @@ function setupEventListeners() {
     elements.showRulesBtn.addEventListener('click', () => elements.rulesModal.classList.remove('hidden'));
     elements.closeRulesBtn.addEventListener('click', () => elements.rulesModal.classList.add('hidden'));
 
-    elements.joinTabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            elements.joinTabs.forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.join-tab-content').forEach(content => content.classList.remove('active'));
-
-            tab.classList.add('active');
-            const tabName = tab.dataset.tab;
-            const targetContentId = tabName === 'browse' ? 'browse-lobbies-tab' : 'code-join-tab';
-            document.getElementById(targetContentId).classList.add('active');
-
-            if (tabName === 'browse') {
-                sendMessage({ type: 'getPublicLobbies' });
-            }
-        });
-    });
-
-    elements.refreshLobbiesBtn.addEventListener('click', () => sendMessage({ type: 'getPublicLobbies' }));
-
-    elements.publicLobbiesList.addEventListener('click', (e) => {
-        const joinBtn = e.target.closest('.join-from-browser-btn');
-        if (joinBtn) {
-            const lobbyCode = joinBtn.dataset.lobbyCode;
-            sendMessage({ type: 'getLobbyInfo', lobbyCode });
-        }
-    });
+    // Public lobby browsing removed
 
     elements.enterLobbyByCode.addEventListener('click', () => {
         const lobbyCode = elements.lobbyCodeInput.value.trim().toUpperCase();
@@ -1608,12 +1556,10 @@ function cacheDOMElements() {
         draftLogicSelect: document.getElementById('draft-logic-select'),
         matchTypeSelect: document.getElementById('match-type-select'),
         timerToggle: document.getElementById('timer-toggle'),
-        publicLobbyToggle: document.getElementById('public-lobby-toggle'),
+    publicLobbyToggle: document.getElementById('public-lobby-toggle'), // may be null
         rosterSizeSelect: document.getElementById('roster-size-select'),
         showRulesBtn: document.getElementById('show-rules-btn'),
-        joinTabs: document.querySelectorAll('.join-tab-btn'),
-        refreshLobbiesBtn: document.getElementById('refresh-lobbies-btn'),
-        publicLobbiesList: document.getElementById('public-lobbies-list'),
+    // Removed public lobby browsing elements
         lobbyCodeInput: document.getElementById('lobby-code-input'),
         enterLobbyByCode: document.getElementById('enter-lobby-by-code'),
         builderRosterDescription: document.getElementById('builder-roster-description'),
