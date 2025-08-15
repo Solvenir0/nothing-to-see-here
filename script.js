@@ -68,6 +68,7 @@ const state = {
     draftFilters: { sinner: "", sinAffinity: "", keyword: "", rosterSearch: "" },
     egoSearch: "",
     timerInterval: null,
+    keepAliveInterval: null,
     socket: null,
     joinTarget: {
         lobbyCode: null,
@@ -98,6 +99,42 @@ function createSlug(name) {
     slug = slug.replace(/e\.g\.o::/g, 'ego-');
     slug = slug.replace(/ & /g, ' ').replace(/[.'"]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/[^\w-]+/g, '');
     return slug;
+}
+
+// ======================
+// KEEP-ALIVE SYSTEM
+// ======================
+function startKeepAlive() {
+    if (state.keepAliveInterval) return; // Already running
+    
+    console.log('Starting keep-alive system for active draft phases');
+    
+    // Send keep-alive every 4 minutes (Render free tier sleeps after ~15 min of inactivity)
+    state.keepAliveInterval = setInterval(() => {
+        if (shouldSendKeepAlive()) {
+            console.log('Sending keep-alive message to prevent server sleep');
+            sendMessage({ type: 'keepAlive', lobbyCode: state.lobbyCode });
+        }
+    }, 4 * 60 * 1000); // 4 minutes
+}
+
+function stopKeepAlive() {
+    if (state.keepAliveInterval) {
+        console.log('Stopping keep-alive system');
+        clearInterval(state.keepAliveInterval);
+        state.keepAliveInterval = null;
+    }
+}
+
+function shouldSendKeepAlive() {
+    // Only send keep-alive during active draft phases to prevent sleep
+    if (!state.lobbyCode || !state.socket || state.socket.readyState !== WebSocket.OPEN) {
+        return false;
+    }
+    
+    // Active draft phases that need keep-alive
+    const activeDraftPhases = ['coinFlip', 'egoBan', 'ban', 'pick', 'midBan', 'pick2', 'pick_s2'];
+    return activeDraftPhases.includes(state.draft.phase);
 }
 
 // ======================
@@ -265,6 +302,7 @@ function connectWebSocket() {
         elements.connectionStatus.className = 'connection-status';
         elements.connectionStatus.innerHTML = '<i class="fas fa-plug"></i> <span>Disconnected</span>';
         if (state.timerInterval) clearInterval(state.timerInterval);
+        stopKeepAlive(); // Stop keep-alive when connection is lost
     };
     state.socket.onerror = (error) => console.error('WebSocket error:', error);
 }
@@ -303,6 +341,10 @@ function handleServerMessage(message) {
                 elements.rejoinOverlay.style.display = 'none';
                 if (rejoinTimeout) clearTimeout(rejoinTimeout);
             }
+            break;
+        case 'keepAliveAck':
+            // Server acknowledged keep-alive, no action needed
+            console.log('Keep-alive acknowledged by server');
             break;
     }
 }
@@ -1097,6 +1139,9 @@ function handleLobbyJoined(message) {
         }));
     }
 
+    // Start keep-alive system when joining a lobby
+    startKeepAlive();
+
     handleStateUpdate(message);
     showNotification(`Joined lobby as ${state.participants[state.userRole].name}`);
 }
@@ -1217,12 +1262,14 @@ function setupEventListeners() {
     elements.cancelRejoinBtn.addEventListener('click', cancelRejoinAction);
 
     const clearSessionAndReload = () => {
+        stopKeepAlive(); // Stop keep-alive before leaving
         localStorage.removeItem('limbusDraftSession');
         window.location.reload();
     };
     elements.backToMainLobby.addEventListener('click', clearSessionAndReload);
     elements.restartDraft.addEventListener('click', clearSessionAndReload);
     elements.backToMainBuilder.addEventListener('click', () => {
+        stopKeepAlive(); // Stop keep-alive when leaving lobby
         state.lobbyCode = ''; 
         switchView('mainPage');
     });

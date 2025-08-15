@@ -952,6 +952,15 @@ wss.on('connection', (ws, req) => {
                 broadcastState(lobbyCode);
                 break;
             }
+
+            case 'keepAlive': {
+                // Keep-alive message to prevent Render sleep during active drafts
+                if (!lobbyData) return;
+                updateLobbyActivity(lobbyCode);
+                // Send a minimal acknowledgment to confirm server is active
+                ws.send(JSON.stringify({ type: 'keepAliveAck' }));
+                break;
+            }
         }
     });
 
