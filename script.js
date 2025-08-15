@@ -51,6 +51,7 @@ const state = {
         picks: { p1: [], p2: [] },
         picks_s2: { p1: [], p2: [] },
         hovered: { p1: null, p2: null },
+        banPools: { p1: [], p2: [] },
         draftLogic: '1-2-2',
         matchType: 'section1',
         rosterSize: 42,
@@ -789,6 +790,11 @@ function updateDraftInstructions() {
             // Always show the ACTIVE player's bannable pool to everyone so both sides view the same list.
             // This avoids perspective confusion where the waiting player would otherwise see their own roster.
             availableIdList = state.draft.banPools[currentPlayer] || [];
+            
+            // Debug logging to help identify issues
+            if (availableIdList.length === 0 && state.draft.banPools) {
+                console.warn(`[Draft Debug] Empty ban pool for ${currentPlayer} in phase ${phase}. BanPools:`, state.draft.banPools);
+            }
         } else {
             availableIdList = state.draft.available[currentPlayer] || [];
         }
@@ -1079,7 +1085,20 @@ function handleLobbyJoined(message) {
 function handleStateUpdate(message) {
     Object.assign(state.participants, message.state.participants);
     Object.assign(state.roster, message.state.roster);
-    Object.assign(state.draft, message.state.draft);
+    
+    // Deep merge the draft state to ensure new properties like banPools are properly copied
+    if (message.state.draft) {
+        Object.keys(message.state.draft).forEach(key => {
+            if (typeof message.state.draft[key] === 'object' && message.state.draft[key] !== null && !Array.isArray(message.state.draft[key])) {
+                // For nested objects, ensure the property exists before assigning
+                if (!state.draft[key]) state.draft[key] = {};
+                Object.assign(state.draft[key], message.state.draft[key]);
+            } else {
+                // For primitive values and arrays, direct assignment
+                state.draft[key] = message.state.draft[key];
+            }
+        });
+    }
     
     elements.lobbyCodeDisplay.textContent = state.lobbyCode;
     updateAllUIsFromState();

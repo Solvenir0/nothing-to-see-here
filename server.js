@@ -40,37 +40,37 @@ const DRAFT_LOGIC = {
         ban1Steps: 8,
         pick1: [{ p: 'p1', c: 1 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 1 }],
         midBanSteps: 6,
-        // Phase 2 now starts with the same player (p1) instead of giving first move to p2
-        pick2: [{ p: 'p1', c: 1 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 1 }],
+        // Phase 2 (pick2) starts with p2 - the player who goes second during phase 1 goes first during phase 2
+        pick2: [{ p: 'p2', c: 1 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 1 }],
         pick_s2: [{ p: 'p1', c: 1 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 1 }]
     },
     '1-2-2-extended': { // For "All Sections" matches
         ban1Steps: 8,
         pick1: [{ p: 'p1', c: 1 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 1 }],
         midBanSteps: 8, // Increased to 8
-        pick2: [ // Starts with p1 now
-            { p: 'p1', c: 1 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 },
-            { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 },
-            { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 },
-            { p: 'p1', c: 1 }
+        pick2: [ // Starts with p2 now - the player who goes second during phase 1 goes first during phase 2
+            { p: 'p2', c: 1 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 },
+            { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 },
+            { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 },
+            { p: 'p2', c: 1 }
         ],
     },
     '2-3-2': {
         ban1Steps: 8,
         pick1: [{ p: 'p1', c: 2 }, { p: 'p2', c: 3 }, { p: 'p1', c: 2 }, { p: 'p2', c: 3 }, { p: 'p1', c: 2 }],
         midBanSteps: 6,
-        pick2: [{ p: 'p1', c: 2 }, { p: 'p2', c: 3 }, { p: 'p1', c: 2 }, { p: 'p2', c: 3 }, { p: 'p1', c: 2 }],
+        pick2: [{ p: 'p2', c: 2 }, { p: 'p1', c: 3 }, { p: 'p2', c: 2 }, { p: 'p1', c: 3 }, { p: 'p2', c: 2 }],
         pick_s2: [{ p: 'p1', c: 1 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 1 }]
     },
     '2-3-2-extended': { // For "All Sections" matches
         ban1Steps: 8,
         pick1: [{ p: 'p1', c: 2 }, { p: 'p2', c: 3 }, { p: 'p1', c: 2 }, { p: 'p2', c: 3 }, { p: 'p1', c: 2 }],
         midBanSteps: 8, // Increased to 8
-        pick2: [ // Starts with p1 now
-            { p: 'p1', c: 1 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 },
-            { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 },
-            { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 },
-            { p: 'p1', c: 1 }
+        pick2: [ // Starts with p2 now - the player who goes second during phase 1 goes first during phase 2
+            { p: 'p2', c: 1 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 },
+            { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 },
+            { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 },
+            { p: 'p2', c: 1 }
         ],
     }
 };
@@ -549,6 +549,11 @@ function computeBanPools(lobbyData) {
         pools[player] = (roster[opponent] || []).filter(id => !blocked.has(id));
     });
     draft.banPools = pools;
+    
+    // Debug logging to help identify issues
+    console.log(`[Ban Pools Debug] Phase: ${draft.phase}, Current: ${draft.currentPlayer}`);
+    console.log(`[Ban Pools Debug] P1 can ban from (${pools.p1.length} IDs):`, pools.p1.slice(0, 5), '...');
+    console.log(`[Ban Pools Debug] P2 can ban from (${pools.p2.length} IDs):`, pools.p2.slice(0, 5), '...');
 }
 
 function handleDraftConfirm(lobbyCode, lobbyData, ws) {
