@@ -657,7 +657,7 @@ input:focus, select:focus {
     position: relative;
     padding: 8px;
     margin: 0;
-    background: rgba(139, 0, 0, 0.3);
+    background: rgba(0, 0, 0, 0.2);
     border-radius: 4px;
     display: flex;
     align-items: center;
@@ -672,14 +672,12 @@ input:focus, select:focus {
 .id-item.rarity-000 { border-left-color: var(--rarity-000); }
 
 .id-item:hover {
-    background: rgba(139, 0, 0, 0.5);
+    background: rgba(0, 0, 0, 0.3);
     transform: translateX(5px);
 }
 
 .id-item.selected {
     background: var(--primary);
-    border-color: var(--accent) !important;
-    box-shadow: 0 0 10px var(--accent);
 }
 
 /* === SIMPLE HOVER SYSTEM === */
@@ -695,11 +693,6 @@ input:focus, select:focus {
     transition: transform 0.2s ease;
 }
 
-.compact-id-list .id-item.selected .id-icon {
-    border-color: var(--accent) !important;
-    box-shadow: 0 0 10px var(--accent);
-}
-
 /* Final picks/bans - simple scale effect on image */
 .final-picks .id-item:hover .id-icon,
 .final-picks .id-item.hovered .id-icon,
@@ -707,12 +700,6 @@ input:focus, select:focus {
 .final-bans .id-item.hovered .id-icon {
     transform: scale(1.05);
     transition: transform 0.2s ease;
-}
-
-.final-picks .id-item.selected .id-icon,
-.final-bans .id-item.selected .id-icon {
-    border-color: var(--accent) !important;
-    box-shadow: 0 0 10px var(--accent);
 }
 
 /* Sinner grouped roster (draft pool) - simple scale effect on container */
@@ -1258,8 +1245,6 @@ input:focus, select:focus {
     object-fit: cover; /* Ensure image fits properly */
 }
 .sinner-grouped-roster .id-item.selected {
-    border-color: var(--accent) !important;
-    box-shadow: 0 0 8px var(--accent);
     background: var(--primary);
 }
 
