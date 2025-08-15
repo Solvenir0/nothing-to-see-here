@@ -617,12 +617,13 @@ input:focus, select:focus {
     background: rgba(0, 0, 0, 0.3);
     border-radius: 8px;
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    grid-template-columns: repeat(auto-fill, 100px);
     gap: 8px;
     min-height: 90px;
     align-content: start;
     max-height: 40vh;
     overflow-y: auto;
+    justify-content: space-evenly;
 }
 
 .compact-id-list.section2-picks {
