@@ -792,6 +792,12 @@ function updateDraftInstructions() {
             availableIdList = state.draft.banPools[currentPlayer] || [];
             
             // Debug logging to help identify issues
+            console.log(`[Draft Debug] Ban action in phase ${phase}, currentPlayer: ${currentPlayer}`);
+            console.log(`[Draft Debug] BanPools object:`, state.draft.banPools);
+            console.log(`[Draft Debug] Using ban pool for ${currentPlayer}:`, availableIdList);
+            console.log(`[Draft Debug] P1 roster:`, state.roster.p1);
+            console.log(`[Draft Debug] P2 roster:`, state.roster.p2);
+            
             if (availableIdList.length === 0 && state.draft.banPools) {
                 console.warn(`[Draft Debug] Empty ban pool for ${currentPlayer} in phase ${phase}. BanPools:`, state.draft.banPools);
             }
