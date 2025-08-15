@@ -813,11 +813,17 @@ function updateDraftInstructions() {
         let availableObjects = availableIdList.map(id => state.masterIDList.find(item => item && item.id === id)).filter(Boolean);
         
         console.log(`[Draft Debug] Available objects before filtering (${availableObjects.length}):`, availableObjects.slice(0, 5).map(obj => obj.name));
+        console.log(`[Draft Debug] Sample IDs from ban pool:`, availableIdList.slice(0, 5));
+        console.log(`[Draft Debug] Sample mapped objects:`, availableObjects.slice(0, 5).map(obj => ({id: obj.id, name: obj.name})));
         
         availableObjects = filterIDs(availableObjects, state.draftFilters, { draftPhase: true });
         
         console.log(`[Draft Debug] Available objects after filtering (${availableObjects.length}):`, availableObjects.slice(0, 5).map(obj => obj.name));
         console.log(`[Draft Debug] Looking for Yi Sang in available objects:`, availableObjects.filter(obj => obj.name.includes('Yi Sang')).map(obj => obj.name));
+        
+        // Check if any Yi Sang IDs are in the ban pool
+        const yiSangIdsInPool = availableIdList.filter(id => id.includes('yi-sang'));
+        console.log(`[Draft Debug] Yi Sang IDs in ban pool:`, yiSangIdsInPool);
         
         const clickHandler = (state.userRole === currentPlayer || state.userRole === 'ref') ? (id) => hoverDraftID(id) : null;
         
