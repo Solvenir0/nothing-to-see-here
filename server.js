@@ -303,6 +303,10 @@ function createNewLobbyState(options = {}) {
             picks: { p1: [], p2: [] },
             picks_s2: { p1: [], p2: [] },
             hovered: { p1: null, p2: null },
+            // Authoritative server-side view of bannable opponent IDs for each player.
+            // banPools.p1: IDs p1 may ban (derived from roster.p2 minus bans & p2 picks)
+            // banPools.p2: IDs p2 may ban (derived from roster.p1 minus bans & p1 picks)
+            banPools: { p1: [], p2: [] },
             draftLogic,
             matchType,
             rosterSize: parseInt(rosterSize, 10),
@@ -454,6 +458,7 @@ function advancePhase(lobbyData) {
                 draft.actionCount = 1;
                 draft.available.p1 = [...lobbyData.roster.p1];
                 draft.available.p2 = [...lobbyData.roster.p2];
+                computeBanPools(lobbyData); // initialize ban pools for initial ban phase
             }
             break;
         case "ban":
@@ -482,6 +487,7 @@ function advancePhase(lobbyData) {
                 draft.step = 0;
                 draft.currentPlayer = 'p2';
                 draft.actionCount = 1;
+                computeBanPools(lobbyData); // refresh ban pools for mid-ban phase
             }
             break;
         case "midBan":
@@ -524,6 +530,24 @@ function advancePhase(lobbyData) {
             break;
     }
     return lobbyData;
+}
+
+// Recompute the bannable pools for each player based on current rosters, bans, and opponent picks.
+function computeBanPools(lobbyData) {
+    if (!lobbyData || !lobbyData.draft) return;
+    const { draft, roster } = lobbyData;
+    const banned = new Set([...draft.idBans.p1, ...draft.idBans.p2]);
+    const pools = { p1: [], p2: [] };
+    ['p1','p2'].forEach(player => {
+        const opponent = player === 'p1' ? 'p2' : 'p1';
+        const blocked = new Set([
+            ...banned,
+            ...draft.picks[opponent],
+            ...draft.picks_s2[opponent]
+        ]);
+        pools[player] = (roster[opponent] || []).filter(id => !blocked.has(id));
+    });
+    draft.banPools = pools;
 }
 
 function handleDraftConfirm(lobbyCode, lobbyData, ws) {
@@ -855,8 +879,7 @@ wss.on('connection', (ws, req) => {
                 // Validate hovered ID belongs to the correct pool for ID phases
                 if (['ban', 'pick', 'midBan', 'pick2', 'pick_s2'].includes(draft.phase)) {
                     const isBanAction = (draft.phase === 'ban' || draft.phase === 'midBan');
-                    const sourcePlayer = isBanAction ? (currentPlayer === 'p1' ? 'p2' : 'p1') : currentPlayer;
-                    const sourceList = draft.available[sourcePlayer] || [];
+                    const sourceList = isBanAction ? (draft.banPools[currentPlayer] || []) : (draft.available[currentPlayer] || []);
                     if (!sourceList.includes(hoveredId)) return;
                 }
 
@@ -869,6 +892,8 @@ wss.on('connection', (ws, req) => {
             case 'draftConfirm': {
                 if (!lobbyData) return;
                 handleDraftConfirm(lobbyCode, lobbyData, ws);
+                // Any confirmation (ban or pick) can change future bannable pools.
+                computeBanPools(lobbyData);
                 break;
             }
 

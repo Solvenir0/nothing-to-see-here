@@ -786,23 +786,10 @@ function updateDraftInstructions() {
 
         let availableIdList;
         if (isBanAction) {
-            // High-level fix: each player always views THEIR opponent's roster during ban/midBan phases,
-            // not the opponent-of-currentPlayer for everyone. This prevents a waiting player from seeing their own list.
-            let rosterPlayer;
-            if (state.userRole === 'p1' || state.userRole === 'p2') {
-                rosterPlayer = (state.userRole === 'p1') ? 'p2' : 'p1';
-            } else { // ref perspective: show the roster being targeted by the active player
-                rosterPlayer = (currentPlayer === 'p1') ? 'p2' : 'p1';
-            }
-            const displayRoster = state.roster[rosterPlayer] || [];
-            // Block: all bans + picks locked in by the owner of the displayed roster (can't be banned)
-            const blocked = new Set([
-                ...state.draft.idBans.p1,
-                ...state.draft.idBans.p2,
-                ...state.draft.picks[rosterPlayer],
-                ...state.draft.picks_s2[rosterPlayer]
-            ]);
-            availableIdList = displayRoster.filter(id => !blocked.has(id));
+            // Use authoritative server-provided banPools. For a player, always show their opponent's bannable pool.
+            // For ref, show the current player's target pool.
+            const poolOwner = (state.userRole === 'ref') ? currentPlayer : state.userRole;
+            availableIdList = state.draft.banPools[poolOwner] || [];
         } else {
             availableIdList = state.draft.available[currentPlayer] || [];
         }
