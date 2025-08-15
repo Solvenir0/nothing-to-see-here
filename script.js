@@ -786,18 +786,23 @@ function updateDraftInstructions() {
 
         let availableIdList;
         if (isBanAction) {
-            // Show the FULL opponent roster (minus already banned/picked IDs)
-            const opponentRoster = state.roster[opponent] || [];
-            // Only exclude IDs that are already banned by either player, or that the OPPONENT has picked/locked.
-            // We still show IDs the current player has picked (can't be banned but should appear for full roster visibility);
-            // those will simply be non-interactive due to validation on confirm.
+            // High-level fix: each player always views THEIR opponent's roster during ban/midBan phases,
+            // not the opponent-of-currentPlayer for everyone. This prevents a waiting player from seeing their own list.
+            let rosterPlayer;
+            if (state.userRole === 'p1' || state.userRole === 'p2') {
+                rosterPlayer = (state.userRole === 'p1') ? 'p2' : 'p1';
+            } else { // ref perspective: show the roster being targeted by the active player
+                rosterPlayer = (currentPlayer === 'p1') ? 'p2' : 'p1';
+            }
+            const displayRoster = state.roster[rosterPlayer] || [];
+            // Block: all bans + picks locked in by the owner of the displayed roster (can't be banned)
             const blocked = new Set([
                 ...state.draft.idBans.p1,
                 ...state.draft.idBans.p2,
-                ...state.draft.picks[opponent],
-                ...state.draft.picks_s2[opponent]
+                ...state.draft.picks[rosterPlayer],
+                ...state.draft.picks_s2[rosterPlayer]
             ]);
-            availableIdList = opponentRoster.filter(id => !blocked.has(id));
+            availableIdList = displayRoster.filter(id => !blocked.has(id));
         } else {
             availableIdList = state.draft.available[currentPlayer] || [];
         }
