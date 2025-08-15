@@ -623,7 +623,7 @@ input:focus, select:focus {
     align-content: start;
     max-height: 40vh;
     overflow-y: auto;
-    justify-content: space-evenly;
+    justify-content: center;
 }
 
 .compact-id-list.section2-picks {
@@ -636,6 +636,8 @@ input:focus, select:focus {
     background: transparent;
     border: none;
     cursor: default;
+    width: 100px; /* Constrain item to grid column size */
+    max-width: 100px; /* Prevent expansion */
 }
 .compact-id-list .id-item:hover {
     transform: none;
@@ -649,6 +651,7 @@ input:focus, select:focus {
     aspect-ratio: 1 / 1;
     border-radius: 8px;
     border: 2px solid var(--border);
+    max-width: 100px; /* Prevent icon from exceeding container */
 }
 
 .id-item {
@@ -1155,7 +1158,7 @@ input:focus, select:focus {
     display: grid;
     grid-template-columns: repeat(auto-fill, 80px);
     gap: 5px;
-    justify-content: space-evenly;
+    justify-content: center;
 }
 /* Style the id-item when it's inside the new container */
 .sinner-grouped-roster .id-item {
@@ -1171,6 +1174,8 @@ input:focus, select:focus {
 .sinner-grouped-roster .id-item .id-icon {
     width: 80px; /* Increased size */
     height: 80px; /* Increased size */
+    max-width: 80px; /* Prevent icon from exceeding container */
+    max-height: 80px; /* Prevent icon from exceeding container */
 }
 .sinner-grouped-roster .id-item:hover {
     transform: scale(1.1);
