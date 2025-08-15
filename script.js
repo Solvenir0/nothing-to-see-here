@@ -797,25 +797,28 @@ function updateDraftInstructions() {
 
         let availableIdList;
         if (isBanAction) {
-            // Always show the ACTIVE player's bannable pool to everyone so both sides view the same list.
-            // This avoids perspective confusion where the waiting player would otherwise see their own roster.
-            // Make a copy to avoid race conditions during rendering
-            const banPools = state.draft.banPools || {};
-            availableIdList = [...(banPools[currentPlayer] || [])];
+            // For ban phases: show the enemy roster (what the current player can ban from)
+            const enemyPlayer = currentPlayer === 'p1' ? 'p2' : 'p1';
+            const enemyRoster = state.roster[enemyPlayer] || [];
             
-            // Debug logging to help identify issues
-            console.log(`[Draft Debug] Ban action in phase ${phase}, currentPlayer: ${currentPlayer}`);
-            console.log(`[Draft Debug] BanPools object:`, banPools);
-            console.log(`[Draft Debug] Using ban pool for ${currentPlayer}:`, availableIdList);
-            console.log(`[Draft Debug] P1 roster:`, state.roster.p1);
-            console.log(`[Draft Debug] P2 roster:`, state.roster.p2);
+            // Filter out already banned and picked IDs
+            const blocked = new Set([
+                ...state.draft.idBans.p1,
+                ...state.draft.idBans.p2,
+                ...state.draft.picks[enemyPlayer],
+                ...state.draft.picks_s2[enemyPlayer]
+            ]);
             
-            if (availableIdList.length === 0 && banPools) {
-                console.warn(`[Draft Debug] Empty ban pool for ${currentPlayer} in phase ${phase}. BanPools:`, banPools);
-            }
+            availableIdList = enemyRoster.filter(id => !blocked.has(id));
+            
+            console.log(`[Draft Debug] Ban phase - showing ${enemyPlayer}'s roster to ban from (${availableIdList.length} IDs)`);
+            console.log(`[Draft Debug] Enemy roster Yi Sang count:`, availableIdList.filter(id => id.includes('yi-sang')).length);
         } else {
+            // For pick phases: show own available roster
             const available = state.draft.available || {};
             availableIdList = [...(available[currentPlayer] || [])];
+            
+            console.log(`[Draft Debug] Pick phase - showing ${currentPlayer}'s available roster (${availableIdList.length} IDs)`);
         }
 
         if (!availableIdList) {
@@ -825,18 +828,9 @@ function updateDraftInstructions() {
 
         let availableObjects = availableIdList.map(id => state.masterIDList.find(item => item && item.id === id)).filter(Boolean);
         
-        console.log(`[Draft Debug] Available objects before filtering (${availableObjects.length}):`, availableObjects.slice(0, 5).map(obj => obj.name));
-        console.log(`[Draft Debug] Sample IDs from ban pool:`, availableIdList.slice(0, 5));
-        console.log(`[Draft Debug] Sample mapped objects:`, availableObjects.slice(0, 5).map(obj => ({id: obj.id, name: obj.name})));
+        console.log(`[Draft Debug] Final available objects (${availableObjects.length}):`, availableObjects.slice(0, 3).map(obj => obj.name));
         
         availableObjects = filterIDs(availableObjects, state.draftFilters, { draftPhase: true });
-        
-        console.log(`[Draft Debug] Available objects after filtering (${availableObjects.length}):`, availableObjects.slice(0, 5).map(obj => obj.name));
-        console.log(`[Draft Debug] Looking for Yi Sang in available objects:`, availableObjects.filter(obj => obj.name.includes('Yi Sang')).map(obj => obj.name));
-        
-        // Check if any Yi Sang IDs are in the ban pool
-        const yiSangIdsInPool = availableIdList.filter(id => id.includes('yi-sang'));
-        console.log(`[Draft Debug] Yi Sang IDs in ban pool:`, yiSangIdsInPool);
         
         const clickHandler = (state.userRole === currentPlayer || state.userRole === 'ref') ? (id) => hoverDraftID(id) : null;
         
