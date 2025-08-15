@@ -646,12 +646,13 @@ input:focus, select:focus {
     display: none;
 }
 .compact-id-list .id-item .id-icon {
-    width: 100%;
-    height: auto;
+    width: 96px; /* Fixed width slightly smaller than container */
+    height: 96px; /* Fixed height to maintain aspect ratio */
     aspect-ratio: 1 / 1;
     border-radius: 8px;
     border: 2px solid var(--border);
-    max-width: 100px; /* Prevent icon from exceeding container */
+    max-width: 96px; /* Prevent icon from exceeding intended size */
+    object-fit: cover; /* Ensure image fits properly */
 }
 
 .id-item {
@@ -1172,10 +1173,11 @@ input:focus, select:focus {
     display: none; /* Hide the name */
 }
 .sinner-grouped-roster .id-item .id-icon {
-    width: 80px; /* Increased size */
-    height: 80px; /* Increased size */
-    max-width: 80px; /* Prevent icon from exceeding container */
-    max-height: 80px; /* Prevent icon from exceeding container */
+    width: 76px; /* Slightly smaller than container */
+    height: 76px; /* Slightly smaller than container */
+    max-width: 76px; /* Prevent icon from exceeding intended size */
+    max-height: 76px; /* Prevent icon from exceeding intended size */
+    object-fit: cover; /* Ensure image fits properly */
 }
 .sinner-grouped-roster .id-item:hover {
     transform: scale(1.1);
