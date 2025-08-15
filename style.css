@@ -413,22 +413,22 @@ input:focus, select:focus {
 
 /* Your Side Indicator */
 .your-side-indicator {
-    display: inline-block;
-    background: var(--accent);
-    color: var(--background);
-    font-size: 0.7rem;
-    font-weight: bold;
-    padding: 2px 6px;
-    border-radius: 4px;
+    color: var(--accent);
+    font-size: 0.9rem;
     margin-left: 8px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    filter: drop-shadow(0 0 4px var(--accent));
     animation: gentle-pulse 2s infinite;
 }
 
 @keyframes gentle-pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
+    0%, 100% { 
+        opacity: 1; 
+        transform: scale(1);
+    }
+    50% { 
+        opacity: 0.7; 
+        transform: scale(1.1);
+    }
 }
 
 /* Enhanced turn indication with stronger glow effect */

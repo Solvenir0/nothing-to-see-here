@@ -755,11 +755,11 @@ function updateDraftUI() {
     const p2Name = state.participants.p2.name;
     
     if (userRole === 'p1') {
-        elements.p1DraftName.innerHTML = `${p1Name} <span class="your-side-indicator">YOUR SIDE</span>`;
+        elements.p1DraftName.innerHTML = `${p1Name} <i class="fas fa-star your-side-indicator" title="Your Side"></i>`;
         elements.p2DraftName.textContent = p2Name;
     } else if (userRole === 'p2') {
         elements.p1DraftName.textContent = p1Name;
-        elements.p2DraftName.innerHTML = `${p2Name} <span class="your-side-indicator">YOUR SIDE</span>`;
+        elements.p2DraftName.innerHTML = `${p2Name} <i class="fas fa-star your-side-indicator" title="Your Side"></i>`;
     } else {
         // Referee view - no side indicators
         elements.p1DraftName.textContent = p1Name;
