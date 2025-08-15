@@ -235,6 +235,54 @@ function shouldSendKeepAlive() {
 }
 
 // ======================
+// INPUT VALIDATION HELPERS
+// ======================
+function validateAndTrimInput(input, fieldName) {
+    const trimmed = input.trim();
+    if (!trimmed) {
+        showNotification(`Please enter a ${fieldName}.`, true);
+        return null;
+    }
+    return trimmed;
+}
+
+function validatePlayerName(name) {
+    const trimmed = name.trim();
+    return trimmed || 'Anonymous'; // Provide default if empty
+}
+
+function validateRosterSize(roster, requiredSize, action = 'proceed') {
+    if (roster.length !== requiredSize) {
+        showNotification(`Must select ${requiredSize} IDs to ${action}.`, true);
+        return false;
+    }
+    return true;
+}
+
+function validateRosterCodeSize(rosterCode, requiredSize) {
+    if (!rosterCode) {
+        showNotification('Please enter a roster code.', true);
+        return false;
+    }
+    
+    const roster = loadRosterFromCode(rosterCode);
+    if (!roster) {
+        return false; // loadRosterFromCode already shows error notification
+    }
+    
+    if (roster.length !== requiredSize) {
+        showNotification(`Roster code is for ${roster.length} IDs, but lobby requires ${requiredSize}.`, true);
+        return false;
+    }
+    
+    return roster;
+}
+
+function validateUserPermission(userRole, targetRole) {
+    return userRole === targetRole || userRole === 'ref';
+}
+
+// ======================
 // DATA HANDLING
 // ======================
 function parseIDCSV(csv) {
@@ -374,27 +422,48 @@ function connectWebSocket() {
         elements.connectionStatus.className = 'connection-status connected';
         elements.connectionStatus.innerHTML = '<i class="fas fa-plug"></i> <span>Connected</span>';
         
-        const session = JSON.parse(localStorage.getItem('limbusDraftSession'));
-        if (session && session.lobbyCode && session.userRole && session.rejoinToken) {
-            console.log('Found session, attempting to rejoin:', session);
-            elements.rejoinOverlay.style.display = 'flex';
-            sendMessage({ 
-                type: 'rejoinLobby', 
-                lobbyCode: session.lobbyCode,
-                role: session.userRole,
-                rejoinToken: session.rejoinToken
-            });
+        try {
+            const session = JSON.parse(localStorage.getItem('limbusDraftSession'));
+            if (session && session.lobbyCode && session.userRole && session.rejoinToken) {
+                console.log('Found session, attempting to rejoin:', session);
+                elements.rejoinOverlay.style.display = 'flex';
+                sendMessage({ 
+                    type: 'rejoinLobby', 
+                    lobbyCode: session.lobbyCode,
+                    role: session.userRole,
+                    rejoinToken: session.rejoinToken
+                });
 
-            rejoinTimeout = setTimeout(() => {
-                if (elements.rejoinOverlay.style.display === 'flex') {
-                    elements.rejoinOverlay.style.display = 'none';
-                    localStorage.removeItem('limbusDraftSession');
-                    showNotification("Failed to rejoin lobby. Session cleared.", true);
-                }
-            }, TIMING.RECONNECT_ATTEMPT_DELAY);
+                rejoinTimeout = setTimeout(() => {
+                    if (elements.rejoinOverlay.style.display === 'flex') {
+                        elements.rejoinOverlay.style.display = 'none';
+                        try {
+                            localStorage.removeItem('limbusDraftSession');
+                        } catch (storageError) {
+                            console.error('Failed to clear session storage:', storageError);
+                        }
+                        showNotification("Failed to rejoin lobby. Session cleared.", true);
+                    }
+                }, TIMING.RECONNECT_ATTEMPT_DELAY);
+            }
+        } catch (error) {
+            console.error('Failed to parse session storage:', error);
+            try {
+                localStorage.removeItem('limbusDraftSession');
+            } catch (storageError) {
+                console.error('Failed to clear corrupted session storage:', storageError);
+            }
         }
     };
-    state.socket.onmessage = (event) => handleServerMessage(JSON.parse(event.data));
+    state.socket.onmessage = (event) => {
+        try {
+            const message = JSON.parse(event.data);
+            handleServerMessage(message);
+        } catch (error) {
+            console.error('Failed to parse WebSocket message:', error, 'Raw data:', event.data);
+            showNotification('Received invalid message from server', true);
+        }
+    };
     state.socket.onclose = () => {
         elements.connectionStatus.className = 'connection-status';
         elements.connectionStatus.innerHTML = '<i class="fas fa-plug"></i> <span>Disconnected</span>';
@@ -406,7 +475,14 @@ function connectWebSocket() {
 
 function sendMessage(message) {
     if (state.socket && state.socket.readyState === WebSocket.OPEN) {
-        state.socket.send(JSON.stringify(message));
+        try {
+            state.socket.send(JSON.stringify(message));
+        } catch (error) {
+            console.error('Failed to send WebSocket message:', error, 'Message:', message);
+            showNotification('Failed to send message to server', true);
+        }
+    } else {
+        console.warn('Cannot send message: WebSocket is not connected', message);
     }
 }
 
@@ -420,11 +496,15 @@ function handleServerMessage(message) {
                 console.log(`Role updated by server from ${state.userRole} to ${message.newRole}`);
                 state.userRole = message.newRole;
                 
-                const session = JSON.parse(localStorage.getItem('limbusDraftSession'));
-                if (session) {
-                    session.userRole = message.newRole;
-                    localStorage.setItem('limbusDraftSession', JSON.stringify(session));
-                    console.log('Updated session storage with new role.');
+                try {
+                    const session = JSON.parse(localStorage.getItem('limbusDraftSession'));
+                    if (session) {
+                        session.userRole = message.newRole;
+                        localStorage.setItem('limbusDraftSession', JSON.stringify(session));
+                        console.log('Updated session storage with new role.');
+                    }
+                } catch (error) {
+                    console.error('Failed to update session storage with new role:', error);
                 }
             }
             handleStateUpdate(message);
@@ -434,7 +514,11 @@ function handleServerMessage(message) {
         case 'error':
             showNotification(`Error: ${message.message}`, true);
             if (message.message.includes('rejoin') || message.message.includes('Clearing session')) {
-                localStorage.removeItem('limbusDraftSession');
+                try {
+                    localStorage.removeItem('limbusDraftSession');
+                } catch (storageError) {
+                    console.error('Failed to clear session storage on error:', storageError);
+                }
                 elements.rejoinOverlay.style.display = 'none';
                 if (rejoinTimeout) clearTimeout(rejoinTimeout);
             }
@@ -1243,11 +1327,16 @@ function handleLobbyJoined(message) {
     state.rejoinToken = message.rejoinToken;
 
     if (state.rejoinToken) {
-        localStorage.setItem('limbusDraftSession', JSON.stringify({
-            lobbyCode: state.lobbyCode,
-            userRole: state.userRole,
-            rejoinToken: state.rejoinToken
-        }));
+        try {
+            localStorage.setItem('limbusDraftSession', JSON.stringify({
+                lobbyCode: state.lobbyCode,
+                userRole: state.userRole,
+                rejoinToken: state.rejoinToken
+            }));
+        } catch (error) {
+            console.error('Failed to save session to localStorage:', error);
+            showNotification('Warning: Session could not be saved for auto-rejoin', true);
+        }
     }
 
     // Start keep-alive system when joining a lobby
@@ -1331,7 +1420,7 @@ function setupEventListeners() {
     // Main Page
     elements.createLobbyBtn.addEventListener('click', () => {
         const options = {
-            name: elements.playerNameInput.value.trim() || 'Referee',
+            name: validatePlayerName(elements.playerNameInput.value) || 'Referee',
             draftLogic: elements.draftLogicSelect.value,
             matchType: elements.matchTypeSelect.value,
             timerEnabled: elements.timerToggle.value === 'true',
@@ -1353,9 +1442,10 @@ function setupEventListeners() {
     // Public lobby browsing removed
 
     elements.enterLobbyByCode.addEventListener('click', () => {
-        const lobbyCode = elements.lobbyCodeInput.value.trim().toUpperCase();
-        if (!lobbyCode) return showNotification('Please enter a lobby code.', true);
-        sendMessage({ type: 'getLobbyInfo', lobbyCode });
+        const lobbyCode = validateAndTrimInput(elements.lobbyCodeInput.value, 'lobby code');
+        if (lobbyCode) {
+            sendMessage({ type: 'getLobbyInfo', lobbyCode: lobbyCode.toUpperCase() });
+        }
     });
 
     elements.closeRoleModalBtn.addEventListener('click', () => elements.roleSelectionModal.classList.add('hidden'));
@@ -1365,14 +1455,18 @@ function setupEventListeners() {
                 type: 'joinLobby',
                 lobbyCode: state.joinTarget.lobbyCode,
                 role: state.joinTarget.role,
-                name: elements.playerNameInput.value.trim()
+                name: validatePlayerName(elements.playerNameInput.value)
             });
         }
     });
     
     const cancelRejoinAction = () => {
         if (rejoinTimeout) clearTimeout(rejoinTimeout);
-        localStorage.removeItem('limbusDraftSession');
+        try {
+            localStorage.removeItem('limbusDraftSession');
+        } catch (error) {
+            console.error('Failed to clear session storage:', error);
+        }
         elements.rejoinOverlay.style.display = 'none';
         if (state.socket && state.socket.readyState !== WebSocket.CLOSED) {
             state.socket.close();
@@ -1384,7 +1478,11 @@ function setupEventListeners() {
 
     const clearSessionAndReload = () => {
         stopKeepAlive(); // Stop keep-alive before leaving
-        localStorage.removeItem('limbusDraftSession');
+        try {
+            localStorage.removeItem('limbusDraftSession');
+        } catch (error) {
+            console.error('Failed to clear session storage:', error);
+        }
         window.location.reload();
     };
     elements.backToMainLobby.addEventListener('click', clearSessionAndReload);
@@ -1397,23 +1495,21 @@ function setupEventListeners() {
     
     // Lobby Roster Controls
     ['p1', 'p2'].forEach(player => {
-        elements[`${player}Random`].addEventListener('click', () => (state.userRole === player || state.userRole === 'ref') && sendMessage({ type: 'rosterRandomize', lobbyCode: state.lobbyCode, player }));
-        elements[`${player}Clear`].addEventListener('click', () => (state.userRole === player || state.userRole === 'ref') && sendMessage({ type: 'rosterClear', lobbyCode: state.lobbyCode, player }));
+        elements[`${player}Random`].addEventListener('click', () => validateUserPermission(state.userRole, player) && sendMessage({ type: 'rosterRandomize', lobbyCode: state.lobbyCode, player }));
+        elements[`${player}Clear`].addEventListener('click', () => validateUserPermission(state.userRole, player) && sendMessage({ type: 'rosterClear', lobbyCode: state.lobbyCode, player }));
         elements[`${player}Ready`].addEventListener('click', () => {
-            if (state.userRole === player || state.userRole === 'ref') {
-                 if (state.roster[player].length !== state.draft.rosterSize && !state.participants[player].ready) return showNotification(`Must select ${state.draft.rosterSize} IDs.`, true);
+            if (validateUserPermission(state.userRole, player)) {
+                if (!state.participants[player].ready && !validateRosterSize(state.roster[player], state.draft.rosterSize, 'ready up')) {
+                    return;
+                }
                 sendMessage({ type: 'updateReady', lobbyCode: state.lobbyCode, player });
             }
         });
         elements[`${player}RosterLoad`].addEventListener('click', () => {
-            if (state.userRole === player || state.userRole === 'ref') {
+            if (validateUserPermission(state.userRole, player)) {
                 const code = elements[`${player}RosterCodeInput`].value.trim();
-                const roster = loadRosterFromCode(code);
+                const roster = validateRosterCodeSize(code, state.draft.rosterSize);
                 if (roster) {
-                    if (roster.length !== state.draft.rosterSize) {
-                        showNotification(`Roster code is for ${roster.length} IDs, but lobby requires ${state.draft.rosterSize}.`, true);
-                        return;
-                    }
                     setPlayerRoster(player, roster);
                     showNotification("Roster loaded successfully!");
                 }
@@ -1447,26 +1543,35 @@ function setupEventListeners() {
     });
     elements.builderCopyCode.addEventListener('click', () => {
         const code = elements.builderRosterCodeDisplay.textContent;
+        if (!navigator.clipboard) {
+            // Fallback for browsers without clipboard API
+            showNotification("Clipboard not supported. Please copy manually.", true);
+            return;
+        }
+        
         navigator.clipboard.writeText(code).then(() => {
             showNotification("Roster code copied to clipboard!");
-        }, () => {
-            showNotification("Failed to copy code.", true);
+        }).catch((error) => {
+            console.error('Clipboard write failed:', error);
+            showNotification("Failed to copy code. Please copy manually.", true);
         });
     });
     elements.builderLoadCode.addEventListener('click', () => {
-        const code = elements.builderLoadCodeInput.value.trim();
-        const roster = loadRosterFromCode(code);
-        if (roster) {
-            state.builderRoster = roster;
-            state.builderRosterSize = roster.length;
-            
-            elements.builderRosterSizeSelector.querySelectorAll('button').forEach(btn => {
-                btn.classList.toggle('active', parseInt(btn.dataset.size) === state.builderRosterSize);
-            });
+        const code = validateAndTrimInput(elements.builderLoadCodeInput.value, 'roster code');
+        if (code) {
+            const roster = loadRosterFromCode(code);
+            if (roster) {
+                state.builderRoster = roster;
+                state.builderRosterSize = roster.length;
+                
+                elements.builderRosterSizeSelector.querySelectorAll('button').forEach(btn => {
+                    btn.classList.toggle('active', parseInt(btn.dataset.size) === state.builderRosterSize);
+                });
 
-            renderRosterBuilder();
-            setupAdvancedRandomUI();
-            showNotification(`Roster for ${roster.length} IDs loaded successfully!`);
+                renderRosterBuilder();
+                setupAdvancedRandomUI();
+                showNotification(`Roster for ${roster.length} IDs loaded successfully!`);
+            }
         }
     });
 

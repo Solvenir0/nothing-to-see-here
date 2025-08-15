@@ -643,8 +643,8 @@ All improvements preserve the existing meticulously crafted draft logic. The cha
 ### Client-Side (script.js) Improvements
 - [x] **Extract magic numbers to constants** - Replace hardcoded values like `150` for max character count
 - [x] **Consolidate duplicate DOM queries** - Cache frequently accessed DOM elements
-- [ ] **Improve error handling in async functions** - Add proper try-catch blocks where missing
-- [ ] **Extract repeated validation logic** - The character validation is repeated in multiple places
+- [x] **Improve error handling in async functions** - Add proper try-catch blocks where missing
+- [x] **Extract repeated validation logic** - The character validation is repeated in multiple places
 - [ ] **Improve function naming** - Some functions like `updateCharacterCount` could be more descriptive
 - [ ] **Add debouncing to search functionality** - Prevent excessive API calls during typing
 
