@@ -1639,28 +1639,57 @@ function setupEventListeners() {
         const tooltip = document.createElement('div');
         tooltip.id = 'id-tooltip';
         tooltip.textContent = idData.name;
+        
+        // Position off-screen initially to get accurate dimensions
+        tooltip.style.position = 'fixed';
+        tooltip.style.top = '-9999px';
+        tooltip.style.left = '-9999px';
+        tooltip.style.opacity = '0';
+        
         document.body.appendChild(tooltip);
         
         // Cache the newly created tooltip
         elements.idTooltip = tooltip;
 
-        const rect = element.getBoundingClientRect();
-        let top = rect.top - tooltip.offsetHeight - 5;
-        let left = rect.left + rect.width / 2 - tooltip.offsetWidth / 2;
+        // Use requestAnimationFrame to ensure the element is rendered and measured
+        requestAnimationFrame(() => {
+            const rect = element.getBoundingClientRect();
+            const tooltipRect = tooltip.getBoundingClientRect();
+            
+            // Calculate ideal position (centered above the element)
+            let top = rect.top - tooltipRect.height - 8;
+            let left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
+            
+            // Boundary checks and adjustments
+            const margin = 8;
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+            
+            // If tooltip would go above viewport, position it below the element
+            if (top < margin) {
+                top = rect.bottom + 8;
+            }
+            
+            // If tooltip would go below viewport when positioned below, try above again
+            if (top + tooltipRect.height > viewportHeight - margin && rect.top - tooltipRect.height - 8 >= margin) {
+                top = rect.top - tooltipRect.height - 8;
+            }
+            
+            // Horizontal boundary checks
+            if (left < margin) {
+                left = margin;
+            } else if (left + tooltipRect.width > viewportWidth - margin) {
+                left = viewportWidth - tooltipRect.width - margin;
+            }
+            
+            // Final boundary check - ensure tooltip doesn't go off screen entirely
+            left = Math.max(margin, Math.min(left, viewportWidth - tooltipRect.width - margin));
+            top = Math.max(margin, Math.min(top, viewportHeight - tooltipRect.height - margin));
 
-        if (top < 0) {
-            top = rect.bottom + 5;
-        }
-        if (left < 0) {
-            left = 5;
-        }
-        if (left + tooltip.offsetWidth > window.innerWidth) {
-            left = window.innerWidth - tooltip.offsetWidth - 5;
-        }
-
-        tooltip.style.top = `${top}px`;
-        tooltip.style.left = `${left}px`;
-        tooltip.style.opacity = '1';
+            tooltip.style.top = `${top}px`;
+            tooltip.style.left = `${left}px`;
+            tooltip.style.opacity = '1';
+        });
     };
 
     const hideTooltip = () => {
