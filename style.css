@@ -682,21 +682,17 @@ input:focus, select:focus {
     box-shadow: 0 0 10px var(--accent);
 }
 
-/* === CLEAN HOVER SYSTEM === */
+/* === SIMPLE HOVER SYSTEM === */
 /* Standard ID items with names (full-width) */
 .id-item.hovered {
-    border-color: var(--hover) !important;
-    box-shadow: 0 0 10px var(--hover);
-    background: rgba(255, 235, 59, 0.1);
+    transform: scale(1.02);
 }
 
-/* Compact contexts - apply hover effect to the image */
+/* Compact contexts - simple scale effect on image */
 .compact-id-list .id-item:hover .id-icon,
 .compact-id-list .id-item.hovered .id-icon {
-    border-color: var(--hover) !important;
-    box-shadow: 0 0 10px var(--hover);
     transform: scale(1.05);
-    transition: all 0.2s ease;
+    transition: transform 0.2s ease;
 }
 
 .compact-id-list .id-item.selected .id-icon {
@@ -704,15 +700,13 @@ input:focus, select:focus {
     box-shadow: 0 0 10px var(--accent);
 }
 
-/* Final picks/bans - apply hover effect to the image */
+/* Final picks/bans - simple scale effect on image */
 .final-picks .id-item:hover .id-icon,
 .final-picks .id-item.hovered .id-icon,
 .final-bans .id-item:hover .id-icon,
 .final-bans .id-item.hovered .id-icon {
-    border-color: var(--hover) !important;
-    box-shadow: 0 0 10px var(--hover);
     transform: scale(1.05);
-    transition: all 0.2s ease;
+    transition: transform 0.2s ease;
 }
 
 .final-picks .id-item.selected .id-icon,
@@ -721,15 +715,12 @@ input:focus, select:focus {
     box-shadow: 0 0 10px var(--accent);
 }
 
-/* Sinner grouped roster (draft pool) - hover effect on container */
+/* Sinner grouped roster (draft pool) - simple scale effect on container */
 .sinner-grouped-roster .id-item:hover,
 .sinner-grouped-roster .id-item.hovered {
-    border-color: var(--hover) !important;
-    box-shadow: 0 0 10px var(--hover);
     transform: scale(1.05);
     z-index: 2;
-    background: rgba(255, 235, 59, 0.1);
-    transition: all 0.2s ease;
+    transition: transform 0.2s ease;
 }
 
 /* Disable default ID item hover in compact contexts */
@@ -984,6 +975,34 @@ input:focus, select:focus {
     padding: 20px;
     border-radius: 10px;
     border-top: 4px solid var(--accent);
+}
+
+/* Optimize opponent roster layout in EGO ban phase */
+#opponent-roster-display .sinner-grouped-roster {
+    max-height: 400px; /* Increased height for better visibility */
+}
+
+#opponent-roster-display .sinner-id-container {
+    /* Use more flexible grid that adapts to container width */
+    grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+    gap: 8px;
+    justify-content: stretch; /* Fill available space */
+}
+
+#opponent-roster-display .id-item {
+    /* Ensure items can expand to fill grid cells */
+    width: 100%;
+    min-width: 90px;
+}
+
+#opponent-roster-display .id-item .id-icon {
+    /* Make icons responsive to their container size */
+    width: 100%;
+    height: auto;
+    max-width: 100px;
+    max-height: 100px;
+    min-width: 80px;
+    min-height: 80px;
 }
 
 #current-player-ego-bans {
@@ -1777,6 +1796,17 @@ select:focus-visible {
         flex-direction: row;
         align-items: flex-start;
     }
+    
+    /* Optimize EGO ban layout proportions */
+    #ego-ban-main-panel {
+        flex: 2; /* Reduced from 3 to give more space to side panel */
+    }
+    
+    #ego-ban-side-panel {
+        flex: 1.2; /* Increased from 1 to give more room for roster display */
+        min-width: 350px; /* Ensure minimum width for roster visibility */
+    }
+    
     #roster-builder-page .card {
         flex-direction: row;
     }
@@ -1847,4 +1877,22 @@ select:focus-visible {
     .public-lobby-item { grid-template-columns: 1fr auto; grid-template-rows: auto auto; }
     .public-lobby-item .btn { grid-column: 2 / 3; grid-row: 1 / 3; }
     .top-left-controls { top: 10px; left: 10px; }
+}
+
+/* Large screens - even more space optimization for EGO bans */
+@media (min-width: 1400px) {
+    #ego-ban-side-panel {
+        flex: 1.4; /* Even more space for roster on large screens */
+        min-width: 400px;
+    }
+    
+    #opponent-roster-display .sinner-id-container {
+        grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+        gap: 12px;
+    }
+    
+    #opponent-roster-display .id-item .id-icon {
+        max-width: 110px;
+        max-height: 110px;
+    }
 }
