@@ -786,10 +786,9 @@ function updateDraftInstructions() {
 
         let availableIdList;
         if (isBanAction) {
-            // Use authoritative server-provided banPools. For a player, always show their opponent's bannable pool.
-            // For ref, show the current player's target pool.
-            const poolOwner = (state.userRole === 'ref') ? currentPlayer : state.userRole;
-            availableIdList = state.draft.banPools[poolOwner] || [];
+            // Always show the ACTIVE player's bannable pool to everyone so both sides view the same list.
+            // This avoids perspective confusion where the waiting player would otherwise see their own roster.
+            availableIdList = state.draft.banPools[currentPlayer] || [];
         } else {
             availableIdList = state.draft.available[currentPlayer] || [];
         }
