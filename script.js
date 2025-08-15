@@ -738,7 +738,6 @@ let isUpdatingDraftInstructions = false;
 function updateDraftInstructions() {
     // Prevent race conditions from multiple simultaneous updates
     if (isUpdatingDraftInstructions) {
-        console.log('[Draft Debug] Skipping update - already in progress');
         return;
     }
     isUpdatingDraftInstructions = true;
@@ -810,15 +809,10 @@ function updateDraftInstructions() {
             ]);
             
             availableIdList = enemyRoster.filter(id => !blocked.has(id));
-            
-            console.log(`[Draft Debug] BAN phase (${phase}) - ${currentPlayer} banning from ${enemyPlayer}'s roster (${availableIdList.length} IDs)`);
-            console.log(`[Draft Debug] Enemy roster Yi Sang count:`, availableIdList.filter(id => id.includes('yi-sang')).length);
         } else {
             // For pick phases: show own available roster
             const available = state.draft.available || {};
             availableIdList = [...(available[currentPlayer] || [])];
-            
-            console.log(`[Draft Debug] PICK phase (${phase}) - ${currentPlayer} picking from own roster (${availableIdList.length} IDs)`);
         }
 
         if (!availableIdList) {
@@ -827,8 +821,6 @@ function updateDraftInstructions() {
         }
 
         let availableObjects = availableIdList.map(id => state.masterIDList.find(item => item && item.id === id)).filter(Boolean);
-        
-        console.log(`[Draft Debug] Final available objects (${availableObjects.length}):`, availableObjects.slice(0, 3).map(obj => obj.name));
         
         availableObjects = filterIDs(availableObjects, state.draftFilters, { draftPhase: true });
         
