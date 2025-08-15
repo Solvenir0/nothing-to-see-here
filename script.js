@@ -733,9 +733,19 @@ function updateDraftUI() {
     renderBannedEgosDisplay();
 }
 
+let isUpdatingDraftInstructions = false;
+
 function updateDraftInstructions() {
-    let phaseText = "", actionDesc = "";
-    const { phase, currentPlayer, action, actionCount, egoBans, hovered, matchType } = state.draft;
+    // Prevent race conditions from multiple simultaneous updates
+    if (isUpdatingDraftInstructions) {
+        console.log('[Draft Debug] Skipping update - already in progress');
+        return;
+    }
+    isUpdatingDraftInstructions = true;
+    
+    try {
+        let phaseText = "", actionDesc = "";
+        const { phase, currentPlayer, action, actionCount, egoBans, hovered, matchType } = state.draft;
     
     const hub = elements.draftInteractionHub;
     const existingPool = hub.querySelector('.sinner-grouped-roster');
@@ -789,20 +799,23 @@ function updateDraftInstructions() {
         if (isBanAction) {
             // Always show the ACTIVE player's bannable pool to everyone so both sides view the same list.
             // This avoids perspective confusion where the waiting player would otherwise see their own roster.
-            availableIdList = state.draft.banPools[currentPlayer] || [];
+            // Make a copy to avoid race conditions during rendering
+            const banPools = state.draft.banPools || {};
+            availableIdList = [...(banPools[currentPlayer] || [])];
             
             // Debug logging to help identify issues
             console.log(`[Draft Debug] Ban action in phase ${phase}, currentPlayer: ${currentPlayer}`);
-            console.log(`[Draft Debug] BanPools object:`, state.draft.banPools);
+            console.log(`[Draft Debug] BanPools object:`, banPools);
             console.log(`[Draft Debug] Using ban pool for ${currentPlayer}:`, availableIdList);
             console.log(`[Draft Debug] P1 roster:`, state.roster.p1);
             console.log(`[Draft Debug] P2 roster:`, state.roster.p2);
             
-            if (availableIdList.length === 0 && state.draft.banPools) {
-                console.warn(`[Draft Debug] Empty ban pool for ${currentPlayer} in phase ${phase}. BanPools:`, state.draft.banPools);
+            if (availableIdList.length === 0 && banPools) {
+                console.warn(`[Draft Debug] Empty ban pool for ${currentPlayer} in phase ${phase}. BanPools:`, banPools);
             }
         } else {
-            availableIdList = state.draft.available[currentPlayer] || [];
+            const available = state.draft.available || {};
+            availableIdList = [...(available[currentPlayer] || [])];
         }
 
         if (!availableIdList) {
@@ -847,6 +860,9 @@ function updateDraftInstructions() {
     elements.currentPhase.textContent = phaseText;
     elements.draftActionDescription.textContent = actionDesc;
     elements.completeDraft.disabled = state.userRole !== 'ref' || phase === 'complete';
+    } finally {
+        isUpdatingDraftInstructions = false;
+    }
 }
 
 function handleCoinFlipUI() {
