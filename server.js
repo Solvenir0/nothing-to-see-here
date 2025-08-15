@@ -40,36 +40,37 @@ const DRAFT_LOGIC = {
         ban1Steps: 8,
         pick1: [{ p: 'p1', c: 1 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 1 }],
         midBanSteps: 6,
-        pick2: [{ p: 'p2', c: 1 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 1 }],
+        // Phase 2 now starts with the same player (p1) instead of giving first move to p2
+        pick2: [{ p: 'p1', c: 1 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 1 }],
         pick_s2: [{ p: 'p1', c: 1 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 1 }]
     },
     '1-2-2-extended': { // For "All Sections" matches
         ban1Steps: 8,
         pick1: [{ p: 'p1', c: 1 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 1 }],
         midBanSteps: 8, // Increased to 8
-        pick2: [ // Increased to 12 picks per player
-            { p: 'p2', c: 1 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 },
-            { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 },
-            { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 },
-            { p: 'p2', c: 1 }
+        pick2: [ // Starts with p1 now
+            { p: 'p1', c: 1 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 },
+            { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 },
+            { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 },
+            { p: 'p1', c: 1 }
         ],
     },
     '2-3-2': {
         ban1Steps: 8,
         pick1: [{ p: 'p1', c: 2 }, { p: 'p2', c: 3 }, { p: 'p1', c: 2 }, { p: 'p2', c: 3 }, { p: 'p1', c: 2 }],
         midBanSteps: 6,
-        pick2: [{ p: 'p2', c: 2 }, { p: 'p1', c: 3 }, { p: 'p2', c: 2 }, { p: 'p1', c: 3 }, { p: 'p2', c: 2 }],
+        pick2: [{ p: 'p1', c: 2 }, { p: 'p2', c: 3 }, { p: 'p1', c: 2 }, { p: 'p2', c: 3 }, { p: 'p1', c: 2 }],
         pick_s2: [{ p: 'p1', c: 1 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 1 }]
     },
     '2-3-2-extended': { // For "All Sections" matches
         ban1Steps: 8,
         pick1: [{ p: 'p1', c: 2 }, { p: 'p2', c: 3 }, { p: 'p1', c: 2 }, { p: 'p2', c: 3 }, { p: 'p1', c: 2 }],
         midBanSteps: 8, // Increased to 8
-        pick2: [ // Increased to 12 picks per player
-            { p: 'p2', c: 1 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 },
-            { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 },
-            { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 },
-            { p: 'p2', c: 1 }
+        pick2: [ // Starts with p1 now
+            { p: 'p1', c: 1 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 },
+            { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 },
+            { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 },
+            { p: 'p1', c: 1 }
         ],
     }
 };
@@ -616,15 +617,12 @@ function handleDraftConfirm(lobbyCode, lobbyData, ws) {
             listToUpdate = draft.picks_s2[currentPlayer];
         }
 
-    if (listToUpdate) listToUpdate.push(selectedId);
-    // For pick phases, remove globally. For ban phases, don't shrink both lists—display logic derives from rosters.
-    const isBanRemoval = (phase === 'ban' || phase === 'midBan');
-    if (!isBanRemoval) {
-            let p1Index = draft.available.p1.indexOf(selectedId);
-            if(p1Index > -1) draft.available.p1.splice(p1Index, 1);
-            let p2Index = draft.available.p2.indexOf(selectedId);
-            if(p2Index > -1) draft.available.p2.splice(p2Index, 1);
-        }
+        if (listToUpdate) listToUpdate.push(selectedId);
+        // Always remove the chosen ID from both availability lists (bans deny globally; picks lock globally)
+        ['p1','p2'].forEach(p => {
+            const idx = draft.available[p].indexOf(selectedId);
+            if (idx > -1) draft.available[p].splice(idx, 1);
+        });
         
         draft.actionCount--;
 
