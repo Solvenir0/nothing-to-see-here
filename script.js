@@ -793,7 +793,7 @@ function updateDraftInstructions() {
 
     if (['ban', 'pick', 'midBan', 'pick2', 'pick_s2'].includes(phase)) {
         const opponent = currentPlayer === 'p1' ? 'p2' : 'p1';
-        const isBanAction = phase.includes('ban');
+        const isBanAction = (phase === 'ban' || phase === 'midBan');
 
         let availableIdList;
         if (isBanAction) {
@@ -811,14 +811,14 @@ function updateDraftInstructions() {
             
             availableIdList = enemyRoster.filter(id => !blocked.has(id));
             
-            console.log(`[Draft Debug] Ban phase - showing ${enemyPlayer}'s roster to ban from (${availableIdList.length} IDs)`);
+            console.log(`[Draft Debug] BAN phase (${phase}) - ${currentPlayer} banning from ${enemyPlayer}'s roster (${availableIdList.length} IDs)`);
             console.log(`[Draft Debug] Enemy roster Yi Sang count:`, availableIdList.filter(id => id.includes('yi-sang')).length);
         } else {
             // For pick phases: show own available roster
             const available = state.draft.available || {};
             availableIdList = [...(available[currentPlayer] || [])];
             
-            console.log(`[Draft Debug] Pick phase - showing ${currentPlayer}'s available roster (${availableIdList.length} IDs)`);
+            console.log(`[Draft Debug] PICK phase (${phase}) - ${currentPlayer} picking from own roster (${availableIdList.length} IDs)`);
         }
 
         if (!availableIdList) {
