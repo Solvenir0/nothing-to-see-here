@@ -812,7 +812,12 @@ function updateDraftInstructions() {
 
         let availableObjects = availableIdList.map(id => state.masterIDList.find(item => item && item.id === id)).filter(Boolean);
         
+        console.log(`[Draft Debug] Available objects before filtering (${availableObjects.length}):`, availableObjects.slice(0, 5).map(obj => obj.name));
+        
         availableObjects = filterIDs(availableObjects, state.draftFilters, { draftPhase: true });
+        
+        console.log(`[Draft Debug] Available objects after filtering (${availableObjects.length}):`, availableObjects.slice(0, 5).map(obj => obj.name));
+        console.log(`[Draft Debug] Looking for Yi Sang in available objects:`, availableObjects.filter(obj => obj.name.includes('Yi Sang')).map(obj => obj.name));
         
         const clickHandler = (state.userRole === currentPlayer || state.userRole === 'ref') ? (id) => hoverDraftID(id) : null;
         
