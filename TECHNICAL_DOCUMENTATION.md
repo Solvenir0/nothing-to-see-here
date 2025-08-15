@@ -645,8 +645,8 @@ All improvements preserve the existing meticulously crafted draft logic. The cha
 - [x] **Consolidate duplicate DOM queries** - Cache frequently accessed DOM elements
 - [x] **Improve error handling in async functions** - Add proper try-catch blocks where missing
 - [x] **Extract repeated validation logic** - The character validation is repeated in multiple places
-- [ ] **Improve function naming** - Some functions like `updateCharacterCount` could be more descriptive
-- [ ] **Add debouncing to search functionality** - Prevent excessive API calls during typing
+- [x] **Improve function naming** - Some functions like `updateCharacterCount` could be more descriptive
+- [x] **Add debouncing to search functionality** - Prevent excessive API calls during typing
 
 ### Code Organization Improvements
 - [ ] **Move validation functions to separate module** - Extract roster validation logic to a utility file

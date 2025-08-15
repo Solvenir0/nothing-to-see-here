@@ -1152,9 +1152,10 @@ input:focus, select:focus {
     padding: 0;
 }
 .sinner-grouped-roster .sinner-id-container {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, 80px);
     gap: 5px;
+    justify-content: space-evenly;
 }
 /* Style the id-item when it's inside the new container */
 .sinner-grouped-roster .id-item {

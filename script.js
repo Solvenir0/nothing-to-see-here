@@ -283,6 +283,17 @@ function validateUserPermission(userRole, targetRole) {
 }
 
 // ======================
+// DEBOUNCING UTILITY
+// ======================
+function createDebounceFunction(func, delay) {
+    let timeoutId;
+    return function (...args) {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => func.apply(this, args), delay);
+    };
+}
+
+// ======================
 // DATA HANDLING
 // ======================
 function parseIDCSV(csv) {
@@ -703,7 +714,7 @@ function switchView(view) {
 }
 
 
-function updateAllUIsFromState() {
+function refreshInterfaceBasedOnGameState() {
     const { draft } = state;
     const { phase, rosterSize } = draft;
 
@@ -725,7 +736,7 @@ function updateAllUIsFromState() {
 
 
     if (phase === 'coinFlip') {
-        handleCoinFlipUI();
+        displayCoinFlipResultAndChoices();
     }
 
     elements.participantsList.innerHTML = '';
@@ -778,7 +789,7 @@ function updateAllUIsFromState() {
     }
     
     updateDraftInstructions();
-    checkPhaseReadiness();
+    updateRosterPhaseReadyButtonState();
     updateTimerUI();
 }
 
@@ -1088,7 +1099,7 @@ function updateDraftInstructions() {
     }
 }
 
-function handleCoinFlipUI() {
+function displayCoinFlipResultAndChoices() {
     const { coinFlipWinner } = state.draft;
     const winnerName = coinFlipWinner ? state.participants[coinFlipWinner].name : '';
 
@@ -1151,7 +1162,7 @@ function renderCompletedView() {
 }
 
 
-function checkPhaseReadiness() {
+function updateRosterPhaseReadyButtonState() {
     if (state.draft.phase === 'roster') {
         const { rosterSize } = state.draft;
         const p1Ready = state.participants.p1.ready && state.roster.p1.length === rosterSize;
@@ -1292,7 +1303,7 @@ function hoverDraftID(id) {
     sendMessage({ type: 'draftHover', lobbyCode: state.lobbyCode, payload: { id, type: 'id' } });
 }
 
-function confirmSelection(type) {
+function confirmDraftAction(type) {
      sendMessage({ type: 'draftConfirm', lobbyCode: state.lobbyCode, payload: { type } });
 }
 
@@ -1375,7 +1386,7 @@ function handleStateUpdate(message) {
     }
     
     elements.lobbyCodeDisplay.textContent = state.lobbyCode;
-    updateAllUIsFromState();
+    refreshInterfaceBasedOnGameState();
 }
 
 // ======================
@@ -1393,11 +1404,14 @@ function setupFilterBar(barId, filterStateObject) {
             renderRosterBuilder();
         }
     };
+    
+    // Create debounced version for search input
+    const debouncedUpdate = createDebounceFunction(update, 300);
 
     bar.addEventListener('input', (e) => {
         if (e.target.classList.contains('roster-search-input')) {
             filterStateObject.rosterSearch = e.target.value;
-            update();
+            debouncedUpdate(); // Use debounced version for search
         }
     });
     bar.addEventListener('change', (e) => {
@@ -1581,10 +1595,11 @@ function setupEventListeners() {
     elements.builderAdvancedRandom.addEventListener('click', generateAdvancedRandomRoster);
 
 
-    // EGO Search
+    // EGO Search with debouncing
+    const debouncedRenderEgoBanPhase = createDebounceFunction(renderEgoBanPhase, 300);
     elements.egoSearchInput.addEventListener('input', (e) => {
         state.egoSearch = e.target.value;
-        renderEgoBanPhase();
+        debouncedRenderEgoBanPhase(); // Use debounced version
     });
 
     // Draft controls
@@ -1593,8 +1608,8 @@ function setupEventListeners() {
     elements.goSecondBtn.addEventListener('click', () => sendMessage({ type: 'setTurnOrder', lobbyCode: state.lobbyCode, choice: 'second' }));
     elements.confirmEgoBans.addEventListener('click', () => sendMessage({ type: 'draftControl', lobbyCode: state.lobbyCode, action: 'confirmEgoBans' }));
     elements.completeDraft.addEventListener('click', () => sendMessage({ type: 'draftControl', lobbyCode: state.lobbyCode, action: 'complete' }));
-    elements.confirmSelectionId.addEventListener('click', () => confirmSelection('id'));
-    elements.confirmSelectionEgo.addEventListener('click', () => confirmSelection('ego'));
+    elements.confirmSelectionId.addEventListener('click', () => confirmDraftAction('id'));
+    elements.confirmSelectionEgo.addEventListener('click', () => confirmDraftAction('ego'));
     elements.refTimerControl.addEventListener('click', () => sendMessage({ type: 'timerControl', lobbyCode: state.lobbyCode, action: 'togglePause' }));
     
     // Hide/show lobby code
