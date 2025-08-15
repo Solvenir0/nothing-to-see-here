@@ -639,18 +639,6 @@ input:focus, select:focus {
     width: 100px; /* Constrain item to grid column size */
     max-width: 100px; /* Prevent expansion */
 }
-.compact-id-list .id-item:hover {
-    transform: none;
-}
-.compact-id-list .id-item:hover .id-icon,
-.compact-id-list .id-item.hovered .id-icon {
-    border-color: var(--hover) !important;
-    box-shadow: 0 0 8px var(--hover);
-}
-.compact-id-list .id-item.selected .id-icon {
-    border-color: var(--accent) !important;
-    box-shadow: 0 0 8px var(--accent);
-}
 .compact-id-list .id-item .id-name {
     display: none;
 }
@@ -662,6 +650,7 @@ input:focus, select:focus {
     border: 2px solid var(--border);
     max-width: 100px; /* Prevent icon from exceeding intended size */
     object-fit: cover; /* Ensure image fits properly */
+    transition: all 0.2s ease;
 }
 
 .id-item {
@@ -692,26 +681,68 @@ input:focus, select:focus {
     border-color: var(--accent) !important;
     box-shadow: 0 0 10px var(--accent);
 }
-/* Override selected styling for compact contexts - apply to icon instead */
-.compact-id-list .id-item.selected,
-.final-picks .id-item.selected,
-.final-bans .id-item.selected,
-#draft-pool-container .id-item.selected {
-    background: transparent !important;
-    border-color: transparent !important;
-    box-shadow: none !important;
-}
+
+/* === CLEAN HOVER SYSTEM === */
+/* Standard ID items with names (full-width) */
 .id-item.hovered {
     border-color: var(--hover) !important;
     box-shadow: 0 0 10px var(--hover);
+    background: rgba(255, 235, 59, 0.1);
 }
-/* Override hovered styling for compact contexts - apply to icon instead */
+
+/* Compact contexts - apply hover effect to the image */
+.compact-id-list .id-item:hover .id-icon,
+.compact-id-list .id-item.hovered .id-icon {
+    border-color: var(--hover) !important;
+    box-shadow: 0 0 10px var(--hover);
+    transform: scale(1.05);
+    transition: all 0.2s ease;
+}
+
+.compact-id-list .id-item.selected .id-icon {
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 10px var(--accent);
+}
+
+/* Final picks/bans - apply hover effect to the image */
+.final-picks .id-item:hover .id-icon,
+.final-picks .id-item.hovered .id-icon,
+.final-bans .id-item:hover .id-icon,
+.final-bans .id-item.hovered .id-icon {
+    border-color: var(--hover) !important;
+    box-shadow: 0 0 10px var(--hover);
+    transform: scale(1.05);
+    transition: all 0.2s ease;
+}
+
+.final-picks .id-item.selected .id-icon,
+.final-bans .id-item.selected .id-icon {
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 10px var(--accent);
+}
+
+/* Sinner grouped roster (draft pool) - hover effect on container */
+.sinner-grouped-roster .id-item:hover,
+.sinner-grouped-roster .id-item.hovered {
+    border-color: var(--hover) !important;
+    box-shadow: 0 0 10px var(--hover);
+    transform: scale(1.05);
+    z-index: 2;
+    background: rgba(255, 235, 59, 0.1);
+    transition: all 0.2s ease;
+}
+
+/* Disable default ID item hover in compact contexts */
+.compact-id-list .id-item:hover,
+.final-picks .id-item:hover,
+.final-bans .id-item:hover,
 .compact-id-list .id-item.hovered,
 .final-picks .id-item.hovered,
-.final-bans .id-item.hovered,
-#draft-pool-container .id-item.hovered {
+.final-bans .id-item.hovered {
+    background: transparent !important;
     border-color: transparent !important;
     box-shadow: none !important;
+    transform: none !important;
 }
 
 .shared-icon {
@@ -894,21 +925,6 @@ input:focus, select:focus {
     background: transparent;
     border: none;
 }
-.final-picks .id-item:hover .id-icon,
-.final-picks .id-item.hovered .id-icon,
-.final-bans .id-item:hover .id-icon,
-.final-bans .id-item.hovered .id-icon,
-#draft-pool-container .id-item:hover .id-icon,
-#draft-pool-container .id-item.hovered .id-icon {
-    border-color: var(--hover) !important;
-    box-shadow: 0 0 8px var(--hover);
-}
-.final-picks .id-item.selected .id-icon,
-.final-bans .id-item.selected .id-icon,
-#draft-pool-container .id-item.selected .id-icon {
-    border-color: var(--accent) !important;
-    box-shadow: 0 0 8px var(--accent);
-}
 .final-picks .id-item .id-name, .final-bans .id-item .id-name {
     display: none;
 }
@@ -918,6 +934,7 @@ input:focus, select:focus {
     aspect-ratio: 1 / 1;
     border-radius: 5px;
     border: 1px solid var(--border);
+    transition: all 0.2s ease;
 }
 
 .final-bans .id-item .id-icon {
@@ -1209,6 +1226,7 @@ input:focus, select:focus {
     border: 2px solid transparent;
     border-radius: 5px;
     gap: 0;
+    transition: all 0.2s ease;
 }
 .sinner-grouped-roster .id-item .id-name {
     display: none; /* Hide the name */
@@ -1220,20 +1238,10 @@ input:focus, select:focus {
     max-height: 96px; /* Prevent icon from exceeding intended size */
     object-fit: cover; /* Ensure image fits properly */
 }
-.sinner-grouped-roster .id-item:hover {
-    transform: scale(1.1);
-    border-color: var(--accent);
-    z-index: 2;
-    background: var(--primary-dark);
-}
 .sinner-grouped-roster .id-item.selected {
     border-color: var(--accent) !important;
     box-shadow: 0 0 8px var(--accent);
     background: var(--primary);
-}
-.sinner-grouped-roster .id-item.hovered {
-    border-color: var(--hover) !important;
-    box-shadow: 0 0 8px var(--hover);
 }
 
 /* --- Triptych Layout --- */
