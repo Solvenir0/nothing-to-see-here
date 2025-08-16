@@ -331,6 +331,7 @@ const idCsvData = `Name,Keywords,SinAffinities,Rarity
 "W Corp. L3 Cleanup Captain Outis","Charge,Rupture","Pride,Envy,Gloom","000"
 "The Barber of La Manchaland Outis","Bleed","Gluttony,Lust,Wrath","000"
 "Heishou Pack - Mao Branch Outis","Rupture","Sloth,Gluttony,Gloom","000"
+"T Corp. Class 3 VDCU Staff Outis","Tremor","Pride,Sloth,Gluttony","000"
 "Liu Association South Section 6 Gregor","Burn","Wrath,Lust,Sloth","00"
 "R.B. Sous-chef Gregor","Bleed","Lust,Gluttony,Envy","00"
 "Rosespanner Workshop Fixer Gregor","Rupture,Tremor","Gluttony,Envy,Gloom","00"
@@ -1065,3 +1066,4 @@ setInterval(cleanupInactiveLobbies, 30 * 60 * 1000);
 
 const PORT = process.env.PORT || 8080;
 server.listen(PORT, () => logInfo('SERVER', `Server started and listening on port ${PORT}`));
+
