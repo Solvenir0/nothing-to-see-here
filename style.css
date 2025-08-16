@@ -1932,7 +1932,6 @@ select:focus-visible {
     opacity: 0;
     transition: opacity 0.2s ease-in-out;
     max-width: 300px;
-    word-break: break-all;
     overflow-wrap: anywhere;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     backdrop-filter: blur(4px);
