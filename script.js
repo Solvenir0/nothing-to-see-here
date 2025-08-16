@@ -17,6 +17,27 @@ const zayinBanExceptions = [
     "Cavernous Wailing (Sinclair)",
     "Legerdemain (Gregor)"
 ];
+
+// Timing constants (in milliseconds)
+const TIMING = {
+    NOTIFICATION_HIDE_DELAY: 3000,
+    CONNECTION_ERROR_DELAY: 5000,
+    RECONNECT_ATTEMPT_DELAY: 10000,
+    WEBSOCKET_RETRY_DELAY: 100,
+    TOOLTIP_SHOW_DELAY: 500,
+    TIMER_UPDATE_INTERVAL: 1000,
+    KEEP_ALIVE_INTERVAL: 4 * 60 * 1000  // 4 minutes
+};
+
+// Game configuration constants
+const GAME_CONFIG = {
+    DEFAULT_RESERVE_TIME: 120,  // seconds
+    SECTION1_ROSTER_SIZE: 42,
+    ALL_SECTIONS_ROSTER_SIZE: 72,
+    USER_ID_LENGTH: 9,
+    USER_ID_START_POS: 2,
+    MAX_GENERATION_ATTEMPTS: 1000
+};
 // ======================
 // APPLICATION STATE
 // ======================
@@ -27,13 +48,13 @@ const state = {
     userRole: "",
     rejoinToken: null,
     participants: {
-        p1: { name: "Player 1", status: "disconnected", ready: false, reserveTime: 120 },
-        p2: { name: "Player 2", status: "disconnected", ready: false, reserveTime: 120 },
+        p1: { name: "Player 1", status: "disconnected", ready: false, reserveTime: GAME_CONFIG.DEFAULT_RESERVE_TIME },
+        p2: { name: "Player 2", status: "disconnected", ready: false, reserveTime: GAME_CONFIG.DEFAULT_RESERVE_TIME },
         ref: { name: "Referee", status: "disconnected" }
     },
     roster: { p1: [], p2: [] },
     builderRoster: [],
-    builderRosterSize: 42,
+    builderRosterSize: GAME_CONFIG.SECTION1_ROSTER_SIZE,
     masterIDList: [],
     builderMasterIDList: [],
     masterEGOList: [],
@@ -51,9 +72,10 @@ const state = {
         picks: { p1: [], p2: [] },
         picks_s2: { p1: [], p2: [] },
         hovered: { p1: null, p2: null },
+        banPools: { p1: [], p2: [] },
         draftLogic: '1-2-2',
         matchType: 'section1',
-        rosterSize: 42,
+        rosterSize: GAME_CONFIG.SECTION1_ROSTER_SIZE,
         coinFlipWinner: null,
         turnOrderDecided: false,
         timer: {
@@ -67,6 +89,8 @@ const state = {
     draftFilters: { sinner: "", sinAffinity: "", keyword: "", rosterSearch: "" },
     egoSearch: "",
     timerInterval: null,
+    keepAliveInterval: null,
+    lastCountdownSecond: null, // Track last played countdown second to prevent duplicates
     socket: null,
     joinTarget: {
         lobbyCode: null,
@@ -77,17 +101,93 @@ const state = {
 let elements = {};
 
 // ======================
+// DOM ELEMENT MANAGEMENT
+// ======================
+/**
+ * Helper function to get reserve time element for a specific role
+ * @param {string} role - Player role (p1, p2)
+ * @returns {HTMLElement|null} The reserve time element
+ */
+function getReserveTimeElement(role) {
+    const elementKey = `${role}ReserveTime`;
+    if (!elements[elementKey]) {
+        elements[elementKey] = document.getElementById(`${role}-reserve-time`);
+    }
+    return elements[elementKey];
+}
+
+/**
+ * Helper function to get slider elements for advanced random generation
+ * @param {string} sinner - Sinner name
+ * @returns {object} Object containing slider elements
+ */
+function getSliderElements(sinner) {
+    const cacheKey = `sliders_${sinner.replace(/\s+/g, '_')}`;
+    if (!elements[cacheKey]) {
+        elements[cacheKey] = {
+            minSlider: document.getElementById(`slider-${sinner}-min`),
+            maxSlider: document.getElementById(`slider-${sinner}-max`),
+            minVal: document.getElementById(`slider-val-${sinner}-min`),
+            maxVal: document.getElementById(`slider-val-${sinner}-max`)
+        };
+    }
+    return elements[cacheKey];
+}
+
+/**
+ * Helper function to manage tooltip element
+ * @returns {HTMLElement} The tooltip element
+ */
+function getTooltipElement() {
+    if (!elements.idTooltip) {
+        elements.idTooltip = document.getElementById('id-tooltip');
+    }
+    return elements.idTooltip;
+}
+
+/**
+ * Clear cached dynamic elements when they're removed from DOM
+ */
+function clearDynamicElementCache() {
+    elements.idTooltip = null;
+    // Clear any slider caches if needed
+    Object.keys(elements).forEach(key => {
+        if (key.startsWith('sliders_')) {
+            delete elements[key];
+        }
+    });
+}
+
+// ======================
 // UTILITY & CORE
 // ======================
 function generateUserId() {
-    return 'user-' + Math.random().toString(36).substr(2, 9);
+    return 'user-' + Math.random().toString(36).substr(GAME_CONFIG.USER_ID_START_POS, GAME_CONFIG.USER_ID_LENGTH);
 }
 
 function showNotification(text, isError = false) {
     elements.notification.textContent = text;
     elements.notification.style.background = isError ? 'var(--disconnected)' : 'var(--primary)';
     elements.notification.classList.add('show');
-    setTimeout(() => { elements.notification.classList.remove('show'); }, 3000);
+    setTimeout(() => { elements.notification.classList.remove('show'); }, TIMING.NOTIFICATION_HIDE_DELAY);
+}
+
+function showSideChangeNotification(oldRole, newRole) {
+    const oldSide = oldRole === 'p1' ? 'LEFT' : 'RIGHT';
+    const newSide = newRole === 'p1' ? 'LEFT' : 'RIGHT';
+    const message = `Position Changed! You are now on the ${newSide} side (was ${oldSide})`;
+    
+    // Show special notification with different styling
+    elements.notification.innerHTML = `<i class="fas fa-exchange-alt"></i> ${message}`;
+    elements.notification.style.background = 'var(--warning)';
+    elements.notification.style.fontWeight = 'bold';
+    elements.notification.classList.add('show');
+    
+    // Keep it visible longer for side changes
+    setTimeout(() => { 
+        elements.notification.classList.remove('show'); 
+        elements.notification.style.fontWeight = ''; // Reset
+    }, TIMING.CONNECTION_ERROR_DELAY);
 }
 
 function createSlug(name) {
@@ -97,6 +197,101 @@ function createSlug(name) {
     slug = slug.replace(/e\.g\.o::/g, 'ego-');
     slug = slug.replace(/ & /g, ' ').replace(/[.'"]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/[^\w-]+/g, '');
     return slug;
+}
+
+// ======================
+// KEEP-ALIVE SYSTEM
+// ======================
+function startKeepAlive() {
+    if (state.keepAliveInterval) return; // Already running
+    
+    console.log('Starting keep-alive system for active draft phases');
+    
+    // Send keep-alive every 4 minutes (Render free tier sleeps after ~15 min of inactivity)
+    state.keepAliveInterval = setInterval(() => {
+        if (shouldSendKeepAlive()) {
+            console.log('Sending keep-alive message to prevent server sleep');
+            sendMessage({ type: 'keepAlive', lobbyCode: state.lobbyCode });
+        }
+    }, TIMING.KEEP_ALIVE_INTERVAL);
+}
+
+function stopKeepAlive() {
+    if (state.keepAliveInterval) {
+        console.log('Stopping keep-alive system');
+        clearInterval(state.keepAliveInterval);
+        state.keepAliveInterval = null;
+    }
+}
+
+function shouldSendKeepAlive() {
+    // Only send keep-alive during active draft phases to prevent sleep
+    if (!state.lobbyCode || !state.socket || state.socket.readyState !== WebSocket.OPEN) {
+        return false;
+    }
+    
+    // Active draft phases that need keep-alive
+    const activeDraftPhases = ['coinFlip', 'egoBan', 'ban', 'pick', 'midBan', 'pick2', 'pick_s2'];
+    return activeDraftPhases.includes(state.draft.phase);
+}
+
+// ======================
+// INPUT VALIDATION HELPERS
+// ======================
+function validateAndTrimInput(input, fieldName) {
+    const trimmed = input.trim();
+    if (!trimmed) {
+        showNotification(`Please enter a ${fieldName}.`, true);
+        return null;
+    }
+    return trimmed;
+}
+
+function validatePlayerName(name) {
+    const trimmed = name.trim();
+    return trimmed || 'Anonymous'; // Provide default if empty
+}
+
+function validateRosterSize(roster, requiredSize, action = 'proceed') {
+    if (roster.length !== requiredSize) {
+        showNotification(`Must select ${requiredSize} IDs to ${action}.`, true);
+        return false;
+    }
+    return true;
+}
+
+function validateRosterCodeSize(rosterCode, requiredSize) {
+    if (!rosterCode) {
+        showNotification('Please enter a roster code.', true);
+        return false;
+    }
+    
+    const roster = loadRosterFromCode(rosterCode);
+    if (!roster) {
+        return false; // loadRosterFromCode already shows error notification
+    }
+    
+    if (roster.length !== requiredSize) {
+        showNotification(`Roster code is for ${roster.length} IDs, but lobby requires ${requiredSize}.`, true);
+        return false;
+    }
+    
+    return roster;
+}
+
+function validateUserPermission(userRole, targetRole) {
+    return userRole === targetRole || userRole === 'ref';
+}
+
+// ======================
+// DEBOUNCING UTILITY
+// ======================
+function createDebounceFunction(func, delay) {
+    let timeoutId;
+    return function (...args) {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => func.apply(this, args), delay);
+    };
 }
 
 // ======================
@@ -239,38 +434,68 @@ function connectWebSocket() {
         elements.connectionStatus.className = 'connection-status connected';
         elements.connectionStatus.innerHTML = '<i class="fas fa-plug"></i> <span>Connected</span>';
         
-        const session = JSON.parse(localStorage.getItem('limbusDraftSession'));
-        if (session && session.lobbyCode && session.userRole && session.rejoinToken) {
-            console.log('Found session, attempting to rejoin:', session);
-            elements.rejoinOverlay.style.display = 'flex';
-            sendMessage({ 
-                type: 'rejoinLobby', 
-                lobbyCode: session.lobbyCode,
-                role: session.userRole,
-                rejoinToken: session.rejoinToken
-            });
+        try {
+            const session = JSON.parse(localStorage.getItem('limbusDraftSession'));
+            if (session && session.lobbyCode && session.userRole && session.rejoinToken) {
+                console.log('Found session, attempting to rejoin:', session);
+                elements.rejoinOverlay.style.display = 'flex';
+                sendMessage({ 
+                    type: 'rejoinLobby', 
+                    lobbyCode: session.lobbyCode,
+                    role: session.userRole,
+                    rejoinToken: session.rejoinToken
+                });
 
-            rejoinTimeout = setTimeout(() => {
-                if (elements.rejoinOverlay.style.display === 'flex') {
-                    elements.rejoinOverlay.style.display = 'none';
-                    localStorage.removeItem('limbusDraftSession');
-                    showNotification("Failed to rejoin lobby. Session cleared.", true);
-                }
-            }, 10000);
+                rejoinTimeout = setTimeout(() => {
+                    if (elements.rejoinOverlay.style.display === 'flex') {
+                        elements.rejoinOverlay.style.display = 'none';
+                        try {
+                            localStorage.removeItem('limbusDraftSession');
+                        } catch (storageError) {
+                            console.error('Failed to clear session storage:', storageError);
+                        }
+                        showNotification("Failed to rejoin lobby. Session cleared.", true);
+                    }
+                }, TIMING.RECONNECT_ATTEMPT_DELAY);
+            }
+        } catch (error) {
+            console.error('Failed to parse session storage:', error);
+            try {
+                localStorage.removeItem('limbusDraftSession');
+            } catch (storageError) {
+                console.error('Failed to clear corrupted session storage:', storageError);
+            }
         }
     };
-    state.socket.onmessage = (event) => handleServerMessage(JSON.parse(event.data));
+    state.socket.onmessage = (event) => {
+        try {
+            const message = JSON.parse(event.data);
+            handleServerMessage(message);
+        } catch (error) {
+            console.error('Failed to parse WebSocket message:', error, 'Raw data:', event.data);
+            showNotification('Received invalid message from server', true);
+        }
+    };
     state.socket.onclose = () => {
         elements.connectionStatus.className = 'connection-status';
         elements.connectionStatus.innerHTML = '<i class="fas fa-plug"></i> <span>Disconnected</span>';
         if (state.timerInterval) clearInterval(state.timerInterval);
+        state.lastCountdownSecond = null; // Reset countdown tracking on disconnect
+        stopKeepAlive(); // Stop keep-alive when connection is lost
     };
     state.socket.onerror = (error) => console.error('WebSocket error:', error);
 }
 
 function sendMessage(message) {
     if (state.socket && state.socket.readyState === WebSocket.OPEN) {
-        state.socket.send(JSON.stringify(message));
+        try {
+            state.socket.send(JSON.stringify(message));
+        } catch (error) {
+            console.error('Failed to send WebSocket message:', error, 'Message:', message);
+            showNotification('Failed to send message to server', true);
+        }
+    } else {
+        console.warn('Cannot send message: WebSocket is not connected', message);
     }
 }
 
@@ -284,25 +509,36 @@ function handleServerMessage(message) {
                 console.log(`Role updated by server from ${state.userRole} to ${message.newRole}`);
                 state.userRole = message.newRole;
                 
-                const session = JSON.parse(localStorage.getItem('limbusDraftSession'));
-                if (session) {
-                    session.userRole = message.newRole;
-                    localStorage.setItem('limbusDraftSession', JSON.stringify(session));
-                    console.log('Updated session storage with new role.');
+                try {
+                    const session = JSON.parse(localStorage.getItem('limbusDraftSession'));
+                    if (session) {
+                        session.userRole = message.newRole;
+                        localStorage.setItem('limbusDraftSession', JSON.stringify(session));
+                        console.log('Updated session storage with new role.');
+                    }
+                } catch (error) {
+                    console.error('Failed to update session storage with new role:', error);
                 }
             }
             handleStateUpdate(message);
             break;
-        case 'publicLobbiesList': renderPublicLobbies(message.lobbies); break;
         case 'lobbyInfo': showRoleSelectionModal(message.lobby); break;
         case 'notification': showNotification(message.text); break;
         case 'error':
             showNotification(`Error: ${message.message}`, true);
             if (message.message.includes('rejoin') || message.message.includes('Clearing session')) {
-                localStorage.removeItem('limbusDraftSession');
+                try {
+                    localStorage.removeItem('limbusDraftSession');
+                } catch (storageError) {
+                    console.error('Failed to clear session storage on error:', storageError);
+                }
                 elements.rejoinOverlay.style.display = 'none';
                 if (rejoinTimeout) clearTimeout(rejoinTimeout);
             }
+            break;
+        case 'keepAliveAck':
+            // Server acknowledged keep-alive, no action needed
+            console.log('Keep-alive acknowledged by server');
             break;
     }
 }
@@ -327,7 +563,7 @@ function createIdElement(idData, options = {}) {
     if (isHovered) idElement.classList.add('hovered');
 
     idElement.dataset.id = idData.id;
-    let html = `<div class="id-icon" style="background-image: url('/uploads/${idData.imageFile}')"></div><div class="id-name">${idData.name}</div>`;
+    let html = `<img class="id-icon" src="/uploads/${idData.imageFile}" alt="${idData.name}"><div class="id-name">${idData.name}</div>`;
     if (isShared) {
         html += '<div class="shared-icon"><i class="fas fa-link"></i></div>';
     }
@@ -480,7 +716,7 @@ function switchView(view) {
 }
 
 
-function updateAllUIsFromState() {
+function refreshInterfaceBasedOnGameState() {
     const { draft } = state;
     const { phase, rosterSize } = draft;
 
@@ -500,9 +736,19 @@ function updateAllUIsFromState() {
     elements.coinFlipModal.classList.toggle('hidden', phase !== 'coinFlip');
     elements.draftStatusPanel.classList.toggle('hidden', phase === 'roster' || phase === 'complete');
 
+    // Apply draft phase classes for dynamic border colors
+    document.body.classList.remove('draft-ban-phase', 'draft-pick-phase');
+    if (['ban', 'midBan', 'egoBan'].includes(phase)) {
+        document.body.classList.add('draft-ban-phase');
+        console.log('Applied draft-ban-phase class for phase:', phase);
+    } else if (['pick', 'pick2', 'pick_s2'].includes(phase)) {
+        document.body.classList.add('draft-pick-phase');
+        console.log('Applied draft-pick-phase class for phase:', phase);
+    }
+
 
     if (phase === 'coinFlip') {
-        handleCoinFlipUI();
+        displayCoinFlipResultAndChoices();
     }
 
     elements.participantsList.innerHTML = '';
@@ -520,7 +766,7 @@ function updateAllUIsFromState() {
         elements.participantsList.appendChild(el);
 
         if ((role === 'p1' || role === 'p2') && p.reserveTime !== undefined) {
-            const reserveTimeEl = document.getElementById(`${role}-reserve-time`);
+            const reserveTimeEl = getReserveTimeElement(role);
             if (reserveTimeEl) {
                 const minutes = Math.floor(p.reserveTime / 60);
                 const seconds = p.reserveTime % 60;
@@ -555,7 +801,7 @@ function updateAllUIsFromState() {
     }
     
     updateDraftInstructions();
-    checkPhaseReadiness();
+    updateRosterPhaseReadyButtonState();
     updateTimerUI();
 }
 
@@ -689,8 +935,22 @@ function renderBannedEgosDisplay() {
 }
 
 function updateDraftUI() {
-    elements.p1DraftName.textContent = state.participants.p1.name;
-    elements.p2DraftName.textContent = state.participants.p2.name;
+    // Update player names with side indicators
+    const userRole = state.userRole;
+    const p1Name = state.participants.p1.name;
+    const p2Name = state.participants.p2.name;
+    
+    if (userRole === 'p1') {
+        elements.p1DraftName.innerHTML = `${p1Name} <i class="fas fa-star your-side-indicator" title="Your Side"></i>`;
+        elements.p2DraftName.textContent = p2Name;
+    } else if (userRole === 'p2') {
+        elements.p1DraftName.textContent = p1Name;
+        elements.p2DraftName.innerHTML = `${p2Name} <i class="fas fa-star your-side-indicator" title="Your Side"></i>`;
+    } else {
+        // Referee view - no side indicators
+        elements.p1DraftName.textContent = p1Name;
+        elements.p2DraftName.textContent = p2Name;
+    }
 
     const renderCompactIdListChronological = (container, idList) => {
         const scrollTop = container.scrollTop;
@@ -733,9 +993,18 @@ function updateDraftUI() {
     renderBannedEgosDisplay();
 }
 
+let isUpdatingDraftInstructions = false;
+
 function updateDraftInstructions() {
-    let phaseText = "", actionDesc = "";
-    const { phase, currentPlayer, action, actionCount, egoBans, hovered, matchType } = state.draft;
+    // Prevent race conditions from multiple simultaneous updates
+    if (isUpdatingDraftInstructions) {
+        return;
+    }
+    isUpdatingDraftInstructions = true;
+    
+    try {
+        let phaseText = "", actionDesc = "";
+        const { phase, currentPlayer, action, actionCount, egoBans, hovered, matchType } = state.draft;
     
     const hub = elements.draftInteractionHub;
     const existingPool = hub.querySelector('.sinner-grouped-roster');
@@ -783,13 +1052,31 @@ function updateDraftInstructions() {
 
     if (['ban', 'pick', 'midBan', 'pick2', 'pick_s2'].includes(phase)) {
         const opponent = currentPlayer === 'p1' ? 'p2' : 'p1';
-        const isBanAction = phase.includes('ban');
+        const isBanAction = (phase === 'ban' || phase === 'midBan');
 
-        const poolSourcePlayer = isBanAction ? opponent : currentPlayer;
-        const availableIdList = state.draft.available[poolSourcePlayer];
+        let availableIdList;
+        if (isBanAction) {
+            // For ban phases: show the enemy roster (what the current player can ban from)
+            const enemyPlayer = currentPlayer === 'p1' ? 'p2' : 'p1';
+            const enemyRoster = state.roster[enemyPlayer] || [];
+            
+            // Filter out already banned and picked IDs
+            const blocked = new Set([
+                ...state.draft.idBans.p1,
+                ...state.draft.idBans.p2,
+                ...state.draft.picks[enemyPlayer],
+                ...state.draft.picks_s2[enemyPlayer]
+            ]);
+            
+            availableIdList = enemyRoster.filter(id => !blocked.has(id));
+        } else {
+            // For pick phases: show own available roster
+            const available = state.draft.available || {};
+            availableIdList = [...(available[currentPlayer] || [])];
+        }
 
         if (!availableIdList) {
-            console.error(`[Draft Render] ERROR: availableIdList for ${poolSourcePlayer} is undefined!`);
+            console.error(`[Draft Render] ERROR: availableIdList for draft pool render`);
             return;
         }
 
@@ -805,10 +1092,10 @@ function updateDraftInstructions() {
         elements.draftPoolContainer.appendChild(poolEl);
 
         const sharedIds = state.roster.p1.filter(id => state.roster.p2.includes(id));
-
         renderGroupedView(poolEl, availableObjects, { 
             clickHandler, 
             hoverId: hovered[currentPlayer],
+            selectionSet: hovered[currentPlayer] ? [hovered[currentPlayer]] : [], // Show selected border for clicked item
             sharedIdSet: sharedIds
         });
 
@@ -820,9 +1107,12 @@ function updateDraftInstructions() {
     elements.currentPhase.textContent = phaseText;
     elements.draftActionDescription.textContent = actionDesc;
     elements.completeDraft.disabled = state.userRole !== 'ref' || phase === 'complete';
+    } finally {
+        isUpdatingDraftInstructions = false;
+    }
 }
 
-function handleCoinFlipUI() {
+function displayCoinFlipResultAndChoices() {
     const { coinFlipWinner } = state.draft;
     const winnerName = coinFlipWinner ? state.participants[coinFlipWinner].name : '';
 
@@ -885,7 +1175,7 @@ function renderCompletedView() {
 }
 
 
-function checkPhaseReadiness() {
+function updateRosterPhaseReadyButtonState() {
     if (state.draft.phase === 'roster') {
         const { rosterSize } = state.draft;
         const p1Ready = state.participants.p1.ready && state.roster.p1.length === rosterSize;
@@ -947,7 +1237,7 @@ function renderRosterBuilder() {
 }
 
 function updateTimerUI() {
-    const { timer } = state.draft;
+    const { timer, currentPlayer } = state.draft;
     elements.refTimerControl.classList.toggle('hidden', !timer.enabled || state.userRole !== 'ref');
     elements.phaseTimer.classList.toggle('hidden', !timer.enabled);
 
@@ -957,46 +1247,86 @@ function updateTimerUI() {
         elements.phaseTimer.textContent = "--:--";
         if(state.timerInterval) clearInterval(state.timerInterval);
         state.timerInterval = null;
+        state.lastCountdownSecond = null; // Reset countdown tracking when timer stops
         return;
     }
 
     if (!state.timerInterval) {
-        state.timerInterval = setInterval(updateTimerUI, 1000);
+        state.timerInterval = setInterval(updateTimerUI, TIMING.TIMER_UPDATE_INTERVAL);
     }
 
-    const remaining = Math.max(0, Math.round((timer.endTime - Date.now()) / 1000));
+    const remaining = Math.max(0, Math.round((timer.endTime - Date.now()) / 1000)); // Calculate seconds directly
     const minutes = Math.floor(remaining / 60);
     const seconds = remaining % 60;
     elements.phaseTimer.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+
+    // Play countdown sounds when current user has 5 seconds or less remaining
+    const isCurrentPlayersTurn = state.userRole === currentPlayer;
+    
+    if (isCurrentPlayersTurn && remaining <= 5 && remaining > 0) {
+        playCountdownSound(remaining);
+    }
 }
 
-function renderPublicLobbies(lobbies) {
-    const listEl = elements.publicLobbiesList;
-    listEl.innerHTML = '';
-
-    if (!lobbies || lobbies.length === 0) {
-        listEl.innerHTML = '<p style="text-align: center; padding: 20px;">No public lobbies found. Why not create one?</p>';
+// Function to play countdown sounds
+function playCountdownSound(secondsRemaining) {
+    // Prevent playing the same sound multiple times in the same second
+    if (state.lastCountdownSecond === secondsRemaining) {
         return;
     }
-
-    lobbies.forEach(lobby => {
-        const item = document.createElement('div');
-        item.className = 'public-lobby-item';
+    
+    state.lastCountdownSecond = secondsRemaining;
+    
+    try {
+        // Create audio context for beep sounds
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
         
-        const takenRoles = Object.entries(lobby.participants)
-            .filter(([, p]) => p.status === 'connected')
-            .map(([role]) => role);
-        const playerCount = takenRoles.filter(r => r !== 'ref').length;
-
-        item.innerHTML = `
-            <div class="lobby-item-name">${lobby.hostName || 'Unnamed Lobby'}</div>
-            <div class="lobby-item-players"><i class="fas fa-users"></i> ${playerCount}/2 Players</div>
-            <div class="lobby-item-mode"><i class="fas fa-cogs"></i> ${lobby.draftLogic}</div>
-            <button class="btn btn-primary btn-small join-from-browser-btn" data-lobby-code="${lobby.code}">Join</button>
-        `;
-        listEl.appendChild(item);
-    });
+        // Resume audio context if it's suspended (browser policy)
+        if (audioContext.state === 'suspended') {
+            audioContext.resume().then(() => {
+                playBeep(audioContext, secondsRemaining);
+            });
+        } else {
+            playBeep(audioContext, secondsRemaining);
+        }
+    } catch (error) {
+        console.error('Audio context error:', error);
+        // Fallback: try HTML5 audio with data URI
+        playFallbackBeep(secondsRemaining);
+    }
 }
+
+function playBeep(audioContext, secondsRemaining) {
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    // Single urgent beep sound - consistent frequency
+    oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+    oscillator.type = 'square';
+    
+    // Volume and duration settings for a crisp urgent beep
+    gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
+    
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.15);
+}
+
+function playFallbackBeep(secondsRemaining) {
+    // Generate a simple beep using data URI
+    const audioData = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmAbBj2Y2+/XfS4EOIX+/L1mHgU7k9H0wn0uBSGG5P+pYhQKT6jc84ZhNAU7k9H0wn0uBS'; 
+    try {
+        const audio = new Audio(audioData);
+        audio.volume = 0.1;
+        audio.play().catch(e => console.log('Fallback audio failed:', e));
+    } catch (error) {
+        console.error('Fallback audio error:', error);
+    }
+}
+
 
 function showRoleSelectionModal(lobby) {
     state.joinTarget.lobbyCode = lobby.code;
@@ -1053,7 +1383,7 @@ function hoverDraftID(id) {
     sendMessage({ type: 'draftHover', lobbyCode: state.lobbyCode, payload: { id, type: 'id' } });
 }
 
-function confirmSelection(type) {
+function confirmDraftAction(type) {
      sendMessage({ type: 'draftConfirm', lobbyCode: state.lobbyCode, payload: { type } });
 }
 
@@ -1088,24 +1418,55 @@ function handleLobbyJoined(message) {
     state.rejoinToken = message.rejoinToken;
 
     if (state.rejoinToken) {
-        localStorage.setItem('limbusDraftSession', JSON.stringify({
-            lobbyCode: state.lobbyCode,
-            userRole: state.userRole,
-            rejoinToken: state.rejoinToken
-        }));
+        try {
+            localStorage.setItem('limbusDraftSession', JSON.stringify({
+                lobbyCode: state.lobbyCode,
+                userRole: state.userRole,
+                rejoinToken: state.rejoinToken
+            }));
+        } catch (error) {
+            console.error('Failed to save session to localStorage:', error);
+            showNotification('Warning: Session could not be saved for auto-rejoin', true);
+        }
     }
+
+    // Start keep-alive system when joining a lobby
+    startKeepAlive();
 
     handleStateUpdate(message);
     showNotification(`Joined lobby as ${state.participants[state.userRole].name}`);
 }
 
 function handleStateUpdate(message) {
+    // Check for role swapping before updating state
+    const wasUserRole = state.userRole;
+    const newUserRole = message.newRole || state.userRole;
+    const rolesSwapped = message.state?.rolesSwapped || false;
+    
     Object.assign(state.participants, message.state.participants);
     Object.assign(state.roster, message.state.roster);
-    Object.assign(state.draft, message.state.draft);
+    
+    // Deep merge the draft state to ensure new properties like banPools are properly copied
+    if (message.state.draft) {
+        Object.keys(message.state.draft).forEach(key => {
+            if (typeof message.state.draft[key] === 'object' && message.state.draft[key] !== null && !Array.isArray(message.state.draft[key])) {
+                // For nested objects, ensure the property exists before assigning
+                if (!state.draft[key]) state.draft[key] = {};
+                Object.assign(state.draft[key], message.state.draft[key]);
+            } else {
+                // For primitive values and arrays, direct assignment
+                state.draft[key] = message.state.draft[key];
+            }
+        });
+    }
+    
+    // Handle role swapping notification
+    if (rolesSwapped && wasUserRole && wasUserRole !== newUserRole) {
+        showSideChangeNotification(wasUserRole, newUserRole);
+    }
     
     elements.lobbyCodeDisplay.textContent = state.lobbyCode;
-    updateAllUIsFromState();
+    refreshInterfaceBasedOnGameState();
 }
 
 // ======================
@@ -1123,11 +1484,14 @@ function setupFilterBar(barId, filterStateObject) {
             renderRosterBuilder();
         }
     };
+    
+    // Create debounced version for search input
+    const debouncedUpdate = createDebounceFunction(update, 300);
 
     bar.addEventListener('input', (e) => {
         if (e.target.classList.contains('roster-search-input')) {
             filterStateObject.rosterSearch = e.target.value;
-            update();
+            debouncedUpdate(); // Use debounced version for search
         }
     });
     bar.addEventListener('change', (e) => {
@@ -1150,11 +1514,11 @@ function setupEventListeners() {
     // Main Page
     elements.createLobbyBtn.addEventListener('click', () => {
         const options = {
-            name: elements.playerNameInput.value.trim() || 'Referee',
+            name: validatePlayerName(elements.playerNameInput.value) || 'Referee',
             draftLogic: elements.draftLogicSelect.value,
             matchType: elements.matchTypeSelect.value,
             timerEnabled: elements.timerToggle.value === 'true',
-            isPublic: elements.publicLobbyToggle.value === 'true',
+            // Public lobbies removed
             rosterSize: elements.rosterSizeSelect.value
         };
         sendMessage({ type: 'createLobby', options });
@@ -1169,36 +1533,45 @@ function setupEventListeners() {
     elements.showRulesBtn.addEventListener('click', () => elements.rulesModal.classList.remove('hidden'));
     elements.closeRulesBtn.addEventListener('click', () => elements.rulesModal.classList.add('hidden'));
 
-    elements.joinTabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            elements.joinTabs.forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.join-tab-content').forEach(content => content.classList.remove('active'));
-
-            tab.classList.add('active');
-            const tabName = tab.dataset.tab;
-            const targetContentId = tabName === 'browse' ? 'browse-lobbies-tab' : 'code-join-tab';
-            document.getElementById(targetContentId).classList.add('active');
-
-            if (tabName === 'browse') {
-                sendMessage({ type: 'getPublicLobbies' });
-            }
-        });
-    });
-
-    elements.refreshLobbiesBtn.addEventListener('click', () => sendMessage({ type: 'getPublicLobbies' }));
-
-    elements.publicLobbiesList.addEventListener('click', (e) => {
-        const joinBtn = e.target.closest('.join-from-browser-btn');
-        if (joinBtn) {
-            const lobbyCode = joinBtn.dataset.lobbyCode;
-            sendMessage({ type: 'getLobbyInfo', lobbyCode });
+    // Lobby code click-to-copy functionality
+    elements.lobbyCodeDisplay.addEventListener('click', async () => {
+        try {
+            await navigator.clipboard.writeText(state.lobbyCode);
+            // Show brief visual feedback
+            const originalText = elements.lobbyCodeDisplay.textContent;
+            elements.lobbyCodeDisplay.textContent = 'COPIED!';
+            elements.lobbyCodeDisplay.style.color = '#4CAF50';
+            setTimeout(() => {
+                elements.lobbyCodeDisplay.textContent = originalText;
+                elements.lobbyCodeDisplay.style.color = '';
+            }, 800);
+        } catch (err) {
+            // Fallback for older browsers
+            const textArea = document.createElement('textarea');
+            textArea.value = state.lobbyCode;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            
+            // Show brief visual feedback
+            const originalText = elements.lobbyCodeDisplay.textContent;
+            elements.lobbyCodeDisplay.textContent = 'COPIED!';
+            elements.lobbyCodeDisplay.style.color = '#4CAF50';
+            setTimeout(() => {
+                elements.lobbyCodeDisplay.textContent = originalText;
+                elements.lobbyCodeDisplay.style.color = '';
+            }, 800);
         }
     });
 
+    // Public lobby browsing removed
+
     elements.enterLobbyByCode.addEventListener('click', () => {
-        const lobbyCode = elements.lobbyCodeInput.value.trim().toUpperCase();
-        if (!lobbyCode) return showNotification('Please enter a lobby code.', true);
-        sendMessage({ type: 'getLobbyInfo', lobbyCode });
+        const lobbyCode = validateAndTrimInput(elements.lobbyCodeInput.value, 'lobby code');
+        if (lobbyCode) {
+            sendMessage({ type: 'getLobbyInfo', lobbyCode: lobbyCode.toUpperCase() });
+        }
     });
 
     elements.closeRoleModalBtn.addEventListener('click', () => elements.roleSelectionModal.classList.add('hidden'));
@@ -1208,53 +1581,61 @@ function setupEventListeners() {
                 type: 'joinLobby',
                 lobbyCode: state.joinTarget.lobbyCode,
                 role: state.joinTarget.role,
-                name: elements.playerNameInput.value.trim()
+                name: validatePlayerName(elements.playerNameInput.value)
             });
         }
     });
     
     const cancelRejoinAction = () => {
         if (rejoinTimeout) clearTimeout(rejoinTimeout);
-        localStorage.removeItem('limbusDraftSession');
+        try {
+            localStorage.removeItem('limbusDraftSession');
+        } catch (error) {
+            console.error('Failed to clear session storage:', error);
+        }
         elements.rejoinOverlay.style.display = 'none';
         if (state.socket && state.socket.readyState !== WebSocket.CLOSED) {
             state.socket.close();
         }
-        setTimeout(connectWebSocket, 100);
+        setTimeout(connectWebSocket, TIMING.WEBSOCKET_RETRY_DELAY);
         showNotification("Rejoin attempt cancelled.");
     };
     elements.cancelRejoinBtn.addEventListener('click', cancelRejoinAction);
 
     const clearSessionAndReload = () => {
-        localStorage.removeItem('limbusDraftSession');
+        stopKeepAlive(); // Stop keep-alive before leaving
+        try {
+            localStorage.removeItem('limbusDraftSession');
+        } catch (error) {
+            console.error('Failed to clear session storage:', error);
+        }
         window.location.reload();
     };
     elements.backToMainLobby.addEventListener('click', clearSessionAndReload);
     elements.restartDraft.addEventListener('click', clearSessionAndReload);
     elements.backToMainBuilder.addEventListener('click', () => {
+        stopKeepAlive(); // Stop keep-alive when leaving lobby
         state.lobbyCode = ''; 
         switchView('mainPage');
     });
     
     // Lobby Roster Controls
     ['p1', 'p2'].forEach(player => {
-        elements[`${player}Random`].addEventListener('click', () => (state.userRole === player || state.userRole === 'ref') && sendMessage({ type: 'rosterRandomize', lobbyCode: state.lobbyCode, player }));
-        elements[`${player}Clear`].addEventListener('click', () => (state.userRole === player || state.userRole === 'ref') && sendMessage({ type: 'rosterClear', lobbyCode: state.lobbyCode, player }));
+        elements[`${player}Random`].addEventListener('click', () => validateUserPermission(state.userRole, player) && sendMessage({ type: 'rosterRandomize', lobbyCode: state.lobbyCode, player }));
+        elements[`${player}Clear`].addEventListener('click', () => validateUserPermission(state.userRole, player) && sendMessage({ type: 'rosterClear', lobbyCode: state.lobbyCode, player }));
         elements[`${player}Ready`].addEventListener('click', () => {
-            if (state.userRole === player || state.userRole === 'ref') {
-                 if (state.roster[player].length !== state.draft.rosterSize && !state.participants[player].ready) return showNotification(`Must select ${state.draft.rosterSize} IDs.`, true);
+            if (validateUserPermission(state.userRole, player)) {
+                if (!state.participants[player].ready && !validateRosterSize(state.roster[player], state.draft.rosterSize, 'ready up')) {
+                    return;
+                }
                 sendMessage({ type: 'updateReady', lobbyCode: state.lobbyCode, player });
             }
         });
         elements[`${player}RosterLoad`].addEventListener('click', () => {
-            if (state.userRole === player || state.userRole === 'ref') {
+            if (validateUserPermission(state.userRole, player)) {
                 const code = elements[`${player}RosterCodeInput`].value.trim();
-                const roster = loadRosterFromCode(code);
+                const roster = validateRosterCodeSize(code, state.draft.rosterSize);
                 if (roster) {
-                    if (roster.length !== state.draft.rosterSize) {
-                        showNotification(`Roster code is for ${roster.length} IDs, but lobby requires ${state.draft.rosterSize}.`, true);
-                        return;
-                    }
                     setPlayerRoster(player, roster);
                     showNotification("Roster loaded successfully!");
                 }
@@ -1288,26 +1669,35 @@ function setupEventListeners() {
     });
     elements.builderCopyCode.addEventListener('click', () => {
         const code = elements.builderRosterCodeDisplay.textContent;
+        if (!navigator.clipboard) {
+            // Fallback for browsers without clipboard API
+            showNotification("Clipboard not supported. Please copy manually.", true);
+            return;
+        }
+        
         navigator.clipboard.writeText(code).then(() => {
             showNotification("Roster code copied to clipboard!");
-        }, () => {
-            showNotification("Failed to copy code.", true);
+        }).catch((error) => {
+            console.error('Clipboard write failed:', error);
+            showNotification("Failed to copy code. Please copy manually.", true);
         });
     });
     elements.builderLoadCode.addEventListener('click', () => {
-        const code = elements.builderLoadCodeInput.value.trim();
-        const roster = loadRosterFromCode(code);
-        if (roster) {
-            state.builderRoster = roster;
-            state.builderRosterSize = roster.length;
-            
-            elements.builderRosterSizeSelector.querySelectorAll('button').forEach(btn => {
-                btn.classList.toggle('active', parseInt(btn.dataset.size) === state.builderRosterSize);
-            });
+        const code = validateAndTrimInput(elements.builderLoadCodeInput.value, 'roster code');
+        if (code) {
+            const roster = loadRosterFromCode(code);
+            if (roster) {
+                state.builderRoster = roster;
+                state.builderRosterSize = roster.length;
+                
+                elements.builderRosterSizeSelector.querySelectorAll('button').forEach(btn => {
+                    btn.classList.toggle('active', parseInt(btn.dataset.size) === state.builderRosterSize);
+                });
 
-            renderRosterBuilder();
-            setupAdvancedRandomUI();
-            showNotification(`Roster for ${roster.length} IDs loaded successfully!`);
+                renderRosterBuilder();
+                setupAdvancedRandomUI();
+                showNotification(`Roster for ${roster.length} IDs loaded successfully!`);
+            }
         }
     });
 
@@ -1317,10 +1707,11 @@ function setupEventListeners() {
     elements.builderAdvancedRandom.addEventListener('click', generateAdvancedRandomRoster);
 
 
-    // EGO Search
+    // EGO Search with debouncing
+    const debouncedRenderEgoBanPhase = createDebounceFunction(renderEgoBanPhase, 300);
     elements.egoSearchInput.addEventListener('input', (e) => {
         state.egoSearch = e.target.value;
-        renderEgoBanPhase();
+        debouncedRenderEgoBanPhase(); // Use debounced version
     });
 
     // Draft controls
@@ -1329,8 +1720,8 @@ function setupEventListeners() {
     elements.goSecondBtn.addEventListener('click', () => sendMessage({ type: 'setTurnOrder', lobbyCode: state.lobbyCode, choice: 'second' }));
     elements.confirmEgoBans.addEventListener('click', () => sendMessage({ type: 'draftControl', lobbyCode: state.lobbyCode, action: 'confirmEgoBans' }));
     elements.completeDraft.addEventListener('click', () => sendMessage({ type: 'draftControl', lobbyCode: state.lobbyCode, action: 'complete' }));
-    elements.confirmSelectionId.addEventListener('click', () => confirmSelection('id'));
-    elements.confirmSelectionEgo.addEventListener('click', () => confirmSelection('ego'));
+    elements.confirmSelectionId.addEventListener('click', () => confirmDraftAction('id'));
+    elements.confirmSelectionEgo.addEventListener('click', () => confirmDraftAction('ego'));
     elements.refTimerControl.addEventListener('click', () => sendMessage({ type: 'timerControl', lobbyCode: state.lobbyCode, action: 'togglePause' }));
     
     // Hide/show lobby code
@@ -1347,63 +1738,96 @@ function setupEventListeners() {
         }
     });
 
-    // Tooltip Logic
+    // Universal Tooltip Logic for ID and EGO
     let tooltipTimer = null;
 
-    const showTooltip = (element) => {
-        if (document.getElementById('id-tooltip')) return;
-
+    function getTooltipData(element) {
+        // Try ID first
         const idSlug = element.dataset.id;
-        const idData = state.masterIDList.find(id => id.id === idSlug);
-        if (!idData) return;
+        let data = state.masterIDList.find(id => id.id === idSlug);
+        if (data) return { name: data.name };
+        // Try EGO
+        data = state.masterEGOList && state.masterEGOList.find(ego => ego.id === idSlug);
+        if (data) return { name: data.name };
+        // Fallback: try text content
+        return { name: element.textContent || '' };
+    }
+
+    const showTooltip = (element) => {
+        if (getTooltipElement()) return; // Tooltip already exists
+
+        const tooltipData = getTooltipData(element);
+        if (!tooltipData || !tooltipData.name) return;
 
         const tooltip = document.createElement('div');
         tooltip.id = 'id-tooltip';
-        tooltip.textContent = idData.name;
+        tooltip.textContent = tooltipData.name;
+
+        // Position off-screen initially to get accurate dimensions
+        tooltip.style.position = 'fixed';
+        tooltip.style.top = '-9999px';
+        tooltip.style.left = '-9999px';
+        tooltip.style.opacity = '0';
+
         document.body.appendChild(tooltip);
+        elements.idTooltip = tooltip;
 
-        const rect = element.getBoundingClientRect();
-        let top = rect.top - tooltip.offsetHeight - 5;
-        let left = rect.left + rect.width / 2 - tooltip.offsetWidth / 2;
+        requestAnimationFrame(() => {
+            const rect = element.getBoundingClientRect();
+            const tooltipRect = tooltip.getBoundingClientRect();
 
-        if (top < 0) {
-            top = rect.bottom + 5;
-        }
-        if (left < 0) {
-            left = 5;
-        }
-        if (left + tooltip.offsetWidth > window.innerWidth) {
-            left = window.innerWidth - tooltip.offsetWidth - 5;
-        }
+            // Calculate ideal position (centered above the element)
+            let top = rect.top - tooltipRect.height - 8;
+            let left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
 
-        tooltip.style.top = `${top}px`;
-        tooltip.style.left = `${left}px`;
-        tooltip.style.opacity = '1';
+            // Boundary checks and adjustments
+            const margin = 8;
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+
+            if (top < margin) {
+                top = rect.bottom + 8;
+            }
+            if (top + tooltipRect.height > viewportHeight - margin && rect.top - tooltipRect.height - 8 >= margin) {
+                top = rect.top - tooltipRect.height - 8;
+            }
+            if (left < margin) {
+                left = margin;
+            } else if (left + tooltipRect.width > viewportWidth - margin) {
+                left = viewportWidth - tooltipRect.width - margin;
+            }
+            left = Math.max(margin, Math.min(left, viewportWidth - tooltipRect.width - margin));
+            top = Math.max(margin, Math.min(top, viewportHeight - tooltipRect.height - margin));
+
+            tooltip.style.top = `${top}px`;
+            tooltip.style.left = `${left}px`;
+            tooltip.style.opacity = '1';
+        });
     };
 
     const hideTooltip = () => {
         clearTimeout(tooltipTimer);
-        const tooltip = document.getElementById('id-tooltip');
+        const tooltip = getTooltipElement();
         if (tooltip) {
             tooltip.remove();
+            elements.idTooltip = null;
         }
     };
 
+    // Listen for hover on both .id-item and .ego-item everywhere
     document.body.addEventListener('mouseover', (e) => {
-        const targetElement = e.target.closest('.compact-id-list .id-item, .final-picks .id-item, .final-bans .id-item, #draft-pool-container .id-item');
+        const targetElement = e.target.closest('.id-item, .ego-item');
         if (targetElement) {
             clearTimeout(tooltipTimer);
-            tooltipTimer = setTimeout(() => showTooltip(targetElement), 500);
+            tooltipTimer = setTimeout(() => showTooltip(targetElement), TIMING.TOOLTIP_SHOW_DELAY);
         }
     });
-
     document.body.addEventListener('mouseout', (e) => {
-        const targetElement = e.target.closest('.compact-id-list .id-item, .final-picks .id-item, .final-bans .id-item, #draft-pool-container .id-item');
+        const targetElement = e.target.closest('.id-item, .ego-item');
         if (targetElement) {
             hideTooltip();
         }
     });
-
     window.addEventListener('scroll', hideTooltip, true);
 }
 
@@ -1454,13 +1878,15 @@ function createFilterBarHTML(options = {}) {
 function setupAdvancedRandomUI() {
     const container = elements.sinnerSlidersContainer;
     container.innerHTML = '';
+    clearDynamicElementCache(); // Clear cached slider elements
     const rosterSize = state.builderRosterSize;
 
     const updateTotals = () => {
         let totalMin = 0, totalMax = 0;
         SINNER_ORDER.forEach(sinner => {
-            totalMin += parseInt(document.getElementById(`slider-${sinner}-min`).value, 10);
-            totalMax += parseInt(document.getElementById(`slider-${sinner}-max`).value, 10);
+            const sliders = getSliderElements(sinner);
+            totalMin += parseInt(sliders.minSlider?.value || 0, 10);
+            totalMax += parseInt(sliders.maxSlider?.value || 0, 10);
         });
         elements.totalMinDisplay.textContent = totalMin;
         elements.totalMaxDisplay.textContent = totalMax;
@@ -1492,10 +1918,8 @@ function setupAdvancedRandomUI() {
         `;
         container.appendChild(group);
 
-        const minSlider = document.getElementById(`slider-${sinner}-min`);
-        const maxSlider = document.getElementById(`slider-${sinner}-max`);
-        const minVal = document.getElementById(`slider-val-${sinner}-min`);
-        const maxVal = document.getElementById(`slider-val-${sinner}-max`);
+        const sliders = getSliderElements(sinner);
+        const { minSlider, maxSlider, minVal, maxVal } = sliders;
 
         minSlider.addEventListener('input', () => {
             minVal.textContent = minSlider.value;
@@ -1524,8 +1948,9 @@ function generateAdvancedRandomRoster() {
     const rosterSize = state.builderRosterSize;
 
     SINNER_ORDER.forEach(sinner => {
-        const min = parseInt(document.getElementById(`slider-${sinner}-min`).value, 10);
-        const max = parseInt(document.getElementById(`slider-${sinner}-max`).value, 10);
+        const sliders = getSliderElements(sinner);
+        const min = parseInt(sliders.minSlider?.value || 0, 10);
+        const max = parseInt(sliders.maxSlider?.value || 0, 10);
         constraints[sinner] = { min, max, available: state.idsBySinner[sinner] || [] };
         totalMin += min;
         totalMax += max;
@@ -1554,7 +1979,7 @@ function generateAdvancedRandomRoster() {
     availableIDs = availableIDs.filter(id => !rosterSlugs.has(id.id));
 
     let attempts = 0;
-    while (roster.length < rosterSize && attempts < 1000) {
+    while (roster.length < rosterSize && attempts < GAME_CONFIG.MAX_GENERATION_ATTEMPTS) {
         if (availableIDs.length === 0) break;
 
         const randomIndex = Math.floor(Math.random() * availableIDs.length);
@@ -1595,12 +2020,8 @@ function cacheDOMElements() {
         draftLogicSelect: document.getElementById('draft-logic-select'),
         matchTypeSelect: document.getElementById('match-type-select'),
         timerToggle: document.getElementById('timer-toggle'),
-        publicLobbyToggle: document.getElementById('public-lobby-toggle'),
         rosterSizeSelect: document.getElementById('roster-size-select'),
         showRulesBtn: document.getElementById('show-rules-btn'),
-        joinTabs: document.querySelectorAll('.join-tab-btn'),
-        refreshLobbiesBtn: document.getElementById('refresh-lobbies-btn'),
-        publicLobbiesList: document.getElementById('public-lobbies-list'),
         lobbyCodeInput: document.getElementById('lobby-code-input'),
         enterLobbyByCode: document.getElementById('enter-lobby-by-code'),
         builderRosterDescription: document.getElementById('builder-roster-description'),
@@ -1720,9 +2141,22 @@ function cacheDOMElements() {
         turnChoiceButtons: document.getElementById('turn-choice-buttons'),
         goFirstBtn: document.getElementById('go-first-btn'),
         goSecondBtn: document.getElementById('go-second-btn'),
+
+        // Frequently accessed filter bars
+        globalFilterBarRoster: document.getElementById('global-filter-bar-roster'),
+        globalFilterBarBuilder: document.getElementById('global-filter-bar-builder'),
+        globalFilterBarDraft: document.getElementById('global-filter-bar-draft'),
+
+        // Dynamic tooltip element (will be created/destroyed)
+        idTooltip: null
     };
     
-    const missingElements = Object.keys(elements).filter(key => !elements[key]);
+    // Elements that are intentionally null or optional
+    const optionalElements = ['idTooltip'];
+    
+    const missingElements = Object.keys(elements)
+        .filter(key => !elements[key] && !optionalElements.includes(key));
+    
     if (missingElements.length > 0) {
         console.warn('Missing DOM elements:', missingElements);
     }
@@ -1735,9 +2169,9 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
         cacheDOMElements();
 
-        document.getElementById('global-filter-bar-roster').innerHTML = createFilterBarHTML({ showSinnerFilter: true });
-        document.getElementById('global-filter-bar-builder').innerHTML = createFilterBarHTML({ showSinnerFilter: false });
-        document.getElementById('global-filter-bar-draft').innerHTML = createFilterBarHTML({ showSinnerFilter: true });
+        elements.globalFilterBarRoster.innerHTML = createFilterBarHTML({ showSinnerFilter: true });
+        elements.globalFilterBarBuilder.innerHTML = createFilterBarHTML({ showSinnerFilter: false });
+        elements.globalFilterBarDraft.innerHTML = createFilterBarHTML({ showSinnerFilter: true });
         setupFilterBar('global-filter-bar-roster', state.filters);
         setupFilterBar('global-filter-bar-builder', state.filters);
         setupFilterBar('global-filter-bar-draft', state.draftFilters);
