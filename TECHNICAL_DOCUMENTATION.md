@@ -682,6 +682,19 @@ All improvements preserve the existing meticulously crafted draft logic. The cha
 - Consider backward compatibility for any API changes
 - Test thoroughly after each change to ensure no regressions
 
+### TODO: ID Image Asset Management (August 17, 2025)
+**Priority: High** - Fix missing or broken ID image assets in the `/uploads` directory
+- **Issue**: Several ID character portraits are missing or have broken file paths
+- **Impact**: IDs display as broken images in the unified image-only interface
+- **Required Actions**:
+  - Audit all ID slugs in `data.js` against actual files in `/uploads` directory
+  - Identify missing image files and obtain correct character portraits
+  - Verify image file naming conventions match slug generation patterns
+  - Test image loading across all ID contexts (roster builder, draft interface, ban pools)
+  - Ensure consistent image dimensions and quality standards
+- **Testing**: Verify all ~170 ID images load properly in the interface
+- **Notes**: Critical for the new unified image-only interface where character portraits are the primary visual identification method
+
 ---
 
 ## Testing Scenarios

@@ -60,7 +60,6 @@ h1 {
     font-weight: 900;
     margin-bottom: 10px;
     color: var(--text);
-    text-shadow: 0 0 10px var(--accent), 0 0 20px var(--accent);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -203,9 +202,8 @@ h4 {
 .logo img {
     max-width: 100%;
     height: auto;
-    /* Reduce glow and remove pulse to avoid odd shine */
+    /* Remove glow effect from logo */
     animation: none;
-    filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.35));
 }
 
 .welcome-text {
@@ -401,7 +399,6 @@ input:focus, select:focus {
 
 .timer-display.reserve-active {
     color: var(--warning);
-    text-shadow: 0 0 10px var(--warning);
     animation: pulse-warning 1.5s infinite;
 }
 
@@ -411,12 +408,18 @@ input:focus, select:focus {
     transform: scale(1.01);
 }
 
+/* Red shine for draft-active elements during ban phases */
+.draft-ban-phase .draft-player-column.draft-active, 
+.draft-ban-phase .draft-interaction-hub.draft-active {
+    box-shadow: 0 0 25px var(--primary);
+    border: 2px solid var(--primary);
+}
+
 /* Your Side Indicator */
 .your-side-indicator {
     color: var(--accent);
     font-size: 0.9rem;
     margin-left: 8px;
-    filter: drop-shadow(0 0 4px var(--accent));
     animation: gentle-pulse 2s infinite;
 }
 
@@ -431,9 +434,32 @@ input:focus, select:focus {
     }
 }
 
+@keyframes selection-glow {
+    0%, 100% { 
+        box-shadow: 0 0 15px rgba(255, 215, 0, 0.6);
+    }
+    50% { 
+        box-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
+    }
+}
+
+@keyframes selection-glow-red {
+    0%, 100% { 
+        box-shadow: 0 0 15px rgba(179, 27, 27, 0.6);
+    }
+    50% { 
+        box-shadow: 0 0 20px rgba(179, 27, 27, 0.8);
+    }
+}
+
 /* Enhanced turn indication with stronger glow effect */
 .draft-player-column.draft-active {
     animation: active-glow 1.5s ease-in-out infinite alternate;
+}
+
+/* Red animated glow for draft-active elements during ban phases */
+.draft-ban-phase .draft-player-column.draft-active {
+    animation: active-glow-red 1.5s ease-in-out infinite alternate;
 }
 
 @keyframes active-glow {
@@ -444,6 +470,17 @@ input:focus, select:focus {
     100% { 
         box-shadow: 0 0 35px var(--accent), 0 0 60px rgba(255, 140, 0, 0.3);
         border: 2px solid var(--accent);
+    }
+}
+
+@keyframes active-glow-red {
+    0% { 
+        box-shadow: 0 0 25px var(--primary);
+        border: 2px solid var(--primary);
+    }
+    100% { 
+        box-shadow: 0 0 35px var(--primary), 0 0 60px rgba(179, 27, 27, 0.3);
+        border: 2px solid var(--primary);
     }
 }
 .role-option i {
@@ -473,6 +510,13 @@ input:focus, select:focus {
     border: 1px solid var(--accent);
     box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
     transition: filter 0.3s ease;
+    user-select: none; /* Make non-selectable */
+    cursor: pointer; /* Show it's clickable */
+}
+
+.code-display:hover {
+    background: #1a1a1a;
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
 }
 
 .code-display.hidden {
@@ -643,28 +687,46 @@ input:focus, select:focus {
     display: none;
 }
 .compact-id-list .id-item .id-icon {
-    width: 100px; /* Full width to match container */
-    height: 100px; /* Full height to maintain aspect ratio */
+    width: 100%; /* Fill the container completely */
+    height: 100%; /* Fill the container completely */
     aspect-ratio: 1 / 1;
-    border-radius: 8px;
-    border: 2px solid var(--border);
-    max-width: 100px; /* Prevent icon from exceeding intended size */
+    border-radius: 6px; /* Slightly smaller than container */
+    border: none; /* Border handled by container */
+    max-width: none; /* Remove constraints to fill container */
     object-fit: cover; /* Ensure image fits properly */
     transition: all 0.2s ease;
 }
 
 .id-item {
     position: relative;
-    padding: 8px;
+    padding: 0; /* Remove padding so image fills container */
     margin: 0;
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: 4px;
+    background: transparent; /* No background since we're going image-only */
+    border-radius: 8px;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 0; /* Remove gap for image-only layout */
     cursor: pointer;
     transition: all 0.3s, border-color 0.3s;
-    border: 2px solid transparent;
+    border: 2px solid var(--border); /* Default border for all items */
+    width: 100px; /* Match image size */
+    height: 100px; /* Match image size */
+    overflow: hidden; /* Ensure clean borders */
+}
+
+/* Hide ID names by default - show only images */
+.id-item .id-name {
+    display: none;
+}
+
+/* ID icons get consistent sizing */
+.id-item .id-icon {
+    width: 100%;
+    height: 100%;
+    border-radius: 6px; /* Slightly smaller radius than container */
+    border: none; /* Remove border since container handles it */
+    object-fit: cover;
+    transition: transform 0.2s ease;
 }
 
 .id-item.rarity-0 { border-left-color: var(--rarity-0); }
@@ -672,28 +734,53 @@ input:focus, select:focus {
 .id-item.rarity-000 { border-left-color: var(--rarity-000); }
 
 .id-item:hover {
-    background: rgba(0, 0, 0, 0.3);
-    transform: translateX(5px);
-}
-
-.id-item.selected {
-    background: var(--primary);
+    transform: scale(1.05);
 }
 
 /* === SIMPLE HOVER SYSTEM === */
-/* Standard ID items with names (full-width) */
+/* All ID items now use consistent image-only layout with scale hover */
+.id-item:hover,
 .id-item.hovered {
-    transform: scale(1.02);
+    transform: scale(1.05);
 }
 
-/* Compact contexts - simple scale effect on image */
+/* Selected ID items get a prominent gold border by default */
+.id-item.selected {
+    border: 3px solid var(--accent);
+    border-radius: 8px;
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.6); /* Gold glow effect */
+    animation: selection-glow 2s ease-in-out infinite; /* Animated glow */
+    position: relative;
+    z-index: 2; /* Ensure glow appears above adjacent items */
+}
+
+/* Draft phase specific border colors */
+.draft-ban-phase .id-item.selected {
+    border: 3px solid var(--primary);
+    border-radius: 8px;
+    box-shadow: 0 0 15px rgba(179, 27, 27, 0.6); /* Red glow effect */
+    animation: selection-glow-red 2s ease-in-out infinite; /* Animated red glow */
+    position: relative;
+    z-index: 2;
+}
+
+.draft-pick-phase .id-item.selected {
+    border: 3px solid var(--accent);
+    border-radius: 8px;
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.6); /* Gold glow effect */
+    animation: selection-glow 2s ease-in-out infinite; /* Animated glow */
+    position: relative;
+    z-index: 2;
+}
+
+/* Compact contexts - maintain existing scale effect */
 .compact-id-list .id-item:hover .id-icon,
 .compact-id-list .id-item.hovered .id-icon {
     transform: scale(1.05);
     transition: transform 0.2s ease;
 }
 
-/* Final picks/bans - simple scale effect on image */
+/* Final picks/bans - maintain existing scale effect */
 .final-picks .id-item:hover .id-icon,
 .final-picks .id-item.hovered .id-icon,
 .final-bans .id-item:hover .id-icon,
@@ -702,7 +789,7 @@ input:focus, select:focus {
     transition: transform 0.2s ease;
 }
 
-/* Sinner grouped roster (draft pool) - simple scale effect on container */
+/* Sinner grouped roster - maintain existing scale effect */
 .sinner-grouped-roster .id-item:hover,
 .sinner-grouped-roster .id-item.hovered {
     transform: scale(1.05);
@@ -710,16 +797,13 @@ input:focus, select:focus {
     transition: transform 0.2s ease;
 }
 
-/* Disable default ID item hover in compact contexts */
+/* Disable conflicting transforms for compact contexts */
 .compact-id-list .id-item:hover,
 .final-picks .id-item:hover,
 .final-bans .id-item:hover,
 .compact-id-list .id-item.hovered,
 .final-picks .id-item.hovered,
 .final-bans .id-item.hovered {
-    background: transparent !important;
-    border-color: transparent !important;
-    box-shadow: none !important;
     transform: none !important;
 }
 
@@ -742,13 +826,12 @@ input:focus, select:focus {
 }
 
 .id-icon {
-    width: 60px;
-    height: 60px;
-    border-radius: 5px;
-    background-size: cover;
-    background-position: center;
+    width: 100%;
+    height: 100%;
+    border-radius: 6px;
+    object-fit: cover;
     flex-shrink: 0;
-    border: 1px solid var(--border);
+    border: none; /* Border handled by container */
     /* Subtle inner/outer shadow to give images a carded feel */
     box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05), 0 0 6px rgba(0,0,0,0.45);
 }
@@ -769,14 +852,15 @@ input:focus, select:focus {
 
 .roster-selection {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 10px;
+    grid-template-columns: repeat(auto-fill, 100px); /* Fixed width for image-only layout */
+    gap: 8px;
     margin-top: 15px;
     max-height: 500px;
     overflow-y: auto;
     padding: 10px;
     background: rgba(0, 0, 0, 0.2);
     border-radius: 8px;
+    justify-content: center; /* Center the grid */
 }
 
 .counter {
@@ -891,27 +975,34 @@ input:focus, select:focus {
 
 .final-picks, .final-bans {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    grid-template-columns: repeat(auto-fill, 100px); /* Fixed 100px columns to match ID size */
     gap: 8px;
     margin-top: 15px;
     background: rgba(0,0,0,0.2);
     padding: 10px;
     border-radius: 8px;
+    justify-content: center; /* Center the grid when not completely filled */
 }
 .final-picks .id-item, .final-bans .id-item {
     padding: 0;
     background: transparent;
     border: none;
+    width: 100px; /* Match grid column width */
+    height: 100px; /* Square aspect ratio */
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 .final-picks .id-item .id-name, .final-bans .id-item .id-name {
     display: none;
 }
 .final-picks .id-item .id-icon, .final-bans .id-item .id-icon {
-    width: 100%;
-    height: auto;
+    width: 100px; /* Fixed size to match container */
+    height: 100px; /* Fixed size to match container */
     aspect-ratio: 1 / 1;
-    border-radius: 5px;
-    border: 1px solid var(--border);
+    border-radius: 6px;
+    border: none; /* Border handled by container */
+    object-fit: cover;
     transition: all 0.2s ease;
 }
 
@@ -970,26 +1061,25 @@ input:focus, select:focus {
 }
 
 #opponent-roster-display .sinner-id-container {
-    /* Use more flexible grid that adapts to container width */
-    grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+    /* Use fixed 100px grid columns, left-aligned */
+    grid-template-columns: repeat(auto-fill, 100px);
     gap: 8px;
-    justify-content: stretch; /* Fill available space */
+    justify-content: start; /* Stack to the left instead of stretching */
 }
 
 #opponent-roster-display .id-item {
-    /* Ensure items can expand to fill grid cells */
-    width: 100%;
-    min-width: 90px;
+    /* Fixed 100px sizing, no expansion */
+    width: 100px;
+    height: 100px;
+    min-width: 100px;
+    max-width: 100px;
 }
 
 #opponent-roster-display .id-item .id-icon {
-    /* Make icons responsive to their container size */
-    width: 100%;
-    height: auto;
-    max-width: 100px;
-    max-height: 100px;
-    min-width: 80px;
-    min-height: 80px;
+    /* Consistent 100px sizing for all contexts */
+    width: 100px;
+    height: 100px;
+    object-fit: cover;
 }
 
 #current-player-ego-bans {
@@ -1032,12 +1122,12 @@ input:focus, select:focus {
 .ego-item:hover {
     transform: translateY(-3px) scale(1.02);
     box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-    border-color: var(--accent);
+    border-color: var(--primary); /* Always red since EGO is only interactive during ban phase */
 }
 
 .ego-item.hovered {
-    border-color: var(--hover) !important;
-    box-shadow: 0 0 10px var(--hover);
+    border-color: var(--primary) !important; /* Always red since EGO is only interactive during ban phase */
+    box-shadow: 0 0 10px var(--primary);
 }
 
 .ego-item.banned {
@@ -1227,25 +1317,91 @@ input:focus, select:focus {
 }
 /* Style the id-item when it's inside the new container */
 .sinner-grouped-roster .id-item {
-    padding: 2px;
+    padding: 0; /* Remove padding so image fills container */
     background: transparent;
-    border: 2px solid transparent;
-    border-radius: 5px;
+    border: 2px solid var(--border); /* Default border */
+    border-radius: 8px;
     gap: 0;
+    width: 100px;
+    height: 100px;
+    overflow: hidden;
     transition: all 0.2s ease;
 }
 .sinner-grouped-roster .id-item .id-name {
     display: none; /* Hide the name */
 }
 .sinner-grouped-roster .id-item .id-icon {
-    width: 96px; /* Slightly smaller than 100px container for border/padding */
-    height: 96px; /* Slightly smaller than 100px container for border/padding */
-    max-width: 96px; /* Prevent icon from exceeding intended size */
-    max-height: 96px; /* Prevent icon from exceeding intended size */
+    width: 100%; /* Fill container completely */
+    height: 100%; /* Fill container completely */
+    max-width: none; /* Remove size constraints */
+    max-height: none; /* Remove size constraints */
+    border-radius: 6px; /* Slightly smaller than container */
     object-fit: cover; /* Ensure image fits properly */
 }
+
+/* Selected items in sinner grouped roster get prominent gold border */
 .sinner-grouped-roster .id-item.selected {
-    background: var(--primary);
+    border: 3px solid var(--accent);
+    border-radius: 8px;
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.6); /* Gold glow effect */
+    animation: selection-glow 2s ease-in-out infinite; /* Animated glow */
+    position: relative;
+    z-index: 2;
+}
+
+/* Draft phase specific border colors for sinner grouped roster */
+.draft-ban-phase .sinner-grouped-roster .id-item.selected {
+    border: 3px solid var(--primary);
+    border-radius: 8px;
+    box-shadow: 0 0 15px rgba(179, 27, 27, 0.6); /* Red glow effect */
+    animation: selection-glow-red 2s ease-in-out infinite; /* Animated red glow */
+    position: relative;
+    z-index: 2;
+}
+
+.draft-pick-phase .sinner-grouped-roster .id-item.selected {
+    border: 3px solid var(--accent);
+    border-radius: 8px;
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.6); /* Gold glow effect */
+    animation: selection-glow 2s ease-in-out infinite; /* Animated glow */
+    position: relative;
+    z-index: 2;
+}
+
+/* Draft phase specific border colors for final picks/bans sections */
+.draft-ban-phase .final-picks .id-item.selected,
+.draft-ban-phase .final-bans .id-item.selected {
+    border: 3px solid var(--primary);
+    border-radius: 8px;
+    box-shadow: 0 0 15px rgba(179, 27, 27, 0.6); /* Red glow effect */
+    animation: selection-glow-red 2s ease-in-out infinite; /* Animated red glow */
+    position: relative;
+    z-index: 2;
+}
+
+/* Red border around banned IDs windows during draft */
+.draft-ban-phase #p1-id-bans,
+.draft-ban-phase #p2-id-bans {
+    border: 2px solid var(--primary);
+    border-radius: 8px;
+}
+
+/* Red border around banned IDs in completed view and draft - persistent styling */
+.final-bans,
+#p1-id-bans,
+#p2-id-bans {
+    border: 2px solid var(--primary) !important;
+    border-radius: 8px !important;
+}
+
+.draft-pick-phase .final-picks .id-item.selected,
+.draft-pick-phase .final-bans .id-item.selected {
+    border: 3px solid var(--accent);
+    border-radius: 8px;
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.6); /* Gold glow effect */
+    animation: selection-glow 2s ease-in-out infinite; /* Animated glow */
+    position: relative;
+    z-index: 2;
 }
 
 /* --- Triptych Layout --- */
@@ -1334,7 +1490,7 @@ input:focus, select:focus {
     h2 { font-size: clamp(1.4rem, 3.5vw, 1.8rem); }
     .btn { padding: 12px 18px; font-size: 1rem; }
     .controls .btn { min-width: 120px; }
-    .id-icon { width: 48px; height: 48px; }
+    .id-icon { width: 100px; height: 100px; }
     .id-name { font-size: 0.9rem; }
     .roster-selection { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
     .builder-id-pool { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
@@ -1872,12 +2028,13 @@ select:focus-visible {
     }
     
     #opponent-roster-display .sinner-id-container {
-        grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+        grid-template-columns: repeat(auto-fill, 100px); /* Fixed columns, no stretching */
         gap: 12px;
+        justify-content: start; /* Stack to the left */
     }
     
     #opponent-roster-display .id-item .id-icon {
-        max-width: 110px;
-        max-height: 110px;
+        width: 100px;
+        height: 100px;
     }
 }

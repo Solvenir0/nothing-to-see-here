@@ -90,6 +90,7 @@ const state = {
     egoSearch: "",
     timerInterval: null,
     keepAliveInterval: null,
+    lastCountdownSecond: null, // Track last played countdown second to prevent duplicates
     socket: null,
     joinTarget: {
         lobbyCode: null,
@@ -479,6 +480,7 @@ function connectWebSocket() {
         elements.connectionStatus.className = 'connection-status';
         elements.connectionStatus.innerHTML = '<i class="fas fa-plug"></i> <span>Disconnected</span>';
         if (state.timerInterval) clearInterval(state.timerInterval);
+        state.lastCountdownSecond = null; // Reset countdown tracking on disconnect
         stopKeepAlive(); // Stop keep-alive when connection is lost
     };
     state.socket.onerror = (error) => console.error('WebSocket error:', error);
@@ -561,7 +563,7 @@ function createIdElement(idData, options = {}) {
     if (isHovered) idElement.classList.add('hovered');
 
     idElement.dataset.id = idData.id;
-    let html = `<div class="id-icon" style="background-image: url('/uploads/${idData.imageFile}')"></div><div class="id-name">${idData.name}</div>`;
+    let html = `<img class="id-icon" src="/uploads/${idData.imageFile}" alt="${idData.name}"><div class="id-name">${idData.name}</div>`;
     if (isShared) {
         html += '<div class="shared-icon"><i class="fas fa-link"></i></div>';
     }
@@ -733,6 +735,16 @@ function refreshInterfaceBasedOnGameState() {
     elements.idDraftPhase.classList.toggle('hidden', !['ban', 'pick', 'midBan', 'pick2', 'pick_s2'].includes(phase));
     elements.coinFlipModal.classList.toggle('hidden', phase !== 'coinFlip');
     elements.draftStatusPanel.classList.toggle('hidden', phase === 'roster' || phase === 'complete');
+
+    // Apply draft phase classes for dynamic border colors
+    document.body.classList.remove('draft-ban-phase', 'draft-pick-phase');
+    if (['ban', 'midBan', 'egoBan'].includes(phase)) {
+        document.body.classList.add('draft-ban-phase');
+        console.log('Applied draft-ban-phase class for phase:', phase);
+    } else if (['pick', 'pick2', 'pick_s2'].includes(phase)) {
+        document.body.classList.add('draft-pick-phase');
+        console.log('Applied draft-pick-phase class for phase:', phase);
+    }
 
 
     if (phase === 'coinFlip') {
@@ -1083,6 +1095,7 @@ function updateDraftInstructions() {
         renderGroupedView(poolEl, availableObjects, { 
             clickHandler, 
             hoverId: hovered[currentPlayer],
+            selectionSet: hovered[currentPlayer] ? [hovered[currentPlayer]] : [], // Show selected border for clicked item
             sharedIdSet: sharedIds
         });
 
@@ -1224,7 +1237,7 @@ function renderRosterBuilder() {
 }
 
 function updateTimerUI() {
-    const { timer } = state.draft;
+    const { timer, currentPlayer } = state.draft;
     elements.refTimerControl.classList.toggle('hidden', !timer.enabled || state.userRole !== 'ref');
     elements.phaseTimer.classList.toggle('hidden', !timer.enabled);
 
@@ -1234,6 +1247,7 @@ function updateTimerUI() {
         elements.phaseTimer.textContent = "--:--";
         if(state.timerInterval) clearInterval(state.timerInterval);
         state.timerInterval = null;
+        state.lastCountdownSecond = null; // Reset countdown tracking when timer stops
         return;
     }
 
@@ -1241,10 +1255,76 @@ function updateTimerUI() {
         state.timerInterval = setInterval(updateTimerUI, TIMING.TIMER_UPDATE_INTERVAL);
     }
 
-    const remaining = Math.max(0, Math.round((timer.endTime - Date.now()) / TIMING.TIMER_UPDATE_INTERVAL));
+    const remaining = Math.max(0, Math.round((timer.endTime - Date.now()) / 1000)); // Calculate seconds directly
     const minutes = Math.floor(remaining / 60);
     const seconds = remaining % 60;
     elements.phaseTimer.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+
+    // Play countdown sounds when current user has 5 seconds or less remaining
+    const isCurrentPlayersTurn = state.userRole === currentPlayer;
+    
+    if (isCurrentPlayersTurn && remaining <= 5 && remaining > 0) {
+        playCountdownSound(remaining);
+    }
+}
+
+// Function to play countdown sounds
+function playCountdownSound(secondsRemaining) {
+    // Prevent playing the same sound multiple times in the same second
+    if (state.lastCountdownSecond === secondsRemaining) {
+        return;
+    }
+    
+    state.lastCountdownSecond = secondsRemaining;
+    
+    try {
+        // Create audio context for beep sounds
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // Resume audio context if it's suspended (browser policy)
+        if (audioContext.state === 'suspended') {
+            audioContext.resume().then(() => {
+                playBeep(audioContext, secondsRemaining);
+            });
+        } else {
+            playBeep(audioContext, secondsRemaining);
+        }
+    } catch (error) {
+        console.error('Audio context error:', error);
+        // Fallback: try HTML5 audio with data URI
+        playFallbackBeep(secondsRemaining);
+    }
+}
+
+function playBeep(audioContext, secondsRemaining) {
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    // Single urgent beep sound - consistent frequency
+    oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+    oscillator.type = 'square';
+    
+    // Volume and duration settings for a crisp urgent beep
+    gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
+    
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.15);
+}
+
+function playFallbackBeep(secondsRemaining) {
+    // Generate a simple beep using data URI
+    const audioData = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmAbBj2Y2+/XfS4EOIX+/L1mHgU7k9H0wn0uBSGG5P+pYhQKT6jc84ZhNAU7k9H0wn0uBS'; 
+    try {
+        const audio = new Audio(audioData);
+        audio.volume = 0.1;
+        audio.play().catch(e => console.log('Fallback audio failed:', e));
+    } catch (error) {
+        console.error('Fallback audio error:', error);
+    }
 }
 
 
@@ -1452,6 +1532,38 @@ function setupEventListeners() {
 
     elements.showRulesBtn.addEventListener('click', () => elements.rulesModal.classList.remove('hidden'));
     elements.closeRulesBtn.addEventListener('click', () => elements.rulesModal.classList.add('hidden'));
+
+    // Lobby code click-to-copy functionality
+    elements.lobbyCodeDisplay.addEventListener('click', async () => {
+        try {
+            await navigator.clipboard.writeText(state.lobbyCode);
+            // Show brief visual feedback
+            const originalText = elements.lobbyCodeDisplay.textContent;
+            elements.lobbyCodeDisplay.textContent = 'COPIED!';
+            elements.lobbyCodeDisplay.style.color = '#4CAF50';
+            setTimeout(() => {
+                elements.lobbyCodeDisplay.textContent = originalText;
+                elements.lobbyCodeDisplay.style.color = '';
+            }, 800);
+        } catch (err) {
+            // Fallback for older browsers
+            const textArea = document.createElement('textarea');
+            textArea.value = state.lobbyCode;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            
+            // Show brief visual feedback
+            const originalText = elements.lobbyCodeDisplay.textContent;
+            elements.lobbyCodeDisplay.textContent = 'COPIED!';
+            elements.lobbyCodeDisplay.style.color = '#4CAF50';
+            setTimeout(() => {
+                elements.lobbyCodeDisplay.textContent = originalText;
+                elements.lobbyCodeDisplay.style.color = '';
+            }, 800);
+        }
+    });
 
     // Public lobby browsing removed
 
