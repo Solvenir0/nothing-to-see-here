@@ -1173,6 +1173,14 @@ input:focus, select:focus {
     font-size: 1.0rem; /* more compact */
     font-weight: bold;
     flex-grow: 1;
+    min-height: 2.5em;
+    display: flex;
+    align-items: center;
+    line-height: 1.25;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
 }
 
 .banned-egos-display {

@@ -1738,63 +1738,64 @@ function setupEventListeners() {
         }
     });
 
-    // Tooltip Logic
+    // Universal Tooltip Logic for ID and EGO
     let tooltipTimer = null;
+
+    function getTooltipData(element) {
+        // Try ID first
+        const idSlug = element.dataset.id;
+        let data = state.masterIDList.find(id => id.id === idSlug);
+        if (data) return { name: data.name };
+        // Try EGO
+        data = state.masterEGOList && state.masterEGOList.find(ego => ego.id === idSlug);
+        if (data) return { name: data.name };
+        // Fallback: try text content
+        return { name: element.textContent || '' };
+    }
 
     const showTooltip = (element) => {
         if (getTooltipElement()) return; // Tooltip already exists
 
-        const idSlug = element.dataset.id;
-        const idData = state.masterIDList.find(id => id.id === idSlug);
-        if (!idData) return;
+        const tooltipData = getTooltipData(element);
+        if (!tooltipData || !tooltipData.name) return;
 
         const tooltip = document.createElement('div');
         tooltip.id = 'id-tooltip';
-        tooltip.textContent = idData.name;
-        
+        tooltip.textContent = tooltipData.name;
+
         // Position off-screen initially to get accurate dimensions
         tooltip.style.position = 'fixed';
         tooltip.style.top = '-9999px';
         tooltip.style.left = '-9999px';
         tooltip.style.opacity = '0';
-        
+
         document.body.appendChild(tooltip);
-        
-        // Cache the newly created tooltip
         elements.idTooltip = tooltip;
 
-        // Use requestAnimationFrame to ensure the element is rendered and measured
         requestAnimationFrame(() => {
             const rect = element.getBoundingClientRect();
             const tooltipRect = tooltip.getBoundingClientRect();
-            
+
             // Calculate ideal position (centered above the element)
             let top = rect.top - tooltipRect.height - 8;
             let left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
-            
+
             // Boundary checks and adjustments
             const margin = 8;
             const viewportWidth = window.innerWidth;
             const viewportHeight = window.innerHeight;
-            
-            // If tooltip would go above viewport, position it below the element
+
             if (top < margin) {
                 top = rect.bottom + 8;
             }
-            
-            // If tooltip would go below viewport when positioned below, try above again
             if (top + tooltipRect.height > viewportHeight - margin && rect.top - tooltipRect.height - 8 >= margin) {
                 top = rect.top - tooltipRect.height - 8;
             }
-            
-            // Horizontal boundary checks
             if (left < margin) {
                 left = margin;
             } else if (left + tooltipRect.width > viewportWidth - margin) {
                 left = viewportWidth - tooltipRect.width - margin;
             }
-            
-            // Final boundary check - ensure tooltip doesn't go off screen entirely
             left = Math.max(margin, Math.min(left, viewportWidth - tooltipRect.width - margin));
             top = Math.max(margin, Math.min(top, viewportHeight - tooltipRect.height - margin));
 
@@ -1809,25 +1810,24 @@ function setupEventListeners() {
         const tooltip = getTooltipElement();
         if (tooltip) {
             tooltip.remove();
-            elements.idTooltip = null; // Clear cache when removed
+            elements.idTooltip = null;
         }
     };
 
+    // Listen for hover on both .id-item and .ego-item everywhere
     document.body.addEventListener('mouseover', (e) => {
-        const targetElement = e.target.closest('.compact-id-list .id-item, .final-picks .id-item, .final-bans .id-item, #draft-pool-container .id-item');
+        const targetElement = e.target.closest('.id-item, .ego-item');
         if (targetElement) {
             clearTimeout(tooltipTimer);
             tooltipTimer = setTimeout(() => showTooltip(targetElement), TIMING.TOOLTIP_SHOW_DELAY);
         }
     });
-
     document.body.addEventListener('mouseout', (e) => {
-        const targetElement = e.target.closest('.compact-id-list .id-item, .final-picks .id-item, .final-bans .id-item, #draft-pool-container .id-item');
+        const targetElement = e.target.closest('.id-item, .ego-item');
         if (targetElement) {
             hideTooltip();
         }
     });
-
     window.addEventListener('scroll', hideTooltip, true);
 }
 
