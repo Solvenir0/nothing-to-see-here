@@ -65,6 +65,7 @@ const idCsvData = `Name,Keywords,SinAffinities,Rarity
 "District 20 Yurodivy Hong Lu","Tremor","Gloom,Sloth,Gluttony","000"
 "Full-Stop Office Rep Hong Lu","Ammo,Poise","Sloth,Gloom,Pride","000"
 "R Corp. 4th Pack Reindeer Hong Lu","Charge,Sinking","Gluttony,Envy,Wrath","000"
+"The Lord of Hongyuan Hong Lu","Poise,Rupture","Gloom,Gluttony,Pride","000"
 "Shi Association South Section 5 Heathcliff","Poise","Lust,Wrath,Envy","00"
 "N Corp. Kleinhammer Heathcliff","Bleed","Envy,Gloom,Lust","00"
 "Seven Association South Section 4 Heathcliff","Rupture","Wrath,Envy,Gluttony","00"
