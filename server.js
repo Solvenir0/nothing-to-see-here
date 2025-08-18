@@ -13,9 +13,73 @@ const crypto = require('crypto');
 
 // In-memory storage for lobbies instead of Firestore
 const lobbies = {};
+const VALID_ROLES = new Set(['p1', 'p2', 'ref']);
+
+// Helper function to validate roster
+function validateRoster(roster, rosterSize) {
+    if (!Array.isArray(roster)) return false;
+    const sizeOk = roster.length === rosterSize;
+    const uniqueOk = new Set(roster).size === roster.length;
+    const idsOk = roster.every(x => allIds.includes(x));
+    return sizeOk && uniqueOk && idsOk;
+}
+
+// Helper function to send error responses consistently
+function sendError(ws, message) {
+    ws.send(JSON.stringify({ type: 'error', message }));
+}
+
+// Enhanced logging utility with consistent formatting
+function logInfo(category, message, data = null) {
+    const timestamp = new Date().toISOString();
+    const logMessage = data 
+        ? `[${timestamp}] ${category}: ${message} ${JSON.stringify(data)}`
+        : `[${timestamp}] ${category}: ${message}`;
+    console.log(logMessage);
+}
+
+function logError(category, message, error = null) {
+    const timestamp = new Date().toISOString();
+    const logMessage = error 
+        ? `[${timestamp}] ERROR ${category}: ${message} ${error}`
+        : `[${timestamp}] ERROR ${category}: ${message}`;
+    console.error(logMessage);
+}
+
+// Validation helper functions to reduce repetition
+function validateLobbyExists(ws, lobbyData, sendErrorOnFail = false) {
+    if (!lobbyData) {
+        if (sendErrorOnFail && ws) {
+            sendError(ws, 'Lobby not found.');
+        }
+        return false;
+    }
+    return true;
+}
+
+function validatePlayerRole(player) {
+    return VALID_ROLES.has(player) && player !== 'ref';
+}
+
+function validatePlayerAccess(ws, player, lobbyData) {
+    return validateLobbyExists(null, lobbyData) && 
+           validatePlayerRole(player) && 
+           isAuthorized(ws, player);
+}
+
+function validatePlayerNotReady(lobbyData, player) {
+    return lobbyData.participants[player] && !lobbyData.participants[player].ready;
+}
+
+function validateRefereeAccess(ws, lobbyData) {
+    return validateLobbyExists(null, lobbyData) && ws.userRole === 'ref';
+}
 
 const app = express();
 const server = http.createServer(app);
+
+// Minimal hardening
+app.disable('x-powered-by');
 
 app.use(express.static(path.join(__dirname)));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -36,6 +100,7 @@ const DRAFT_LOGIC = {
         ban1Steps: 8,
         pick1: [{ p: 'p1', c: 1 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 1 }],
         midBanSteps: 6,
+        // Phase 2 (pick2) starts with p2 - the player who goes second during phase 1 goes first during phase 2
         pick2: [{ p: 'p2', c: 1 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 1 }],
         pick_s2: [{ p: 'p1', c: 1 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 1 }]
     },
@@ -43,7 +108,7 @@ const DRAFT_LOGIC = {
         ban1Steps: 8,
         pick1: [{ p: 'p1', c: 1 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 1 }],
         midBanSteps: 8, // Increased to 8
-        pick2: [ // Increased to 12 picks per player
+        pick2: [ // Starts with p2 now - the player who goes second during phase 1 goes first during phase 2
             { p: 'p2', c: 1 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 },
             { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 },
             { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 },
@@ -61,7 +126,7 @@ const DRAFT_LOGIC = {
         ban1Steps: 8,
         pick1: [{ p: 'p1', c: 2 }, { p: 'p2', c: 3 }, { p: 'p1', c: 2 }, { p: 'p2', c: 3 }, { p: 'p1', c: 2 }],
         midBanSteps: 8, // Increased to 8
-        pick2: [ // Increased to 12 picks per player
+        pick2: [ // Starts with p2 now - the player who goes second during phase 1 goes first during phase 2
             { p: 'p2', c: 1 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 },
             { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 },
             { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 },
@@ -83,6 +148,20 @@ function sanitize(text) {
         .replace(/'/g, '&#039;');
 }
 
+// Enhanced player name sanitization with length limits and additional validation
+function sanitizePlayerName(name) {
+    if (!name || typeof name !== 'string') return "";
+    
+    // Trim whitespace and limit length to 16 characters
+    const trimmed = name.trim().slice(0, 16);
+    
+    // Remove any control characters and excessive whitespace
+    const cleaned = trimmed.replace(/[\x00-\x1F\x7F]/g, '').replace(/\s+/g, ' ');
+    
+    // Apply basic HTML sanitization
+    return sanitize(cleaned);
+}
+
 const rateLimit = {};
 const RATE_LIMIT_WINDOW = 60000; // 1 minute
 const RATE_LIMIT_MAX_REQUESTS = 10; // Max 10 lobby creations per minute per IP
@@ -95,6 +174,8 @@ function createSlug(name) {
         .replace(/ & /g, ' ').replace(/[.'"]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/[^\w-]+/g, '');
 }
 
+// Minimal ID catalog: we only need slugs server-side to validate rosters and picks.
+// Keep it in sync with client data.js by reusing the same CSV string via build-time copy.
 function parseIDCSV(csv) {
     const lines = csv.split('\n').filter(line => line.trim() !== '');
     if (lines.length < 2) return [];
@@ -113,15 +194,19 @@ function parseIDCSV(csv) {
             obj[header] = value;
         });
         const name = obj.Name;
-        result.push({ 
-            id: createSlug(name), 
-            name: name,
-            rarity: obj.Rarity,
-        });
+            result.push({ 
+                id: createSlug(name), 
+                name: name,
+                rarity: obj.Rarity,
+            });
     }
     return result;
 }
 
+    // Keep a single source of truth for ID CSV below.
+
+// Reuse the CSV from client (data.js) by embedding the same content here so the server can validate
+// rosters/picks authoritatively. Long-term, consider moving this to a shared file (e.g., ids.csv or ids.json).
 const idCsvData = `Name,Keywords,SinAffinities,Rarity
 "Seven Association South Section 6 Yi Sang","Rupture","Gloom,Gluttony,Sloth","00"
 "Molar Office Fixer Yi Sang","Discard,Tremor","Lust,Sloth,Wrath","00"
@@ -189,6 +274,7 @@ const idCsvData = `Name,Keywords,SinAffinities,Rarity
 "District 20 Yurodivy Hong Lu","Tremor","Gloom,Sloth,Gluttony","000"
 "Full-Stop Office Rep Hong Lu","Ammo,Poise","Sloth,Gloom,Pride","000"
 "R Corp. 4th Pack Reindeer Hong Lu","Charge,Sinking","Gluttony,Envy,Wrath","000"
+"The Lord of Hongyuan Hong Lu","Poise,Rupture","Gloom,Gluttony,Pride","000"
 "Shi Association South Section 5 Heathcliff","Poise","Lust,Wrath,Envy","00"
 "N Corp. Kleinhammer Heathcliff","Bleed","Envy,Gloom,Lust","00"
 "Seven Association South Section 4 Heathcliff","Rupture","Wrath,Envy,Gluttony","00"
@@ -246,6 +332,7 @@ const idCsvData = `Name,Keywords,SinAffinities,Rarity
 "W Corp. L3 Cleanup Captain Outis","Charge,Rupture","Pride,Envy,Gloom","000"
 "The Barber of La Manchaland Outis","Bleed","Gluttony,Lust,Wrath","000"
 "Heishou Pack - Mao Branch Outis","Rupture","Sloth,Gluttony,Gloom","000"
+"T Corp. Class 3 VDCU Staff Outis","Tremor","Pride,Sloth,Gluttony","000"
 "Liu Association South Section 6 Gregor","Burn","Wrath,Lust,Sloth","00"
 "R.B. Sous-chef Gregor","Bleed","Lust,Gluttony,Envy","00"
 "Rosespanner Workshop Fixer Gregor","Rupture,Tremor","Gluttony,Envy,Gloom","00"
@@ -256,10 +343,9 @@ const idCsvData = `Name,Keywords,SinAffinities,Rarity
 "Edgar Family Heir Gregor","Sinking","Envy,Pride,Lust","000"
 "The Priest of La Manchaland Gregor","Aggro,Bleed,Rupture","Gluttony,Pride,Lust","000"
 "Firefist Office Survivor Gregor","Burn","Lust,Wrath,Wrath","000"
-"Heishou Pack - Si Branch Gregor","Poise,Rupture","Pride,Gluttony,Envy","000"
-`;
+"Heishou Pack - Si Branch Gregor","Poise,Rupture","Pride,Gluttony,Envy","000"`;
 const masterIDList = parseIDCSV(idCsvData);
-const allIds = masterIDList.map(item => item.id);
+const allIds = Object.freeze(masterIDList.map(item => item.id));
 
 
 function generateUniqueLobbyCode() {
@@ -271,15 +357,15 @@ function generateUniqueLobbyCode() {
 }
 
 function createNewLobbyState(options = {}) {
-    const { draftLogic = '1-2-2', timerEnabled = false, isPublic = false, name = 'Referee', matchType = 'section1', rosterSize = 42 } = options;
+    const { draftLogic = '1-2-2', timerEnabled = false, name = 'Referee', matchType = 'section1', rosterSize = 42 } = options;
     return {
-        hostName: sanitize(name), // Sanitize name on creation
+        hostName: sanitizePlayerName(name), // Enhanced sanitization for name on creation
         createdAt: new Date().toISOString(),
         lastActivity: new Date().toISOString(),
         participants: {
             p1: { name: "Player 1", status: "disconnected", ready: false, rejoinToken: null, reserveTime: 120 },
             p2: { name: "Player 2", status: "disconnected", ready: false, rejoinToken: null, reserveTime: 120 },
-            ref: { name: sanitize(name), status: "disconnected", rejoinToken: null }
+            ref: { name: sanitizePlayerName(name), status: "disconnected", rejoinToken: null }
         },
         roster: { p1: [], p2: [] },
         draft: {
@@ -294,10 +380,13 @@ function createNewLobbyState(options = {}) {
             picks: { p1: [], p2: [] },
             picks_s2: { p1: [], p2: [] },
             hovered: { p1: null, p2: null },
+            // Authoritative server-side view of bannable opponent IDs for each player.
+            // banPools.p1: IDs p1 may ban (derived from roster.p2 minus bans & p2 picks)
+            // banPools.p2: IDs p2 may ban (derived from roster.p1 minus bans & p1 picks)
+            banPools: { p1: [], p2: [] },
             draftLogic,
             matchType,
             rosterSize: parseInt(rosterSize, 10),
-            isPublic,
             coinFlipWinner: null,
             timer: {
                 enabled: timerEnabled,
@@ -320,7 +409,7 @@ function broadcastState(lobbyCode, rolesSwapped = false) {
         if (client.lobbyCode === lobbyCode && client.readyState === WebSocket.OPEN) {
             const message = {
                 type: 'stateUpdate',
-                state: lobbyData
+                state: { ...lobbyData, rolesSwapped }
             };
 
             if (rolesSwapped) {
@@ -341,6 +430,11 @@ function updateLobbyActivity(lobbyCode) {
     }
 }
 
+function isAuthorized(ws, targetRole) {
+    // Referee can act for anyone; a player can only act for themselves
+    return ws && (ws.userRole === 'ref' || ws.userRole === targetRole);
+}
+
 function handleTimer(lobbyCode) {
     let lobbyData = lobbies[lobbyCode];
     if (!lobbyData) return;
@@ -350,7 +444,7 @@ function handleTimer(lobbyCode) {
     const participant = lobbyData.participants[currentPlayer];
 
     if (participant && participant.reserveTime > 0 && !draft.timer.isReserve) {
-        console.log(`Main timer expired for ${currentPlayer}. Activating reserve time.`);
+        logInfo('TIMER', `Main timer expired for ${currentPlayer}. Activating reserve time.`, { lobbyCode, currentPlayer });
         draft.timer.isReserve = true;
         draft.timer.reserveStartTime = Date.now();
         
@@ -374,14 +468,14 @@ function handleTimer(lobbyCode) {
     const { hovered, phase } = draft;
     const hoveredId = hovered[currentPlayer];
 
-    console.log(`Timer fully expired for ${lobbyCode}. Player: ${currentPlayer}, Phase: ${phase}, Hovered: ${hoveredId}`);
+    logInfo('TIMER', `Timer fully expired`, { lobbyCode, currentPlayer, phase, hoveredId });
     
     if (hoveredId) {
         handleDraftConfirm(lobbyCode, lobbyData, null);
         return;
     }
 
-    console.log("Timer expired with no hover. Skipping turn by advancing phase.");
+    logInfo('TIMER', 'Timer expired with no hover. Skipping turn by advancing phase.', { lobbyCode, currentPlayer });
     lobbyData = advancePhase(lobbyData);
     setTimerForLobby(lobbyCode, lobbyData);
     broadcastState(lobbyCode);
@@ -441,6 +535,7 @@ function advancePhase(lobbyData) {
                 draft.actionCount = 1;
                 draft.available.p1 = [...lobbyData.roster.p1];
                 draft.available.p2 = [...lobbyData.roster.p2];
+                computeBanPools(lobbyData); // initialize ban pools for initial ban phase
             }
             break;
         case "ban":
@@ -469,6 +564,7 @@ function advancePhase(lobbyData) {
                 draft.step = 0;
                 draft.currentPlayer = 'p2';
                 draft.actionCount = 1;
+                computeBanPools(lobbyData); // refresh ban pools for mid-ban phase
             }
             break;
         case "midBan":
@@ -513,6 +609,25 @@ function advancePhase(lobbyData) {
     return lobbyData;
 }
 
+// Recompute the bannable pools for each player based on current rosters, bans, and opponent picks.
+function computeBanPools(lobbyData) {
+    if (!lobbyData || !lobbyData.draft) return;
+    const { draft, roster } = lobbyData;
+    const banned = new Set([...draft.idBans.p1, ...draft.idBans.p2]);
+    const pools = { p1: [], p2: [] };
+    
+    ['p1','p2'].forEach(player => {
+        const opponent = player === 'p1' ? 'p2' : 'p1';
+        const blocked = new Set([
+            ...banned,
+            ...draft.picks[opponent],
+            ...draft.picks_s2[opponent]
+        ]);
+        pools[player] = (roster[opponent] || []).filter(id => !blocked.has(id));
+    });
+    draft.banPools = pools;
+}
+
 function handleDraftConfirm(lobbyCode, lobbyData, ws) {
     const { draft } = lobbyData;
     const { currentPlayer, hovered, phase } = draft;
@@ -522,6 +637,31 @@ function handleDraftConfirm(lobbyCode, lobbyData, ws) {
     if (!selectedId) return;
     
     if (ws && ws.userRole !== currentPlayer && ws.userRole !== 'ref') return;
+
+    // For ID phases, ensure the selection is currently available from the right pool
+    if (['ban', 'pick', 'midBan', 'pick2', 'pick_s2'].includes(phase)) {
+        const isBanAction = (phase === 'ban' || phase === 'midBan');
+        if (isBanAction) {
+            const targetPlayer = currentPlayer === 'p1' ? 'p2' : 'p1';
+            const opponentRoster = lobbyData.roster[targetPlayer] || [];
+            // For ban visibility/validation we only need to exclude IDs already banned by either side
+            // or already picked by the OPPONENT (can't ban something they've locked in). We no longer
+            // exclude IDs the current player has picked; showing them in the list helps satisfy the
+            // requirement to display the opponent's full remaining roster (even if banning them is redundant).
+            const blocked = new Set([
+                ...draft.idBans.p1,
+                ...draft.idBans.p2,
+                ...draft.picks[targetPlayer],
+                ...draft.picks_s2[targetPlayer]
+            ]);
+            if (!opponentRoster.includes(selectedId) || blocked.has(selectedId)) {
+                return; // Invalid ban attempt
+            }
+        } else {
+            const sourceList = draft.available[currentPlayer] || [];
+            if (!sourceList.includes(selectedId)) return;
+        }
+    }
 
     if (draft.timer.isReserve) {
         if (lobbyTimers[lobbyCode]) clearTimeout(lobbyTimers[lobbyCode].timeoutId);
@@ -555,11 +695,11 @@ function handleDraftConfirm(lobbyCode, lobbyData, ws) {
         }
 
         if (listToUpdate) listToUpdate.push(selectedId);
-        
-        let p1Index = draft.available.p1.indexOf(selectedId);
-        if(p1Index > -1) draft.available.p1.splice(p1Index, 1);
-        let p2Index = draft.available.p2.indexOf(selectedId);
-        if(p2Index > -1) draft.available.p2.splice(p2Index, 1);
+        // Always remove the chosen ID from both availability lists (bans deny globally; picks lock globally)
+        ['p1','p2'].forEach(p => {
+            const idx = draft.available[p].indexOf(selectedId);
+            if (idx > -1) draft.available[p].splice(idx, 1);
+        });
         
         draft.actionCount--;
 
@@ -582,14 +722,14 @@ function handleDraftConfirm(lobbyCode, lobbyData, ws) {
 wss.on('connection', (ws, req) => {
     // Use the remote address from the underlying socket for rate limiting
     ws.remoteAddress = req.socket.remoteAddress;
-    console.log(`Client connected from ${ws.remoteAddress}`);
+    logInfo('CONNECTION', 'Client connected', { remoteAddress: ws.remoteAddress });
 
     ws.on('message', (message) => {
         let incomingData;
         try { incomingData = JSON.parse(message); } 
-        catch (e) { console.error('Invalid JSON:', message); return; }
+        catch (e) { logError('WEBSOCKET', 'Invalid JSON received', message); return; }
 
-        const { lobbyCode: rawLobbyCode, role, player, id, action, payload, name, roster, options, choice } = incomingData;
+    const { lobbyCode: rawLobbyCode, role, player, id, action, payload, name, roster, options, choice } = incomingData;
         const lobbyCode = rawLobbyCode ? rawLobbyCode.toUpperCase() : null;
         let lobbyData = lobbyCode ? lobbies[lobbyCode] : null;
 
@@ -600,7 +740,7 @@ wss.on('connection', (ws, req) => {
                 rateLimit[ip] = (rateLimit[ip] || []).filter(timestamp => now - timestamp < RATE_LIMIT_WINDOW);
 
                 if (rateLimit[ip].length >= RATE_LIMIT_MAX_REQUESTS) {
-                    return ws.send(JSON.stringify({ type: 'error', message: 'You are creating lobbies too quickly. Please wait.' }));
+                    return sendError(ws, 'You are creating lobbies too quickly. Please wait.');
                 }
                 rateLimit[ip].push(now);
 
@@ -613,6 +753,7 @@ wss.on('connection', (ws, req) => {
                 
                 newLobbyState.participants.ref.status = "connected";
                 newLobbyState.participants.ref.rejoinToken = rejoinToken;
+                ws.rejoinToken = rejoinToken;
                 
                 lobbies[newLobbyCode] = newLobbyState;
                 
@@ -622,25 +763,9 @@ wss.on('connection', (ws, req) => {
                 break;
             }
 
-            case 'getPublicLobbies': {
-                const validPhases = ['roster', 'coinFlip', 'egoBan', 'ban', 'pick', 'midBan', 'pick2', 'pick_s2'];
-                const publicLobbies = Object.entries(lobbies)
-                    .filter(([, lobby]) => lobby.draft.isPublic && validPhases.includes(lobby.draft.phase))
-                    .map(([code, lobby]) => ({
-                        code,
-                        hostName: lobby.hostName,
-                        participants: lobby.participants,
-                        draftLogic: lobby.draft.draftLogic,
-                    }))
-                    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-                    .slice(0, 50);
-
-                ws.send(JSON.stringify({ type: 'publicLobbiesList', lobbies: publicLobbies }));
-                break;
-            }
             
             case 'getLobbyInfo': {
-                if (!lobbyData) return ws.send(JSON.stringify({ type: 'error', message: 'Lobby not found.' }));
+                if (!lobbyData) return sendError(ws, 'Lobby not found.');
                 ws.send(JSON.stringify({
                     type: 'lobbyInfo',
                     lobby: {
@@ -652,12 +777,13 @@ wss.on('connection', (ws, req) => {
             }
 
             case 'joinLobby': {
-                if (!lobbyData) return ws.send(JSON.stringify({ type: 'error', message: 'Lobby not found.' }));
+                if (!lobbyData) return sendError(ws, 'Lobby not found.');
+                if (!VALID_ROLES.has(role)) return sendError(ws, 'Invalid role.');
                 
                 const participant = lobbyData.participants[role];
 
                 if (participant && (participant.status === 'connected' || participant.rejoinToken)) {
-                    return ws.send(JSON.stringify({ type: 'error', message: `Role ${role.toUpperCase()} is taken or reserved.` }));
+                    return sendError(ws, `Role ${role.toUpperCase()} is taken or reserved.`);
                 }
                 
                 ws.lobbyCode = lobbyCode;
@@ -667,7 +793,8 @@ wss.on('connection', (ws, req) => {
 
                 lobbyData.participants[role].status = 'connected';
                 lobbyData.participants[role].rejoinToken = rejoinToken;
-                if (name) lobbyData.participants[role].name = sanitize(name); // Sanitize name on join
+                if (name) lobbyData.participants[role].name = sanitizePlayerName(name); // Enhanced sanitization for name on join
+                ws.rejoinToken = rejoinToken;
                 
                 updateLobbyActivity(lobbyCode);
                 
@@ -691,6 +818,7 @@ wss.on('connection', (ws, req) => {
                     ws.lobbyCode = lobbyCode;
                     ws.userRole = role;
                     ws.initialUserRole = role;
+                    ws.rejoinToken = incomingData.rejoinToken;
 
                     lobbyData.participants[role].status = 'connected';
                     updateLobbyActivity(lobbyCode);
@@ -704,13 +832,14 @@ wss.on('connection', (ws, req) => {
                     }));
                     broadcastState(lobbyCode);
                 } else {
-                    ws.send(JSON.stringify({ type: 'error', message: 'Failed to rejoin. Session might be invalid.' }));
+                    sendError(ws, 'Failed to rejoin. Session might be invalid.');
                 }
                 break;
             }
 
             case 'rosterSelect': {
-                if (!lobbyData || lobbyData.participants[player].ready) return;
+                if (!validatePlayerAccess(ws, player, lobbyData)) return;
+                if (!validatePlayerNotReady(lobbyData, player)) return;
                 const currentRoster = lobbyData.roster[player];
                 const index = currentRoster.indexOf(id);
                 if (index === -1) { if (currentRoster.length < lobbyData.draft.rosterSize) currentRoster.push(id); } 
@@ -721,8 +850,10 @@ wss.on('connection', (ws, req) => {
             }
             
             case 'rosterSet': {
-                if (!lobbyData || lobbyData.participants[player].ready) return;
-                if (Array.isArray(roster) && roster.length === lobbyData.draft.rosterSize) {
+                if (!validatePlayerAccess(ws, player, lobbyData)) return;
+                if (!validatePlayerNotReady(lobbyData, player)) return;
+                // Validate roster using helper function
+                if (validateRoster(roster, lobbyData.draft.rosterSize)) {
                     lobbyData.roster[player] = roster;
                     updateLobbyActivity(lobbyCode);
                     broadcastState(lobbyCode);
@@ -731,7 +862,8 @@ wss.on('connection', (ws, req) => {
             }
 
             case 'rosterRandomize': {
-                if (!lobbyData || lobbyData.participants[player].ready) return;
+                if (!validatePlayerAccess(ws, player, lobbyData)) return;
+                if (!validatePlayerNotReady(lobbyData, player)) return;
                 const shuffled = [...allIds].sort(() => 0.5 - Math.random());
                 lobbyData.roster[player] = shuffled.slice(0, lobbyData.draft.rosterSize);
                 updateLobbyActivity(lobbyCode);
@@ -739,8 +871,17 @@ wss.on('connection', (ws, req) => {
                 break;
             }
 
+            case 'rosterClear': {
+                if (!validatePlayerAccess(ws, player, lobbyData)) return;
+                lobbyData.roster[player] = [];
+                lobbyData.participants[player].ready = false;
+                updateLobbyActivity(lobbyCode);
+                broadcastState(lobbyCode);
+                break;
+            }
+
             case 'updateReady': {
-                if (!lobbyData) return;
+                if (!validatePlayerAccess(ws, player, lobbyData)) return;
                 const currentReadyState = lobbyData.participants[player].ready;
                 if (!currentReadyState && lobbyData.roster[player].length !== lobbyData.draft.rosterSize) return;
                 lobbyData.participants[player].ready = !currentReadyState;
@@ -750,7 +891,7 @@ wss.on('connection', (ws, req) => {
             }
 
             case 'startCoinFlip': {
-                if (!lobbyData || ws.userRole !== 'ref') return;
+                if (!validateRefereeAccess(ws, lobbyData)) return;
                 lobbyData.draft.phase = 'coinFlip';
                 lobbyData.draft.coinFlipWinner = Math.random() < 0.5 ? 'p1' : 'p2';
                 updateLobbyActivity(lobbyCode);
@@ -766,7 +907,7 @@ wss.on('connection', (ws, req) => {
                 const needsSwap = (draft.coinFlipWinner === 'p2' && choice === 'first') || (draft.coinFlipWinner === 'p1' && choice === 'second');
 
                 if (needsSwap) {
-                    console.log(`[${lobbyCode}] Swapping P1 and P2 roles and data.`);
+                    logInfo('DRAFT', 'Swapping P1 and P2 roles and data', { lobbyCode, coinFlipWinner: draft.coinFlipWinner, choice });
                     rolesSwapped = true;
                     [lobbyData.participants.p1, lobbyData.participants.p2] = [lobbyData.participants.p2, lobbyData.participants.p1];
                     [lobbyData.roster.p1, lobbyData.roster.p2] = [lobbyData.roster.p2, lobbyData.roster.p1];
@@ -796,6 +937,29 @@ wss.on('connection', (ws, req) => {
                 const { currentPlayer } = draft;
                 if (ws.userRole !== currentPlayer && ws.userRole !== 'ref') return;
 
+                // Validate hovered ID belongs to the correct pool for ID phases
+                if (['ban', 'pick', 'midBan', 'pick2', 'pick_s2'].includes(draft.phase)) {
+                    const isBanAction = (draft.phase === 'ban' || draft.phase === 'midBan');
+                    
+                    if (isBanAction) {
+                        // For ban actions: validate against enemy roster
+                        const enemyPlayer = currentPlayer === 'p1' ? 'p2' : 'p1';
+                        const enemyRoster = lobbyData.roster[enemyPlayer] || [];
+                        const blocked = new Set([
+                            ...draft.idBans.p1,
+                            ...draft.idBans.p2,
+                            ...draft.picks[enemyPlayer],
+                            ...draft.picks_s2[enemyPlayer]
+                        ]);
+                        const availableFromEnemy = enemyRoster.filter(id => !blocked.has(id));
+                        if (!availableFromEnemy.includes(hoveredId)) return;
+                    } else {
+                        // For pick actions: validate against own available roster
+                        const sourceList = draft.available[currentPlayer] || [];
+                        if (!sourceList.includes(hoveredId)) return;
+                    }
+                }
+
                 draft.hovered[currentPlayer] = (draft.hovered[currentPlayer] === hoveredId) ? null : hoveredId;
                 updateLobbyActivity(lobbyCode);
                 broadcastState(lobbyCode);
@@ -805,11 +969,13 @@ wss.on('connection', (ws, req) => {
             case 'draftConfirm': {
                 if (!lobbyData) return;
                 handleDraftConfirm(lobbyCode, lobbyData, ws);
+                // Any confirmation (ban or pick) can change future bannable pools.
+                computeBanPools(lobbyData);
                 break;
             }
 
             case 'draftControl': {
-                if (!lobbyData || ws.userRole !== 'ref') return;
+                if (!validateRefereeAccess(ws, lobbyData)) return;
 
                 if (action === 'confirmEgoBans') {
                      const { currentPlayer } = lobbyData.draft;
@@ -827,7 +993,7 @@ wss.on('connection', (ws, req) => {
             }
 
             case 'timerControl': {
-                if (!lobbyData || ws.userRole !== 'ref') return;
+                if (!validateRefereeAccess(ws, lobbyData)) return;
                 const { timer } = lobbyData.draft;
                 
                 if (timer.paused) { // unpausing
@@ -848,11 +1014,20 @@ wss.on('connection', (ws, req) => {
                 broadcastState(lobbyCode);
                 break;
             }
+
+            case 'keepAlive': {
+                // Keep-alive message to prevent Render sleep during active drafts
+                if (!lobbyData) return;
+                updateLobbyActivity(lobbyCode);
+                // Send a minimal acknowledgment to confirm server is active
+                ws.send(JSON.stringify({ type: 'keepAliveAck' }));
+                break;
+            }
         }
     });
 
     ws.on('close', () => {
-        console.log(`Client disconnected from ${ws.remoteAddress}`);
+        logInfo('CONNECTION', 'Client disconnected', { remoteAddress: ws.remoteAddress, lobbyCode: ws.lobbyCode, userRole: ws.userRole });
         const { lobbyCode, userRole } = ws;
         if (lobbyCode && userRole && lobbies[lobbyCode]) {
             const lobbyData = lobbies[lobbyCode];
@@ -877,7 +1052,7 @@ function cleanupInactiveLobbies() {
     for (const lobbyCode in lobbies) {
         const lastActivity = new Date(lobbies[lobbyCode].lastActivity);
         if (now - lastActivity > LOBBY_TTL) {
-            console.log(`Cleaning up inactive lobby: ${lobbyCode}`);
+            logInfo('CLEANUP', 'Cleaning up inactive lobby', { lobbyCode, lastActivity: lastActivity.toISOString(), hoursInactive: Math.round((now - lastActivity) / (1000 * 60 * 60) * 10) / 10 });
             if (lobbyTimers[lobbyCode] && lobbyTimers[lobbyCode].timeoutId) {
                 clearTimeout(lobbyTimers[lobbyCode].timeoutId);
                 delete lobbyTimers[lobbyCode];
@@ -891,4 +1066,6 @@ setInterval(cleanupInactiveLobbies, 30 * 60 * 1000);
 
 
 const PORT = process.env.PORT || 8080;
-server.listen(PORT, () => console.log(`Server is listening on port ${PORT}`));
+server.listen(PORT, () => logInfo('SERVER', `Server started and listening on port ${PORT}`));
+
+
