@@ -9,6 +9,24 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
+    <style>
+        .site-disclaimers {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.9rem;
+            color: #aaa;
+            border-top: 1px dashed #444;
+            padding-top: 15px;
+            margin-top: 20px;
+        }
+        .site-disclaimers h4 {
+            font-family: 'Inter', sans-serif; /* Revert heading font */
+            color: #ccc;
+            font-size: 1.1rem;
+        }
+        .site-disclaimers ul {
+            list-style-position: inside;
+        }
+    </style>
 </head>
 <body>
     <div id="rejoin-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999; color: white; display: none; flex-direction: column; align-items: center; justify-content: center; font-size: 2rem; gap: 20px;">
@@ -41,74 +59,148 @@
             <button id="close-rules-btn" class="close-modal-btn">&times;</button>
             <h2>Tournament Rules</h2>
             <div class="rules-content">
-                <p><strong>Disclaimers & Fair Play</strong></p>
-                <ul>
-                    <li><strong>Service Stability:</strong> This tool is hosted on a free service. Lobbies may be automatically cleared after a period of inactivity (approximately 15 minutes). Please try to complete drafts in one session to avoid disruption.</li>
-                    <li><strong>Data Privacy:</strong> No personal information is stored permanently. Player names and roster selections are temporary and exist only for the duration of an active lobby.</li>
-                    <li><strong>Use "As-Is":</strong> This tool is provided for community use without any warranties. The organizer is not responsible for any technical issues that may arise.</li>
-                    <li><strong>Fair Play:</strong> Please be respectful to all participants. Any form of harassment or malicious behavior will not be tolerated.</li>
-                </ul>
+                <!-- START: Updated Rules Section -->
+                <h3>Tournament Application</h3>
+                <h4>How to Apply</h4>
+                <p>Players interested in participating must fill out the official application Google Form, which will be posted in the Prydwen Discord server.</p>
+                <h4>Application Deadline</h4>
+                <p>Applications will close on <strong>Thursday, August 28th, at 5:00 PM GMT+3</strong>.</p>
+                <h4>Selection Process</h4>
+                <p>Filling out the application form does not guarantee a spot in the tournament. Organizers will select 32 players to participate in a fair way.</p>
+
                 <hr style="margin: 20px 0;">
 
-                <p><strong>0. Application Requirements</strong></p>
-                <p>To apply for this tournament, participants must have successfully cleared RR6 (Refraction Railway 6) with a total turn count of at most 55 turns. Proof of this clear may be requested upon application.</p>
-                
-                <p><strong>1. Roster Submission</strong></p>
-                <p>Each player must submit a roster (default 42 IDs, can be changed by Referee) before the match. Players may only draft IDs listed in their roster.</p>
-                <p><em>Banned IDs:</em><br>
-                - Lobotomy E.G.O::The Sword Sharpened with Tears Rodion<br>
-                - Heishou Pack - Mao Branch Adept Faust</p>
+                <h3>1. Roster Submission: Preparing Your IDs</h3>
+                <p>Before a player can compete, they must declare which IDs they might use by submitting a roster. To prepare a roster, players must visit <a href="https://limbusdraftcode.onrender.com/" target="_blank">https://limbusdraftcode.onrender.com/</a> and use the "Roster Builder" function with the 42-ID setting. Once the roster is finalized, players must copy the generated code for submission.</p>
+                <h4>Submission Method</h4>
+                <p>Players must send their generated roster codes directly to the Tournament Organizer (Solvenir) via Discord Direct Message. The TO will add them to a private master sheet. At the 15-minute deadline, the submitted rosters will be shared publicly.</p>
+                <h4>Submission Deadlines & Roster Rules</h4>
+                <ul>
+                    <li><strong>For the Group Stage:</strong> Because group stage matches are played back-to-back, each player must submit all three of their 42-ID rosters at least 15 minutes before their first scheduled match begins. Players must clearly label which roster is for their first, second, and third match respectively.</li>
+                    <li><strong>For Best of 3 Matches (Playoffs):</strong> Each player must submit three 42-ID rosters before the series begins.</li>
+                    <li><strong>For the Best of 5 Final:</strong> Each player must submit five 42-ID rosters before the series begins.</li>
+                </ul>
+                <h4>General Roster Policies</h4>
+                <ul>
+                    <li><strong>Roster Uniqueness:</strong> Submitted rosters do not have to be different. Players may submit the same roster code for multiple matches or series if they wish.</li>
+                    <li><strong>Failure to Submit:</strong> If a player misses the submission deadline, they will be assigned a pre-made, standard roster for the match or series.</li>
+                    <li><strong>Banned IDs:</strong> "Heishou Pack - Mao Branch Adept Faust" is banned and cannot be included on any roster or used in any match.</li>
+                    <li><strong>Roster Usage in Playoffs:</strong> For a Best of 3 or Best of 5 series, each submitted roster can only be used once. Using a roster more than once will result in a forfeit of the game where the illegal roster was used. It is the player's responsibility to track which rosters have been used.</li>
+                </ul>
 
-                <p><strong>2. Tournament Structure</strong></p>
-                <p><strong>2.1. Elimination Round (If Applicable):</strong> If there are more than 32 applicants, an elimination round will be held. This round will consist of 1 game of Section 1 matches. These matches will continue until the number of remaining players is reduced to 32.</p>
-                <p><strong>2.2. Group Stage:</strong> After the elimination round (or directly if 32 or fewer applicants), players will be divided into groups of 4. Each player within a group will play against every other player in their group once in Section 1 matches, for a total of 3 matches per player. The first 2 placements from each group will advance to the next stage: the Play-ins.</p>
-                <p><strong>2.3. Play-ins:</strong> In the Play-ins, players will compete in matches consisting of 1 game of Section 1 and 2. Winners will advance to the Quarter-finals.</p>
-                <p><strong>2.4. Quarter-finals:</strong> The Quarter-finals will also consist of matches with 1 game of Section 1 and 2. Winners will advance to the Semi-finals.</p>
-                <p><strong>2.5. Semi-finals and Finals:</strong> The Semi-finals and Finals will consist of matches with 1 game of Section 1, 2, and 3.</p>
-                
-                <p><strong>3. Match Start & Draft Order</strong></p>
-                <p>A coin flip determines which player drafts first. In matches with multiple sections, the loser of the previous section drafts first in the next section.</p>
-                
-                <p><strong>4. Final Draft Phase Structure</strong></p>
-                <p>(All pick/ban actions have 15s time limits unless noted)</p>
-                <p><strong>EGO Ban Phase (10 total bans)</strong><br>
-                - P1: Ban 5 EGO (90s)<br>
-                - P2: Ban 5 EGO (90s)</p>
-          
-                <p><strong>ID Ban Phase (8 total bans)</strong><br>
-                - P1: Ban 4 ID (alternating)<br>
-                - P2: Ban 4 ID (alternating)</p>
-                <p><strong>Pick Phase - Round 1 (6 IDs per player)</strong><br>
-                - P1: Pick 1, P2: Pick 2, P1: Pick 2, P2: Pick 2, P1: Pick 2, P2: Pick 2, P1: Pick 1</p>
-                
-                <p><strong>--- Draft structure below depends on Match Type ---</strong></p>
-                <p><strong>For "Section 1 Only" Matches:</strong></p>
-                <p><strong>Mid-Draft ID Ban Phase (6 total bans)</strong><br>
-                - P2: Ban 3 ID (alternating)<br>
-                - P1: Ban 3 ID (alternating)</p>
-                <p><strong>Pick Phase - Round 2 (6 more IDs per player to reach 12 total)</strong><br>
-                - P2: Pick 1, P1: Pick 2, P2: Pick 2, P1: Pick 2, P2: Pick 2, P1: Pick 2, P2: Pick 1</p>
+                <hr style="margin: 20px 0;">
 
-                <p><strong>For "All Sections" Matches:</strong></p>
-                <p><strong>Mid-Draft ID Ban Phase (8 total bans)</strong><br>
-                - P2: Ban 4 ID (alternating)<br>
-                - P1: Ban 4 ID (alternating)</p>
-                <p><strong>Pick Phase - Round 2 (12 more IDs per player to reach 18 total)</strong><br>
-                - A snake draft follows to select the remaining 12 IDs each.</p>
-                 
-                <p><strong>Post-Draft:</strong> A 60-second match preparation period follows the draft.</p>
+                <h3>2. Tournament Structure & Schedule</h3>
+                <h4>Group Stage (September 2nd - 3rd)</h4>
+                <p>Players will be divided into 8 groups of 4. Each player will play one Best of 1 "Section 1" match against every other person in their group, for a total of three matches. All 3 matches will be played in succession with a 15 minute break in-between. The player with the most wins in each group advances directly to the Quarter-finals.</p>
+                <p><strong>Group Stage Tiebreakers:</strong> If there is a tie in wins, the winner will be decided by the player with the lowest total turn count across all three matches. If still tied, the player with the fastest combined real-time clear speeds.</p>
+                <p><em>Group stage will be streamed by Frapollo.</em></p>
+                <h4>Playoff Stage (September 4th - 7th)</h4>
+                <p>All playoff rounds are single-elimination and will be streamed.</p>
+                <ul>
+                    <li><strong>Quarter-finals (September 4th - 5th):</strong> Two Best of 3 series will be played each day.</li>
+                    <li><strong>Semi-finals (September 6th):</strong> Two Best of 3 series will be played.</li>
+                    <li><strong>Finals (September 7th):</strong> One Best of 5 series will be played to determine the champion.</li>
+                </ul>
+                <p><em>Playoff stage will be streamed by Welvader.</em></p>
+                <h4>Prize Pool: $200 USD</h4>
+                <ul>
+                    <li><strong>1st Place:</strong> $100</li>
+                    <li><strong>2nd Place:</strong> $60</li>
+                    <li><strong>3rd Place:</strong> $40</li>
+                </ul>
+                <p><em>Note: There will be a bo3 between the semi-final losers match to determine the 3rd place.</em></p>
 
-                <p><strong>5. Win Condition</strong></p>
-                <p>Victory is awarded to the player who successfully clears the section with a lower turn count than their opponent.</p>
+                <hr style="margin: 20px 0;">
+
+                <h3>3. The Pre-Match Phase: Draft & Setup</h3>
+                <p>The official draft will be conducted using the web application found at: <a href="https://limbusdraftcode.onrender.com/" target="_blank">https://limbusdraftcode.onrender.com/</a></p>
+                <h4>Determining Draft Order</h4>
+                <p>Before draft, a coin flip decides who drafts first. The winner chooses to go first or second.</p>
+                <h4>Draft Time Limits</h4>
+                <ul>
+                    <li>Each player has <strong>15 seconds</strong> for each individual pick or ban.</li>
+                    <li>Each player has a <strong>2-minute reserve time bank</strong> for the entire draft.</li>
+                    <li><strong>Time Penalty:</strong> If a player runs out of reserve time and exceeds the 15-second limit, the draft application will automatically lock in the ID they are currently hovering over. If the player is not hovering over any ID, they forfeit that pick/ban, and the draft proceeds.</li>
+                </ul>
+                <h4>Step-by-Step Draft Structure</h4>
+                <p>(Each player will draft a total of 12 IDs) (P1 is the player that's going first)</p>
+                <ul>
+                    <li><strong>Phase 1: EGO Ban Phase</strong> (P1 Bans 5 -> P2: Ban 5)</li>
+                    <li><strong>Phase 2: First ID Ban Phase</strong> (Alternating bans starting from P1, 4 bans each side)</li>
+                    <li><strong>Phase 3: First Pick Phase</strong> (P1 picks 2 -> P2 picks 3 -> P1 picks 2 -> P2 picks 3 -> P1 picks 2)</li>
+                    <li><strong>Phase 4: Second ID Ban Phase</strong> (Alternating bans starting from P2, 3 bans each side)</li>
+                    <li><strong>Phase 5: Second Pick Phase</strong> (P2 picks 2 -> P1 picks 3 -> P2 picks 2 -> P1 picks 3 -> P2 picks 2)</li>
+                </ul>
+                <h4>General Draft Rules</h4>
+                <ul>
+                    <li><strong>Targeted Bans:</strong> Each player bans IDs directly from their opponent's submitted roster for that match.</li>
+                    <li><strong>Universal Ban Effect:</strong> When an ID is banned from an opponent's roster, it is removed from play for both players for that match. Meaning if the banning player also has that ID on their own roster, they will be unable to pick it as well.</li>
+                </ul>
+                <h4>Final Preparation</h4>
+                <p>A 180-second period follows the draft before the match begins. Players will prepare their team on the Section 1 team preparation screen. And the match timer will begin with the refs countdown after the preparation period.</p>
+
+                <hr style="margin: 20px 0;">
+
+                <h3>4. Match Officiating & In-Game Rules</h3>
+                <p>A designated Referee will be present for every match to officiate and enforce the rules.</p>
+                <h4>Win Condition</h4>
+                <p>The player who clears the section in fewer turns wins. If turn counts are tied, the player who cleared faster in real-time wins. The match Referee will record and report the results.</p>
+                <h4>Sudden Death Protocol</h4>
+                <p>Sudden Death begins 25 minutes into a match. The official timer is kept by the Referee.</p>
+                <ul>
+                    <li>If one player has cleared when the timer hits 25 minutes, they instantly win.</li>
+                    <li>If neither has cleared, a 10-minute grace period begins. During this period, the first player to clear wins. The match ends and the player that hasn’t cleared will have their turn count recorded as +1 of the highest turn count of the group stages and their time will be recorded as 35 minutes.</li>
+                    <li>If no one clears in the grace period, the winner will be the player who is closest to clearing the section. If both players are on the final abnormality, the winner is the player who has brought the boss to the lowest HP percentage at the moment the grace period timer ends.</li>
+                </ul>
+                <h4>Restart Rules</h4>
+                <p>Each player has <strong>10 "Turn 1" Restarts</strong> and <strong>3 "Normal" Restarts</strong> per game. No restarts are allowed during Sudden Death.</p>
+
+                <hr style="margin: 20px 0;">
+
+                <h3>5. Player Conduct & Policies</h3>
+                <h4>Code of Conduct & Sportsmanship</h4>
+                <p>All participants are expected to maintain a high standard of sportsmanship and respect. Harassment, toxic behavior, abusive language, or any action that creates a hostile environment for other players or staff is strictly prohibited and may result in disqualification. Play fair and be respectful.</p>
+                <h4>Punctuality & Forfeiture</h4>
+                <p>Players are required to be present in the designated Discord voice channel and ready for their match at least <strong>15 minutes before</strong> the scheduled start time. Failure to appear <strong>10 minutes</strong> before the scheduled start time will result in an immediate disqualification from the match.</p>
+                <h4>Technical Issues & Disconnects Policy</h4>
+                <ul>
+                    <li><strong>Draft App Crash:</strong> If the draft application crashes, the Referee will pause the proceedings. The draft will be reset, and the Referee will manually input all picks and bans to restore the draft to its state before the crash.</li>
+                    <li><strong>Streaming Issues:</strong> If a player's stream fails, the match and the official timer will be paused while the issue is resolved.</li>
+                    <li><strong>In-Game Internet Issues:</strong> A brief, single disconnect from the game will not stop the match timer. If a player experiences a persistent internet or hardware issue, they may request one technical pause per match (The referee will decide if it will be given or not if the issue isn’t observable by the referee). The timer will be stopped for a maximum of 10 minutes, and their opponent must pause the game. If the issue is not resolved within 10 minutes, a forfeiture may be enforced.</li>
+                </ul>
+                <h4>Match Conduct & Streaming</h4>
+                <ul>
+                    <li><strong>Pre-Match Setup:</strong> Players must be in the designated Discord voice channel 10 minutes before their scheduled match time for stream setup and verification with the Referee.</li>
+                    <li><strong>Audio Requirement:</strong> Players must remain in the voice channel for the duration of the match. Muting is permitted, but players may not deafen themselves.</li>
+                    <li><strong>Streaming Requirement:</strong> Players must stream their gameplay using vdo.ninja for the entire match, from the start of the draft until the match concludes, in at least 720p.</li>
+                    <li><strong>Cheating:</strong> Any form of cheating will result in immediate disqualification from the tournament.</li>
+                </ul>
+
+                <hr style="margin: 20px 0;">
+
+                <h3>6. Communication & Support</h3>
+                <h4>Official Announcements</h4>
+                <p>All tournament-related announcements, schedules, and communications will be made in the official Prydwen Discord server. It is the player's responsibility to stay updated. Join here: <a href="https://discord.gg/prydwen" target="_blank">https://discord.gg/prydwen</a></p>
+                <h4>Dispute Process</h4>
+                <p>If a player has a dispute or issue during a match, they should contact the user Solvenir directly via Discord DMs with a detailed explanation of the situation.</p>
+                <h4>Tournament Organizer (TO) Rulings</h4>
+                <p>The appointed Tournament Organizers (Solvenir and Soundwave) and match Referees have the final authority on all rule interpretations and decisions.</p>
+
+                <hr style="margin: 20px 0;">
+
+                <p><em>Special thanks to antillar, ultranumhere, soundwave3514, oiprocs, ooft, frapollo9494, and welvader for their contributions to the organization of this tournament.</em></p>
                 
-                <p><strong>6. Sudden Death</strong></p>
-                <p>If 30 minutes pass from the start of the match, Sudden Death is triggered.<br>
-                - If one player has cleared and the other has not, the player who cleared wins.<br>
-                - If neither player has cleared, they enter a 10-minute grace period: The first player to clear during this time wins.<br>
-                - If no player clears, the match is decided by coin toss. The turn count is then recorded as +1 above the highest tournament turn count.</p>
-                
-                <p><strong>7. Restart Rules</strong></p>
-                <p>Each player has: 10 Turn 1 Restart Chances, 3 Normal Restart Chances. No restarts are allowed during Sudden Death.</p>
+                <div class="site-disclaimers">
+                    <h4>Site Disclaimers & Fair Play</h4>
+                    <ul>
+                        <li><strong>Service Stability:</strong> This tool is hosted on a free service. Lobbies may be automatically cleared after a period of inactivity (approximately 15 minutes). Please try to complete drafts in one session to avoid disruption.</li>
+                        <li><strong>Data Privacy:</strong> No personal information is stored permanently. Player names and roster selections are temporary and exist only for the duration of an active lobby.</li>
+                        <li><strong>Use "As-Is":</strong> This tool is provided for community use without any warranties. The organizer is not responsible for any technical issues that may arise.</li>
+                        <li><strong>Fair Play:</strong> Please be respectful to all participants. Any form of harassment or malicious behavior will not be tolerated.</li>
+                    </ul>
+                </div>
+                <!-- END: Updated Rules Section -->
             </div>
         </div>
     </div>
