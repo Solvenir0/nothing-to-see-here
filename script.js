@@ -1,10 +1,3 @@
-// =================================================================================
-// FILE: script.js
-// DESCRIPTION: This version adds a tooltip feature. When a user hovers over an
-// ID icon in a view where the name is hidden (like the draft screen or the final
-// summary), the full ID name will appear in a tooltip after a 1-second delay.
-// =================================================================================
-// ======================
 // CONSTANTS & CONFIG
 // ======================
 const EGO_BAN_COUNT = 5;
@@ -245,11 +238,6 @@ function validateAndTrimInput(input, fieldName) {
         return null;
     }
     return trimmed;
-}
-
-function validatePlayerName(name) {
-    const trimmed = name.trim();
-    return trimmed || 'Anonymous'; // Provide default if empty
 }
 
 function validateRosterSize(roster, requiredSize, action = 'proceed') {
@@ -1513,12 +1501,15 @@ function setupFilterBar(barId, filterStateObject) {
 function setupEventListeners() {
     // Main Page
     elements.createLobbyBtn.addEventListener('click', () => {
+        const playerName = validateAndTrimInput(elements.playerNameInput.value, 'your name');
+        if (!playerName) {
+            return; // Stop if name is empty
+        }
         const options = {
-            name: validatePlayerName(elements.playerNameInput.value) || 'Referee',
+            name: playerName,
             draftLogic: elements.draftLogicSelect.value,
             matchType: elements.matchTypeSelect.value,
             timerEnabled: elements.timerToggle.value === 'true',
-            // Public lobbies removed
             rosterSize: elements.rosterSizeSelect.value
         };
         sendMessage({ type: 'createLobby', options });
@@ -1568,6 +1559,10 @@ function setupEventListeners() {
     // Public lobby browsing removed
 
     elements.enterLobbyByCode.addEventListener('click', () => {
+        const playerName = validateAndTrimInput(elements.playerNameInput.value, 'your name');
+        if (!playerName) {
+            return; // Stop if name is empty
+        }
         const lobbyCode = validateAndTrimInput(elements.lobbyCodeInput.value, 'lobby code');
         if (lobbyCode) {
             sendMessage({ type: 'getLobbyInfo', lobbyCode: lobbyCode.toUpperCase() });
@@ -1576,12 +1571,17 @@ function setupEventListeners() {
 
     elements.closeRoleModalBtn.addEventListener('click', () => elements.roleSelectionModal.classList.add('hidden'));
     elements.confirmJoinBtn.addEventListener('click', () => {
+        const playerName = validateAndTrimInput(elements.playerNameInput.value, 'your name');
+        if (!playerName) {
+            elements.roleSelectionModal.classList.add('hidden'); // Close modal if name is missing
+            return; // Stop if name is empty
+        }
         if (state.joinTarget.lobbyCode && state.joinTarget.role) {
             sendMessage({
                 type: 'joinLobby',
                 lobbyCode: state.joinTarget.lobbyCode,
                 role: state.joinTarget.role,
-                name: validatePlayerName(elements.playerNameInput.value)
+                name: playerName
             });
         }
     });
