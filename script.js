@@ -1048,12 +1048,14 @@ function updateDraftInstructions() {
             const enemyPlayer = currentPlayer === 'p1' ? 'p2' : 'p1';
             const enemyRoster = state.roster[enemyPlayer] || [];
             
-            // Filter out already banned and picked IDs
+            // BUG FIX: Filter out already banned AND ALL picked IDs from both players
             const blocked = new Set([
                 ...state.draft.idBans.p1,
                 ...state.draft.idBans.p2,
-                ...state.draft.picks[enemyPlayer],
-                ...state.draft.picks_s2[enemyPlayer]
+                ...state.draft.picks.p1,
+                ...state.draft.picks.p2,
+                ...state.draft.picks_s2.p1,
+                ...state.draft.picks_s2.p2
             ]);
             
             availableIdList = enemyRoster.filter(id => !blocked.has(id));
