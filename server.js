@@ -609,22 +609,26 @@ function advancePhase(lobbyData) {
     return lobbyData;
 }
 
-// Recompute the bannable pools for each player based on current rosters, bans, and opponent picks.
+// BUG FIX: Recompute the bannable pools for each player based on current rosters, bans, and ALL picks.
 function computeBanPools(lobbyData) {
     if (!lobbyData || !lobbyData.draft) return;
     const { draft, roster } = lobbyData;
-    const banned = new Set([...draft.idBans.p1, ...draft.idBans.p2]);
+    
+    // Create a comprehensive set of all IDs that are no longer in play
+    const removedIds = new Set([
+        ...draft.idBans.p1, ...draft.idBans.p2,
+        ...draft.picks.p1, ...draft.picks.p2,
+        ...draft.picks_s2.p1, ...draft.picks_s2.p2
+    ]);
+
     const pools = { p1: [], p2: [] };
     
-    ['p1','p2'].forEach(player => {
-        const opponent = player === 'p1' ? 'p2' : 'p1';
-        const blocked = new Set([
-            ...banned,
-            ...draft.picks[opponent],
-            ...draft.picks_s2[opponent]
-        ]);
-        pools[player] = (roster[opponent] || []).filter(id => !blocked.has(id));
-    });
+    // Player 1 can ban from Player 2's original roster, minus removed IDs
+    pools.p1 = (roster.p2 || []).filter(id => !removedIds.has(id));
+    
+    // Player 2 can ban from Player 1's original roster, minus removed IDs
+    pools.p2 = (roster.p1 || []).filter(id => !removedIds.has(id));
+
     draft.banPools = pools;
 }
 
@@ -642,19 +646,9 @@ function handleDraftConfirm(lobbyCode, lobbyData, ws) {
     if (['ban', 'pick', 'midBan', 'pick2', 'pick_s2'].includes(phase)) {
         const isBanAction = (phase === 'ban' || phase === 'midBan');
         if (isBanAction) {
-            const targetPlayer = currentPlayer === 'p1' ? 'p2' : 'p1';
-            const opponentRoster = lobbyData.roster[targetPlayer] || [];
-            // For ban visibility/validation we only need to exclude IDs already banned by either side
-            // or already picked by the OPPONENT (can't ban something they've locked in). We no longer
-            // exclude IDs the current player has picked; showing them in the list helps satisfy the
-            // requirement to display the opponent's full remaining roster (even if banning them is redundant).
-            const blocked = new Set([
-                ...draft.idBans.p1,
-                ...draft.idBans.p2,
-                ...draft.picks[targetPlayer],
-                ...draft.picks_s2[targetPlayer]
-            ]);
-            if (!opponentRoster.includes(selectedId) || blocked.has(selectedId)) {
+            // BUG FIX: Validate against the authoritative ban pool
+            const bannableIds = draft.banPools[currentPlayer] || [];
+            if (!bannableIds.includes(selectedId)) {
                 return; // Invalid ban attempt
             }
         } else {
@@ -942,17 +936,9 @@ wss.on('connection', (ws, req) => {
                     const isBanAction = (draft.phase === 'ban' || draft.phase === 'midBan');
                     
                     if (isBanAction) {
-                        // For ban actions: validate against enemy roster
-                        const enemyPlayer = currentPlayer === 'p1' ? 'p2' : 'p1';
-                        const enemyRoster = lobbyData.roster[enemyPlayer] || [];
-                        const blocked = new Set([
-                            ...draft.idBans.p1,
-                            ...draft.idBans.p2,
-                            ...draft.picks[enemyPlayer],
-                            ...draft.picks_s2[enemyPlayer]
-                        ]);
-                        const availableFromEnemy = enemyRoster.filter(id => !blocked.has(id));
-                        if (!availableFromEnemy.includes(hoveredId)) return;
+                        // BUG FIX: For ban actions: validate against the authoritative ban pool
+                        const bannableIds = draft.banPools[currentPlayer] || [];
+                        if (!bannableIds.includes(hoveredId)) return;
                     } else {
                         // For pick actions: validate against own available roster
                         const sourceList = draft.available[currentPlayer] || [];
@@ -1067,5 +1053,3 @@ setInterval(cleanupInactiveLobbies, 30 * 60 * 1000);
 
 const PORT = process.env.PORT || 8080;
 server.listen(PORT, () => logInfo('SERVER', `Server started and listening on port ${PORT}`));
-
-
