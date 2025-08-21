@@ -609,7 +609,7 @@ function advancePhase(lobbyData) {
     return lobbyData;
 }
 
-// BUG FIX: Recompute the bannable pools for each player based on current rosters, bans, and ALL picks.
+// Recompute the bannable pools for each player based on current rosters, bans, and ALL picks.
 function computeBanPools(lobbyData) {
     if (!lobbyData || !lobbyData.draft) return;
     const { draft, roster } = lobbyData;
@@ -646,7 +646,7 @@ function handleDraftConfirm(lobbyCode, lobbyData, ws) {
     if (['ban', 'pick', 'midBan', 'pick2', 'pick_s2'].includes(phase)) {
         const isBanAction = (phase === 'ban' || phase === 'midBan');
         if (isBanAction) {
-            // BUG FIX: Validate against the authoritative ban pool
+            // Validate against the authoritative ban pool
             const bannableIds = draft.banPools[currentPlayer] || [];
             if (!bannableIds.includes(selectedId)) {
                 return; // Invalid ban attempt
@@ -667,12 +667,13 @@ function handleDraftConfirm(lobbyCode, lobbyData, ws) {
 
     if (phase === 'egoBan') {
         const playerBans = draft.egoBans[currentPlayer];
-        const banIndex = playerBans.indexOf(selectedId);
-        
-        if (banIndex > -1) {
-            playerBans.splice(banIndex, 1);
-        } else if (playerBans.length < EGO_BAN_COUNT) {
+        // Only add if not already present and there's space
+        if (!playerBans.includes(selectedId) && playerBans.length < EGO_BAN_COUNT) {
             playerBans.push(selectedId);
+        }
+        // If this action completes the bans, advance the phase automatically
+        if (playerBans.length === EGO_BAN_COUNT) {
+            lobbyData = advancePhase(lobbyData);
         }
     } else if (['ban', 'pick', 'midBan', 'pick2', 'pick_s2'].includes(phase)) {
         if (draft.actionCount <= 0) return;
@@ -705,9 +706,8 @@ function handleDraftConfirm(lobbyCode, lobbyData, ws) {
     draft.hovered[currentPlayer] = null;
     updateLobbyActivity(lobbyCode);
 
-    if (phase !== 'egoBan') {
-        setTimerForLobby(lobbyCode, lobbyData);
-    }
+    // Set timer for the next phase/turn
+    setTimerForLobby(lobbyCode, lobbyData);
     
     broadcastState(lobbyCode);
 }
@@ -936,7 +936,7 @@ wss.on('connection', (ws, req) => {
                     const isBanAction = (draft.phase === 'ban' || draft.phase === 'midBan');
                     
                     if (isBanAction) {
-                        // BUG FIX: For ban actions: validate against the authoritative ban pool
+                        // For ban actions: validate against the authoritative ban pool
                         const bannableIds = draft.banPools[currentPlayer] || [];
                         if (!bannableIds.includes(hoveredId)) return;
                     } else {
