@@ -671,11 +671,23 @@ function handleDraftConfirm(lobbyCode, lobbyData, ws) {
         if (!playerBans.includes(selectedId) && playerBans.length < EGO_BAN_COUNT) {
             playerBans.push(selectedId);
         }
-        // If this action completes the bans, advance the phase automatically
+        
+        draft.hovered[currentPlayer] = null; // Clear hover after successful ban
+
+        // If this action completes the bans, advance the phase and set the timer for the *next* phase.
         if (playerBans.length === EGO_BAN_COUNT) {
             lobbyData = advancePhase(lobbyData);
+            setTimerForLobby(lobbyCode, lobbyData);
         }
-    } else if (['ban', 'pick', 'midBan', 'pick2', 'pick_s2'].includes(phase)) {
+        
+        // In either case (ban complete or not), update activity and broadcast.
+        // We do NOT reset the timer if the bans are not yet complete.
+        updateLobbyActivity(lobbyCode);
+        broadcastState(lobbyCode);
+        return; // Exit here to prevent the general timer reset at the end of the function.
+    } 
+    
+    if (['ban', 'pick', 'midBan', 'pick2', 'pick_s2'].includes(phase)) {
         if (draft.actionCount <= 0) return;
 
         let listToUpdate;
@@ -706,7 +718,7 @@ function handleDraftConfirm(lobbyCode, lobbyData, ws) {
     draft.hovered[currentPlayer] = null;
     updateLobbyActivity(lobbyCode);
 
-    // Set timer for the next phase/turn
+    // Set timer for the next phase/turn (this is correct for ID picks/bans which are per-action)
     setTimerForLobby(lobbyCode, lobbyData);
     
     broadcastState(lobbyCode);
@@ -1053,5 +1065,3 @@ setInterval(cleanupInactiveLobbies, 30 * 60 * 1000);
 
 const PORT = process.env.PORT || 8080;
 server.listen(PORT, () => logInfo('SERVER', `Server started and listening on port ${PORT}`));
-
-
