@@ -1,6 +1,5 @@
 // CONSTANTS & CONFIG
 // ======================
-const EGO_BAN_COUNT = 5;
 const SINNER_ORDER = ["Yi Sang", "Faust", "Don Quixote", "Ryōshū", "Meursault", "Hong Lu", "Heathcliff", "Ishmael", "Rodion", "Sinclair", "Outis", "Gregor"];
 const zayinBanExceptions = [
     "Bygone Days (Yi Sang)",
@@ -828,10 +827,10 @@ function filterIDs(sourceList, filterObject, options = {}) {
 }
 
 function renderEgoBanPhase() {
-    const { currentPlayer, hovered, egoBans } = state.draft;
+    const { currentPlayer, hovered, egoBans, step } = state.draft;
     const opponent = currentPlayer === 'p1' ? 'p2' : 'p1';
     
-    elements.egoBanTitle.textContent = `EGO Ban Phase - ${state.participants[currentPlayer].name}'s Turn`;
+    elements.egoBanTitle.textContent = `EGO Ban Phase - ${state.participants[currentPlayer].name}'s Turn (Ban ${Math.floor(step / 2) + 1} of 5)`;
 
     const clickHandler = (state.userRole === currentPlayer || state.userRole === 'ref') ? hoverEgoToBan : null;
     
@@ -875,18 +874,21 @@ function renderEgoBanPhase() {
         item.innerHTML = `<span class="rarity">[${ego.rarity}]</span> <span class="name" style="text-decoration: none;">${ego.name}</span>`;
         bansContainer.appendChild(item);
     });
-    elements.egoBanCounter.textContent = currentPlayerBans.length;
+    
+    const yourBansHeader = elements.egoBanPlayerBansSection.querySelector('h3');
+    if (yourBansHeader) {
+        yourBansHeader.innerHTML = `Your Bans (<span id="ego-ban-counter">${currentPlayerBans.length}</span>/5)`;
+    }
 
     elements.opponentRosterTitle.textContent = `${state.participants[opponent].name}'s Roster`;
     const opponentRosterObjects = state.roster[opponent].map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
     renderGroupedView(elements.opponentRosterList, opponentRosterObjects, {});
 
-    const canConfirm = (state.userRole === 'ref' || state.userRole === currentPlayer) && currentPlayerBans.length === EGO_BAN_COUNT;
-    elements.confirmEgoBans.disabled = !canConfirm;
+    elements.confirmEgoBans.classList.add('hidden');
     elements.confirmSelectionEgo.disabled = !hovered[currentPlayer];
 
     const p1BansPreview = elements.p1EgoBansPreview;
-    if (currentPlayer === 'p2' && egoBans.p1.length === EGO_BAN_COUNT) {
+    if (egoBans.p1 && egoBans.p1.length > 0) {
         p1BansPreview.classList.remove('hidden');
         const p1BannedObjects = egoBans.p1.map(id => state.masterEGOList.find(e => e.id === id)).filter(Boolean);
         const listEl = p1BansPreview.querySelector('.banned-egos-list');
@@ -1010,9 +1012,9 @@ function updateDraftInstructions() {
             actionDesc = "Winner of the coin flip will decide who goes first.";
             break;
         case "egoBan":
-            const bansLeft = EGO_BAN_COUNT - (egoBans[currentPlayer] ? egoBans[currentPlayer].length : 0);
+            const bansDoneByCurrentPlayer = egoBans[currentPlayer] ? egoBans[currentPlayer].length : 0;
             phaseText = `EGO Ban Phase - ${state.participants[currentPlayer].name}'s turn`;
-            actionDesc = `Select and confirm ${bansLeft} more EGO(s) to ban.`;
+            actionDesc = `Select and confirm 1 EGO to ban. (${bansDoneByCurrentPlayer}/5 total for you)`;
             break;
         case "ban":
         case "pick":
@@ -2102,7 +2104,7 @@ function cacheDOMElements() {
         opponentRosterTitle: document.getElementById('opponent-roster-title'),
         opponentRosterList: document.getElementById('opponent-roster-list'),
         currentPlayerEgoBans: document.getElementById('current-player-ego-bans'),
-        egoBanCounter: document.getElementById('ego-ban-counter'),
+        egoBanPlayerBansSection: document.getElementById('ego-ban-player-bans-section'),
         p1EgoBansPreview: document.getElementById('p1-ego-bans-preview'),
 
         // ID Draft Phase
