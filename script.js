@@ -68,6 +68,7 @@ const state = {
         draftLogic: '1-2-2',
         matchType: 'section1',
         rosterSize: GAME_CONFIG.SECTION1_ROSTER_SIZE,
+        egoBanSteps: 10,
         coinFlipWinner: null,
         turnOrderDecided: false,
         timer: {
@@ -829,8 +830,9 @@ function filterIDs(sourceList, filterObject, options = {}) {
 function renderEgoBanPhase() {
     const { currentPlayer, hovered, egoBans, step } = state.draft;
     const opponent = currentPlayer === 'p1' ? 'p2' : 'p1';
+    const totalEgoBansPerPlayer = (state.draft.egoBanSteps || 10) / 2;
     
-    elements.egoBanTitle.textContent = `EGO Ban Phase - ${state.participants[currentPlayer].name}'s Turn (Ban ${Math.floor(step / 2) + 1} of 5)`;
+    elements.egoBanTitle.textContent = `EGO Ban Phase - ${state.participants[currentPlayer].name}'s Turn (Ban ${Math.floor(step / 2) + 1} of ${totalEgoBansPerPlayer})`;
 
     const clickHandler = (state.userRole === currentPlayer || state.userRole === 'ref') ? hoverEgoToBan : null;
     
@@ -877,7 +879,7 @@ function renderEgoBanPhase() {
     
     const yourBansHeader = elements.egoBanPlayerBansSection.querySelector('h3');
     if (yourBansHeader) {
-        yourBansHeader.innerHTML = `Your Bans (<span id="ego-ban-counter">${currentPlayerBans.length}</span>/5)`;
+        yourBansHeader.innerHTML = `Your Bans (<span id="ego-ban-counter">${currentPlayerBans.length}</span>/${totalEgoBansPerPlayer})`;
     }
 
     elements.opponentRosterTitle.textContent = `${state.participants[opponent].name}'s Roster`;
@@ -1012,9 +1014,10 @@ function updateDraftInstructions() {
             actionDesc = "Winner of the coin flip will decide who goes first.";
             break;
         case "egoBan":
+            const totalEgoBansPerPlayer = (state.draft.egoBanSteps || 10) / 2;
             const bansDoneByCurrentPlayer = egoBans[currentPlayer] ? egoBans[currentPlayer].length : 0;
             phaseText = `EGO Ban Phase - ${state.participants[currentPlayer].name}'s turn`;
-            actionDesc = `Select and confirm 1 EGO to ban. (${bansDoneByCurrentPlayer}/5 total for you)`;
+            actionDesc = `Select and confirm 1 EGO to ban. (${bansDoneByCurrentPlayer}/${totalEgoBansPerPlayer} total for you)`;
             break;
         case "ban":
         case "pick":
