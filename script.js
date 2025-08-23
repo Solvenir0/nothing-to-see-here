@@ -889,13 +889,16 @@ function renderEgoBanPhase() {
     elements.confirmEgoBans.classList.add('hidden');
     elements.confirmSelectionEgo.disabled = !hovered[currentPlayer];
 
-    const p1BansPreview = elements.p1EgoBansPreview;
-    if (egoBans.p1 && egoBans.p1.length > 0) {
-        p1BansPreview.classList.remove('hidden');
-        const p1BannedObjects = egoBans.p1.map(id => state.masterEGOList.find(e => e.id === id)).filter(Boolean);
-        const listEl = p1BansPreview.querySelector('.banned-egos-list');
+    const allBansPreview = elements.p1EgoBansPreview; // This element is repurposed to show all bans
+    const allBans = [...egoBans.p1, ...egoBans.p2];
+
+    if (allBans.length > 0) {
+        allBansPreview.classList.remove('hidden');
+        allBansPreview.querySelector('h3').textContent = 'Banned EGOs'; // Make the title generic
+        const allBannedObjects = allBans.map(id => state.masterEGOList.find(e => e.id === id)).filter(Boolean);
+        const listEl = allBansPreview.querySelector('.banned-egos-list');
         listEl.innerHTML = '';
-        p1BannedObjects.forEach(ego => {
+        allBannedObjects.forEach(ego => {
             const item = document.createElement('div');
             item.className = 'banned-ego-item';
             item.style.backgroundColor = ego.cssColor;
@@ -903,9 +906,8 @@ function renderEgoBanPhase() {
             listEl.appendChild(item);
         });
     } else {
-        p1BansPreview.classList.add('hidden');
+        allBansPreview.classList.add('hidden');
     }
-}
 
 function renderBannedEgosDisplay() {
     const allBans = [...state.draft.egoBans.p1, ...state.draft.egoBans.p2];
