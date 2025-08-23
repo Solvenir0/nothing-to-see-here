@@ -890,7 +890,6 @@ function renderEgoBanPhase() {
     elements.confirmSelectionEgo.disabled = !hovered[currentPlayer];
 
     const allBansPreview = elements.p1EgoBansPreview; // This element is repurposed to show all bans
-    const allBans = [...egoBans.p1, ...egoBans.p2];
 
     if (allBans.length > 0) {
         allBansPreview.classList.remove('hidden');
@@ -908,7 +907,6 @@ function renderEgoBanPhase() {
     } else {
         allBansPreview.classList.add('hidden');
     }
-
 function renderBannedEgosDisplay() {
     const allBans = [...state.draft.egoBans.p1, ...state.draft.egoBans.p2];
     const bannedEgoObjects = allBans.map(id => state.masterEGOList.find(ego => ego.id === id)).filter(Boolean);
