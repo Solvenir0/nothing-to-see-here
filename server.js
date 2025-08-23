@@ -87,10 +87,9 @@ app.get('/_ah/health', (req, res) => res.status(200).send('OK'));
 
 const wss = new WebSocket.Server({ server });
 
-const EGO_BAN_COUNT = 5;
 const TIMERS = {
     roster: 90,
-    egoBan: 90,
+    egoBan: 20, // 20 seconds for each EGO ban
     pick: 15,
 };
 
@@ -525,13 +524,17 @@ function advancePhase(lobbyData) {
 
     switch (draft.phase) {
         case "egoBan":
-            if (draft.currentPlayer === 'p1') {
-                draft.currentPlayer = 'p2';
+            // Total of 10 bans (5 each), so 10 steps (0-9)
+            if (draft.step < 9) {
+                draft.step++;
+                draft.currentPlayer = draft.currentPlayer === 'p1' ? 'p2' : 'p1';
+                draft.actionCount = 1; // Each player bans 1 at a time
             } else {
+                // EGO ban phase is over, move to ID bans
                 draft.phase = "ban";
                 draft.action = "ban";
                 draft.step = 0;
-                draft.currentPlayer = 'p1';
+                draft.currentPlayer = 'p1'; // P1 always starts ID bans
                 draft.actionCount = 1;
                 draft.available.p1 = [...lobbyData.roster.p1];
                 draft.available.p2 = [...lobbyData.roster.p2];
@@ -667,24 +670,19 @@ function handleDraftConfirm(lobbyCode, lobbyData, ws) {
 
     if (phase === 'egoBan') {
         const playerBans = draft.egoBans[currentPlayer];
-        // Only add if not already present and there's space
-        if (!playerBans.includes(selectedId) && playerBans.length < EGO_BAN_COUNT) {
+        if (!playerBans.includes(selectedId)) {
             playerBans.push(selectedId);
         }
         
         draft.hovered[currentPlayer] = null; // Clear hover after successful ban
 
-        // If this action completes the bans, advance the phase and set the timer for the *next* phase.
-        if (playerBans.length === EGO_BAN_COUNT) {
-            lobbyData = advancePhase(lobbyData);
-            setTimerForLobby(lobbyCode, lobbyData);
-        }
+        // After one ban, advance the phase to the next player's turn
+        lobbyData = advancePhase(lobbyData);
+        setTimerForLobby(lobbyCode, lobbyData);
         
-        // In either case (ban complete or not), update activity and broadcast.
-        // We do NOT reset the timer if the bans are not yet complete.
         updateLobbyActivity(lobbyCode);
         broadcastState(lobbyCode);
-        return; // Exit here to prevent the general timer reset at the end of the function.
+        return; // Exit here.
     } 
     
     if (['ban', 'pick', 'midBan', 'pick2', 'pick_s2'].includes(phase)) {
@@ -929,6 +927,8 @@ wss.on('connection', (ws, req) => {
                 draft.phase = 'egoBan';
                 draft.action = 'egoBan';
                 draft.currentPlayer = 'p1';
+                draft.step = 0; // Initialize step for egoBan
+                draft.actionCount = 1; // Each player bans 1
 
                 updateLobbyActivity(lobbyCode);
                 setTimerForLobby(lobbyCode, lobbyData);
@@ -976,10 +976,8 @@ wss.on('connection', (ws, req) => {
                 if (!validateRefereeAccess(ws, lobbyData)) return;
 
                 if (action === 'confirmEgoBans') {
-                     const { currentPlayer } = lobbyData.draft;
-                     if (lobbyData.draft.egoBans[currentPlayer].length === EGO_BAN_COUNT) {
-                        lobbyData = advancePhase(lobbyData);
-                     }
+                     // This action is now deprecated with alternating bans, but we keep the case to avoid errors.
+                     // The logic now relies on single confirmations.
                 } else if (action === 'complete') {
                     lobbyData.draft.phase = "complete";
                 }
