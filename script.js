@@ -907,6 +907,8 @@ function renderEgoBanPhase() {
     } else {
         allBansPreview.classList.add('hidden');
     }
+}
+
 function renderBannedEgosDisplay() {
     const allBans = [...state.draft.egoBans.p1, ...state.draft.egoBans.p2];
     const bannedEgoObjects = allBans.map(id => state.masterEGOList.find(ego => ego.id === id)).filter(Boolean);
