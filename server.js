@@ -96,6 +96,7 @@ const TIMERS = {
 // --- DRAFT LOGIC SEQUENCES ---
 const DRAFT_LOGIC = {
     '1-2-2': {
+        egoBanSteps: 10,
         ban1Steps: 8,
         pick1: [{ p: 'p1', c: 1 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 1 }],
         midBanSteps: 6,
@@ -104,6 +105,7 @@ const DRAFT_LOGIC = {
         pick_s2: [{ p: 'p1', c: 1 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 1 }]
     },
     '1-2-2-extended': { // For "All Sections" matches
+        egoBanSteps: 10,
         ban1Steps: 8,
         pick1: [{ p: 'p1', c: 1 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 1 }],
         midBanSteps: 8, // Increased to 8
@@ -115,6 +117,7 @@ const DRAFT_LOGIC = {
         ],
     },
     '2-3-2': {
+        egoBanSteps: 10,
         ban1Steps: 8,
         pick1: [{ p: 'p1', c: 2 }, { p: 'p2', c: 3 }, { p: 'p1', c: 2 }, { p: 'p2', c: 3 }, { p: 'p1', c: 2 }],
         midBanSteps: 6,
@@ -122,7 +125,28 @@ const DRAFT_LOGIC = {
         pick_s2: [{ p: 'p1', c: 1 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 1 }]
     },
     '2-3-2-extended': { // For "All Sections" matches
+        egoBanSteps: 10,
         ban1Steps: 8,
+        pick1: [{ p: 'p1', c: 2 }, { p: 'p2', c: 3 }, { p: 'p1', c: 2 }, { p: 'p2', c: 3 }, { p: 'p1', c: 2 }],
+        midBanSteps: 8, // Increased to 8
+        pick2: [ // Starts with p2 now - the player who goes second during phase 1 goes first during phase 2
+            { p: 'p2', c: 1 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 },
+            { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 },
+            { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 },
+            { p: 'p2', c: 1 }
+        ],
+    },
+    '2-3-2-less-bans': {
+        egoBanSteps: 6,
+        ban1Steps: 6,
+        pick1: [{ p: 'p1', c: 2 }, { p: 'p2', c: 3 }, { p: 'p1', c: 2 }, { p: 'p2', c: 3 }, { p: 'p1', c: 2 }],
+        midBanSteps: 6,
+        pick2: [{ p: 'p2', c: 2 }, { p: 'p1', c: 3 }, { p: 'p2', c: 2 }, { p: 'p1', c: 3 }, { p: 'p2', c: 2 }],
+        pick_s2: [{ p: 'p1', c: 1 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 2 }, { p: 'p2', c: 2 }, { p: 'p1', c: 1 }]
+    },
+    '2-3-2-less-bans-extended': { // For "All Sections" matches
+        egoBanSteps: 6,
+        ban1Steps: 6,
         pick1: [{ p: 'p1', c: 2 }, { p: 'p2', c: 3 }, { p: 'p1', c: 2 }, { p: 'p2', c: 3 }, { p: 'p1', c: 2 }],
         midBanSteps: 8, // Increased to 8
         pick2: [ // Starts with p2 now - the player who goes second during phase 1 goes first during phase 2
@@ -357,6 +381,8 @@ function generateUniqueLobbyCode() {
 
 function createNewLobbyState(options = {}) {
     const { draftLogic = '2-3-2', timerEnabled = false, name = 'Referee', matchType = 'section1', rosterSize = 42 } = options;
+    const fullLogicKey = matchType === 'allSections' ? `${draftLogic}-extended` : draftLogic;
+    const currentLogic = DRAFT_LOGIC[fullLogicKey] || DRAFT_LOGIC[draftLogic];
     return {
         hostName: sanitizePlayerName(name), // Enhanced sanitization for name on creation
         createdAt: new Date().toISOString(),
@@ -386,6 +412,7 @@ function createNewLobbyState(options = {}) {
             draftLogic,
             matchType,
             rosterSize: parseInt(rosterSize, 10),
+            egoBanSteps: currentLogic.egoBanSteps || 10,
             coinFlipWinner: null,
             timer: {
                 enabled: timerEnabled,
@@ -524,8 +551,9 @@ function advancePhase(lobbyData) {
 
     switch (draft.phase) {
         case "egoBan":
-            // Total of 10 bans (5 each), so 10 steps (0-9)
-            if (draft.step < 9) {
+            const totalEgoBans = draft.egoBanSteps || 10;
+            // Total bans, so steps are 0 to totalEgoBans - 1
+            if (draft.step < totalEgoBans - 1) {
                 draft.step++;
                 draft.currentPlayer = draft.currentPlayer === 'p1' ? 'p2' : 'p1';
                 draft.actionCount = 1; // Each player bans 1 at a time
