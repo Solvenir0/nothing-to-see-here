@@ -417,35 +417,46 @@
         <div id="completed-view" class="hidden">
             <header>
                 <h1><i class="fas fa-flag-checkered"></i> Draft Complete</h1>
-                <p>Final Rosters</p>
+                <div class="view-toggle">
+                    <label class="switch">
+                        <input type="checkbox" id="view-toggle-switch">
+                        <span class="slider round"></span>
+                    </label>
+                    <span id="view-toggle-label">View Timeline</span>
+                </div>
             </header>
             <div class="banned-egos-display" id="final-banned-egos">
                 <h3><i class="fas fa-ban"></i> Banned EGOs</h3>
                 <div class="banned-egos-list" id="final-banned-egos-list"></div>
             </div>
-            <div class="final-rosters-container">
-                <div class="final-player-panel">
-                    <h2 id="final-p1-name">Player 1's Roster</h2>
-                    <h4>Picked IDs</h4>
-                    <div class="final-picks" id="final-p1-picks"></div>
-                    <div id="final-p1-s2-picks-container" class="hidden">
-                        <h4>Picked IDs (Sections 2 & 3)</h4>
-                        <div class="final-picks section2-picks" id="final-p1-s2-picks"></div>
+            <div id="final-rosters-view">
+                <div class="final-rosters-container">
+                    <div class="final-player-panel">
+                        <h2 id="final-p1-name">Player 1's Roster</h2>
+                        <h4>Picked IDs</h4>
+                        <div class="final-picks" id="final-p1-picks"></div>
+                        <div id="final-p1-s2-picks-container" class="hidden">
+                            <h4>Picked IDs (Sections 2 & 3)</h4>
+                            <div class="final-picks section2-picks" id="final-p1-s2-picks"></div>
+                        </div>
+                        <h3>Banned IDs</h3>
+                        <div class="final-bans" id="final-p1-bans"></div>
                     </div>
-                    <h3>Banned IDs</h3>
-                    <div class="final-bans" id="final-p1-bans"></div>
-                </div>
-                <div class="final-player-panel">
-                    <h2 id="final-p2-name">Player 2's Roster</h2>
-                    <h4>Picked IDs</h4>
-                    <div class="final-picks" id="final-p2-picks"></div>
-                    <div id="final-p2-s2-picks-container" class="hidden">
-                        <h4>Picked IDs (Sections 2 & 3)</h4>
-                        <div class="final-picks section2-picks" id="final-p2-s2-picks"></div>
+                    <div class="final-player-panel">
+                        <h2 id="final-p2-name">Player 2's Roster</h2>
+                        <h4>Picked IDs</h4>
+                        <div class="final-picks" id="final-p2-picks"></div>
+                        <div id="final-p2-s2-picks-container" class="hidden">
+                            <h4>Picked IDs (Sections 2 & 3)</h4>
+                            <div class="final-picks section2-picks" id="final-p2-s2-picks"></div>
+                        </div>
+                        <h3>Banned IDs</h3>
+                        <div class="final-bans" id="final-p2-bans"></div>
                     </div>
-                    <h3>Banned IDs</h3>
-                    <div class="final-bans" id="final-p2-bans"></div>
                 </div>
+            </div>
+            <div id="timeline-view" class="hidden">
+                <!-- Timeline will be dynamically generated here -->
             </div>
             <button class="btn btn-large btn-primary" id="restart-draft"><i class="fas fa-redo"></i> Start New Draft</button>
         </div>
