@@ -2150,13 +2150,13 @@ input:checked + .slider:before {
     border: 3px solid var(--accent);
     top: 25px;
     z-index: 1;
-    left: 50%;
-    transform: translateX(-50%);
 }
 
 .timeline-event.p1::after { 
+    right: -8px;
 }
 .timeline-event.p2::after { 
+    left: -8px;
 }
 
 .event-group-container {
