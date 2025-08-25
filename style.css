@@ -2262,3 +2262,66 @@ input:checked + .slider:before {
     .timeline-event.p1, .timeline-event.p2 { left: 0; }
     .timeline-event::after { left: 2px; }
 }
+
+/* --- New Timeline Layout Styles --- */
+
+#timeline-wrapper {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start; /* Align items to the top */
+}
+
+.timeline-roster-panel {
+    flex: 1; /* Each roster takes up 1 part of the space */
+    min-width: 280px;
+    background: var(--panel);
+    border-radius: 15px;
+    padding: 15px;
+    border: 1px solid var(--border);
+    
+    /* The magic for the sticky effect! */
+    position: sticky;
+    top: 20px; /* Distance from the top of the viewport when scrolling */
+}
+
+.timeline-roster-panel h4 {
+    margin-top: 0;
+    text-align: center;
+    border-bottom: 1px solid var(--accent);
+    padding-bottom: 10px;
+    color: var(--text);
+}
+
+#timeline-view {
+    flex: 2; /* The timeline takes up 2 parts, making it the focus */
+    width: 100%;
+}
+
+.roster-grid-timeline {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, 70px);
+    gap: 8px;
+    justify-content: center;
+    margin-top: 15px;
+    max-height: 80vh; /* Set a max height to allow scrolling within the panel if needed */
+    overflow-y: auto;
+}
+
+/* Style for unavailable (picked/banned) IDs in the roster panels */
+.roster-grid-timeline .id-item.unavailable .id-icon {
+    filter: grayscale(100%);
+    opacity: 0.4;
+}
+
+/* --- Responsive Handling for Smaller Screens --- */
+@media (max-width: 1200px) {
+    #timeline-wrapper {
+        flex-direction: column; /* Stack the columns vertically */
+    }
+
+    .timeline-roster-panel {
+        position: static; /* Disable the sticky effect on small screens */
+        width: 100%;
+        max-height: 400px; /* Give a reasonable height when stacked */
+    }
+}
