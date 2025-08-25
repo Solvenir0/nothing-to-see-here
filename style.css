@@ -2307,11 +2307,6 @@ input:checked + .slider:before {
     overflow-y: auto;
 }
 
-/* Style for unavailable (picked/banned) IDs in the roster panels */
-.roster-grid-timeline .id-item.unavailable .id-icon {
-    filter: grayscale(100%);
-    opacity: 0.4;
-}
 
 /* --- Responsive Handling for Smaller Screens --- */
 @media (max-width: 1200px) {
