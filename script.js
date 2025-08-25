@@ -1183,48 +1183,87 @@ function renderTimelineView() {
         return;
     }
 
+    // --- START: New Grouping Logic ---
+    const groupedHistory = [];
+    if (history.length > 0) {
+        // Start with the first event as the initial group
+        let currentGroup = {
+            player: history[0].player,
+            type: history[0].type,
+            events: [history[0]]
+        };
+
+        for (let i = 1; i < history.length; i++) {
+            const event = history[i];
+            // If the current event is by the same player and of the same type, add it to the group.
+            if (event.player === currentGroup.player && event.type === currentGroup.type) {
+                currentGroup.events.push(event);
+            } else {
+                // Otherwise, push the completed group and start a new one.
+                groupedHistory.push(currentGroup);
+                currentGroup = {
+                    player: event.player,
+                    type: event.type,
+                    events: [event]
+                };
+            }
+        }
+        // Add the last group to the array
+        groupedHistory.push(currentGroup);
+    }
+    // --- END: New Grouping Logic ---
+
     const timelineContainer = document.createElement('div');
     timelineContainer.className = 'timeline-container';
 
-    history.forEach(event => {
-        const { player, type, targetId } = event;
+    // Now, iterate over the groupedHistory instead of the raw history
+    groupedHistory.forEach(group => {
+        const { player, type, events } = group;
         const isBan = type.includes('BAN');
-        const isEGO = type.includes('EGO');
-
-        let targetData;
-        if (isEGO) {
-            targetData = state.masterEGOList.find(e => e.id === targetId);
-        } else {
-            targetData = state.masterIDList.find(i => i.id === targetId);
-        }
-
-        if (!targetData) return; // Skip if data not found
 
         const eventElement = document.createElement('div');
+        // The class is now based on the group's player
         eventElement.className = `timeline-event ${player}`;
 
         const card = document.createElement('div');
         card.className = `event-card ${isBan ? 'ban' : 'pick'}`;
 
         const actionText = type.replace('_', ' ');
+        const countText = events.length > 1 ? ` (x${events.length})` : '';
 
-        let imageHTML;
-        if (isEGO) {
-            imageHTML = `<i class="fas fa-shield-alt fa-2x" style="width: 60px; text-align: center;"></i>`;
-        } else {
-            imageHTML = `<img src="/uploads/${targetData.imageFile}" alt="${targetData.name}">`;
-        }
+        // Create a container for all the event bodies in the group
+        const eventsContainer = document.createElement('div');
+        eventsContainer.className = 'event-group-container';
+
+        events.forEach(event => {
+            const { targetId } = event;
+            let targetData = isBan && type.includes('EGO')
+                ? state.masterEGOList.find(e => e.id === targetId)
+                : state.masterIDList.find(i => i.id === targetId);
+
+            if (!targetData) return;
+
+            const eventBody = document.createElement('div');
+            eventBody.className = 'event-body';
+            
+            let imageHTML = isBan && type.includes('EGO')
+                ? `<i class="fas fa-shield-alt fa-2x" style="width: 60px; text-align: center;"></i>`
+                : `<img src="/uploads/${targetData.imageFile}" alt="${targetData.name}">`;
+
+            eventBody.innerHTML = `
+                ${imageHTML}
+                <span class="target-name">${targetData.name}</span>
+            `;
+            eventsContainer.appendChild(eventBody);
+        });
 
         card.innerHTML = `
             <div class="event-header">
                 <span class="player-name">${state.participants[player].name}</span>
-                <span class="action-type">${actionText}</span>
-            </div>
-            <div class="event-body">
-                ${imageHTML}
-                <span class="target-name">${targetData.name}</span>
+                <span class="action-type">${actionText}${countText}</span>
             </div>
         `;
+        card.appendChild(eventsContainer); // Append the container of event bodies
         eventElement.appendChild(card);
         timelineContainer.appendChild(eventElement);
     });
