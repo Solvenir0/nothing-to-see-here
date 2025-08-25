@@ -684,7 +684,7 @@ function switchView(view) {
     console.log('Switching to view:', view);
     state.currentView = view;
     
-    ['mainPage', 'lobbyView', 'completedView', 'rosterBuilderPage'].forEach(pageId => {
+    ['mainPage', 'lobbyView', 'completedView', 'rosterBuilderPage', 'timelineWrapper'].forEach(pageId => {
         const el = elements[pageId];
         if (el) {
             el.classList.add('hidden');
@@ -1174,8 +1174,63 @@ function renderCompletedView() {
 }
 
 function renderTimelineView() {
+    // --- PART 1: RENDER THE STICKY ROSTER PANELS ON THE SIDES ---
+
+    // Get the necessary data from the main state object.
+    const { draft, participants, roster } = state;
+
+    // Create a single, fast-lookup list of all IDs that were used (picked or banned) during the draft.
+    // This will be used to determine which IDs to "gray out" in the roster panels.
+    const unavailableIds = new Set([
+        ...draft.idBans.p1, ...draft.idBans.p2,
+        ...draft.picks.p1, ...draft.picks.p2,
+        ...draft.picks_s2.p1, ...draft.picks_s2.p2
+    ]);
+
+    // Define a reusable helper function to draw a complete roster panel for one player.
+    // This avoids writing the same code twice.
+    const renderRoster = (player, container, nameEl) => {
+        // Set the title of the panel, e.g., "Player 1's Roster".
+        nameEl.textContent = `${participants[player].name}'s Roster`;
+        // Clear any old content from the panel before drawing the new roster.
+        container.innerHTML = '';
+        // Use a document fragment for better performance when adding many elements.
+        const fragment = document.createDocumentFragment();
+        
+        // Get the player's initial roster and sort it so IDs always appear in the same order.
+        const sortedRoster = sortIdsByMasterList(roster[player]);
+        // The roster is just a list of ID text (slugs), so we convert it into a list of full ID objects.
+        const idObjects = sortedRoster.map(id => state.masterIDList.find(item => item.id === id)).filter(Boolean);
+
+        // Loop through each ID in the player's initial roster.
+        idObjects.forEach(idData => {
+            // Create the HTML element for the ID's image.
+            const element = createIdElement(idData, {});
+            
+            // Check if this ID is in our 'unavailableIds' list.
+            if (unavailableIds.has(idData.id)) {
+                // If it is, that means it was picked or banned, so we add a special CSS class.
+                // The CSS will use this class to make the image look grayed out.
+                element.classList.add('unavailable');
+            }
+            // Add the finished element to our fragment.
+            fragment.appendChild(element);
+        });
+        // Add all the created elements to the webpage in one go.
+        container.appendChild(fragment);
+    };
+
+    // Call the helper function for both players to draw their roster panels.
+    renderRoster('p1', elements.timelineRosterP1, elements.timelineRosterP1Name);
+    renderRoster('p2', elements.timelineRosterP2, elements.timelineRosterP2Name);
+
+    // --- PART 2: RENDER THE CENTRAL, GROUPED TIMELINE ---
+
+    // Get the container for the timeline itself.
     const container = elements.timelineView;
-    container.innerHTML = ''; // Clear previous content
+    // Clear any timeline content from a previous render.
+    container.innerHTML = '';
+    // Get the draft history, which contains every pick and ban event.
     const { history } = state.draft;
 
     if (!history || history.length === 0) {
@@ -1183,23 +1238,19 @@ function renderTimelineView() {
         return;
     }
 
-    // --- START: New Grouping Logic ---
+    // Logic to group consecutive actions by the same player.
     const groupedHistory = [];
     if (history.length > 0) {
-        // Start with the first event as the initial group
         let currentGroup = {
             player: history[0].player,
             type: history[0].type,
             events: [history[0]]
         };
-
         for (let i = 1; i < history.length; i++) {
             const event = history[i];
-            // If the current event is by the same player and of the same type, add it to the group.
             if (event.player === currentGroup.player && event.type === currentGroup.type) {
                 currentGroup.events.push(event);
             } else {
-                // Otherwise, push the completed group and start a new one.
                 groupedHistory.push(currentGroup);
                 currentGroup = {
                     player: event.player,
@@ -1208,21 +1259,19 @@ function renderTimelineView() {
                 };
             }
         }
-        // Add the last group to the array
         groupedHistory.push(currentGroup);
     }
-    // --- END: New Grouping Logic ---
 
+    // Create the main timeline container element with its center line.
     const timelineContainer = document.createElement('div');
     timelineContainer.className = 'timeline-container';
 
-    // Now, iterate over the groupedHistory instead of the raw history
+    // Loop over the new 'groupedHistory' array instead of the raw event history.
     groupedHistory.forEach(group => {
         const { player, type, events } = group;
         const isBan = type.includes('BAN');
 
         const eventElement = document.createElement('div');
-        // The class is now based on the group's player
         eventElement.className = `timeline-event ${player}`;
 
         const card = document.createElement('div');
@@ -1231,10 +1280,10 @@ function renderTimelineView() {
         const actionText = type.replace('_', ' ');
         const countText = events.length > 1 ? ` (x${events.length})` : '';
 
-        // Create a container for all the event bodies in the group
         const eventsContainer = document.createElement('div');
         eventsContainer.className = 'event-group-container';
 
+        // Loop through all the events within this group.
         events.forEach(event => {
             const { targetId } = event;
             let targetData = isBan && type.includes('EGO')
@@ -1257,20 +1306,21 @@ function renderTimelineView() {
             eventsContainer.appendChild(eventBody);
         });
 
+        // Build the final card with its header and the container of events.
         card.innerHTML = `
             <div class="event-header">
                 <span class="player-name">${state.participants[player].name}</span>
                 <span class="action-type">${actionText}${countText}</span>
             </div>
         `;
-        card.appendChild(eventsContainer); // Append the container of event bodies
+        card.appendChild(eventsContainer);
         eventElement.appendChild(card);
         timelineContainer.appendChild(eventElement);
     });
 
+    // Add the finished timeline to the page.
     container.appendChild(timelineContainer);
 }
-
 
 function updateRosterPhaseReadyButtonState() {
     if (state.draft.phase === 'roster') {
@@ -1849,7 +1899,7 @@ function setupEventListeners() {
     elements.viewToggleSwitch.addEventListener('change', (e) => {
         const isTimelineView = e.target.checked;
         elements.finalRostersView.classList.toggle('hidden', isTimelineView);
-        elements.timelineView.classList.toggle('hidden', !isTimelineView);
+        elements.timelineWrapper.classList.toggle('hidden', !isTimelineView);
         elements.viewToggleLabel.textContent = isTimelineView ? 'View Final Rosters' : 'View Timeline';
     });
 
@@ -2266,6 +2316,14 @@ function cacheDOMElements() {
         globalFilterBarRoster: document.getElementById('global-filter-bar-roster'),
         globalFilterBarBuilder: document.getElementById('global-filter-bar-builder'),
         globalFilterBarDraft: document.getElementById('global-filter-bar-draft'),
+
+        // Inside the `elements` object in the cacheDOMElements function
+        // Add these new properties
+        timelineWrapper: document.getElementById('timeline-wrapper'),
+        timelineRosterP1: document.getElementById('timeline-roster-p1-grid'),
+        timelineRosterP2: document.getElementById('timeline-roster-p2-grid'),
+        timelineRosterP1Name: document.getElementById('timeline-roster-p1-name'),
+        timelineRosterP2Name: document.getElementById('timeline-roster-p2-name'),
 
         // Dynamic tooltip element (will be created/destroyed)
         idTooltip: null
