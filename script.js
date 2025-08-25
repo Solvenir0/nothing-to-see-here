@@ -63,6 +63,7 @@ const state = {
         egoBans: { p1: [], p2: [] },
         picks: { p1: [], p2: [] },
         picks_s2: { p1: [], p2: [] },
+        history: [],
         hovered: { p1: null, p2: null },
         banPools: { p1: [], p2: [] },
         draftLogic: '1-2-2',
@@ -1169,6 +1170,66 @@ function renderCompletedView() {
     renderChronologicalIdList(elements.finalP2Bans, state.draft.idBans.p2);
     
     renderBannedEgosDisplay();
+    renderTimelineView();
+}
+
+function renderTimelineView() {
+    const container = elements.timelineView;
+    container.innerHTML = ''; // Clear previous content
+    const { history } = state.draft;
+
+    if (!history || history.length === 0) {
+        container.innerHTML = '<p>No draft history available.</p>';
+        return;
+    }
+
+    const timelineContainer = document.createElement('div');
+    timelineContainer.className = 'timeline-container';
+
+    history.forEach(event => {
+        const { player, type, targetId } = event;
+        const isBan = type.includes('BAN');
+        const isEGO = type.includes('EGO');
+
+        let targetData;
+        if (isEGO) {
+            targetData = state.masterEGOList.find(e => e.id === targetId);
+        } else {
+            targetData = state.masterIDList.find(i => i.id === targetId);
+        }
+
+        if (!targetData) return; // Skip if data not found
+
+        const eventElement = document.createElement('div');
+        eventElement.className = `timeline-event ${player}`;
+
+        const card = document.createElement('div');
+        card.className = `event-card ${isBan ? 'ban' : 'pick'}`;
+
+        const actionText = type.replace('_', ' ');
+
+        let imageHTML;
+        if (isEGO) {
+            imageHTML = `<i class="fas fa-shield-alt fa-2x" style="width: 60px; text-align: center;"></i>`;
+        } else {
+            imageHTML = `<img src="/uploads/${targetData.imageFile}" alt="${targetData.name}">`;
+        }
+
+        card.innerHTML = `
+            <div class="event-header">
+                <span class="player-name">${state.participants[player].name}</span>
+                <span class="action-type">${actionText}</span>
+            </div>
+            <div class="event-body">
+                ${imageHTML}
+                <span class="target-name">${targetData.name}</span>
+            </div>
+        `;
+        eventElement.appendChild(card);
+        timelineContainer.appendChild(eventElement);
+    });
+
+    container.appendChild(timelineContainer);
 }
 
 
@@ -1565,8 +1626,6 @@ function setupEventListeners() {
         }
     });
 
-    // Public lobby browsing removed
-
     elements.enterLobbyByCode.addEventListener('click', () => {
         const playerName = validateAndTrimInput(elements.playerNameInput.value, 'your name');
         if (!playerName) {
@@ -1746,6 +1805,15 @@ function setupEventListeners() {
             icon.classList.add('fa-eye');
         }
     });
+
+    // Timeline Toggle
+    elements.viewToggleSwitch.addEventListener('change', (e) => {
+        const isTimelineView = e.target.checked;
+        elements.finalRostersView.classList.toggle('hidden', isTimelineView);
+        elements.timelineView.classList.toggle('hidden', !isTimelineView);
+        elements.viewToggleLabel.textContent = isTimelineView ? 'View Final Rosters' : 'View Timeline';
+    });
+
 
     // Universal Tooltip Logic for ID and EGO
     let tooltipTimer = null;
@@ -2142,6 +2210,10 @@ function cacheDOMElements() {
         finalP2S2PicksContainer: document.getElementById('final-p2-s2-picks-container'),
         finalP1S2Picks: document.getElementById('final-p1-s2-picks'),
         finalP2S2Picks: document.getElementById('final-p2-s2-picks'),
+        viewToggleSwitch: document.getElementById('view-toggle-switch'),
+        viewToggleLabel: document.getElementById('view-toggle-label'),
+        finalRostersView: document.getElementById('final-rosters-view'),
+        timelineView: document.getElementById('timeline-view'),
 
         // Coin Flip Modal
         coinFlipModal: document.getElementById('coin-flip-modal'),
