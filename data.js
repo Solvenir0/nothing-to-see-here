@@ -176,6 +176,7 @@ Electric Screaming Meursault - TETH - Envy - Purple
 Pursuance Meursault - HE - Sloth - Yellow
 Capote Meursault - HE - Wrath - Red
 Yearning-Mircalla Meursault - WAW - Lust - Orange
+Crushbound Past Meursault - WAW - Sloth - Yellow
 Land of Illusion Hong Lu - ZAYIN - Gloom - Blue
 Roseate Desire Hong Lu - TETH - Lust - Orange
 Soda Hong Lu - TETH - Gloom - Blue
