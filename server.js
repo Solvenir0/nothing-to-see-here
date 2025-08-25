@@ -404,6 +404,7 @@ function createNewLobbyState(options = {}) {
             egoBans: { p1: [], p2: [] },
             picks: { p1: [], p2: [] },
             picks_s2: { p1: [], p2: [] },
+            history: [],
             hovered: { p1: null, p2: null },
             // Authoritative server-side view of bannable opponent IDs for each player.
             // banPools.p1: IDs p1 may ban (derived from roster.p2 minus bans & p2 picks)
@@ -700,6 +701,7 @@ function handleDraftConfirm(lobbyCode, lobbyData, ws) {
         const playerBans = draft.egoBans[currentPlayer];
         if (!playerBans.includes(selectedId)) {
             playerBans.push(selectedId);
+            draft.history.push({ type: 'EGO_BAN', player: currentPlayer, targetId: selectedId });
         }
         
         draft.hovered[currentPlayer] = null; // Clear hover after successful ban
@@ -718,16 +720,20 @@ function handleDraftConfirm(lobbyCode, lobbyData, ws) {
 
         let listToUpdate;
         const isBanAction = (phase === 'ban' || phase === 'midBan');
+        let eventType = '';
 
         if (isBanAction) {
             listToUpdate = draft.idBans[currentPlayer];
-        } else if (phase === 'pick' || phase === 'pick2') {
-            listToUpdate = draft.picks[currentPlayer];
-        } else if (phase === 'pick_s2') {
-            listToUpdate = draft.picks_s2[currentPlayer];
+            eventType = 'ID_BAN';
+        } else if (phase === 'pick' || phase === 'pick2' || phase === 'pick_s2') {
+            listToUpdate = (phase === 'pick_s2') ? draft.picks_s2[currentPlayer] : draft.picks[currentPlayer];
+            eventType = 'ID_PICK';
         }
 
-        if (listToUpdate) listToUpdate.push(selectedId);
+        if (listToUpdate) {
+            listToUpdate.push(selectedId);
+            draft.history.push({ type: eventType, player: currentPlayer, targetId: selectedId });
+        }
         // Always remove the chosen ID from both availability lists (bans deny globally; picks lock globally)
         ['p1','p2'].forEach(p => {
             const idx = draft.available[p].indexOf(selectedId);
