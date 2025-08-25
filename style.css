@@ -2130,7 +2130,11 @@ input:checked + .slider:before {
     position: relative;
     width: 50%;
     box-sizing: border-box;
-    margin-bottom: 15px;
+    margin-top: -35px;
+}
+
+.timeline-container > .timeline-event:first-child {
+    margin-top: 0;
 }
 
 .timeline-event.p1 { left: 0; }
@@ -2146,10 +2150,21 @@ input:checked + .slider:before {
     border: 3px solid var(--accent);
     top: 25px;
     z-index: 1;
+    left: 50%;
+    transform: translateX(-50%);
 }
 
-.timeline-event.p1::after { right: -8px; }
-.timeline-event.p2::after { left: -8px; }
+.timeline-event.p1::after { 
+}
+.timeline-event.p2::after { 
+}
+
+.event-group-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px; /* Adds a little space between items in a group */
+    margin-top: 10px;
+}
 
 .event-card {
     padding: 15px;
