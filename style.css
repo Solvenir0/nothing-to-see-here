@@ -2320,3 +2320,59 @@ input:checked + .slider:before {
         max-height: 400px; /* Give a reasonable height when stacked */
     }
 }
+/* --- New Main Menu Styles --- */
+.lobby-access-card {
+    max-width: 600px;
+    margin: 0 auto 40px auto;
+}
+.lobby-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+.lobby-controls input {
+    flex-grow: 1;
+    text-align: center;
+}
+.advanced-lobby-options {
+    margin-top: 20px;
+}
+.advanced-lobby-options summary {
+    cursor: pointer;
+    font-weight: bold;
+    color: var(--accent);
+}
+.main-menu-split {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 30px;
+}
+@media (min-width: 992px) {
+    .main-menu-split {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+/* --- New Analyzer Page Styles --- */
+#analyzer-page .card {
+    max-width: 800px;
+    margin: 20px auto;
+}
+.analyzer-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+#draft-import-code {
+    width: 100%;
+    min-height: 200px;
+    padding: 15px;
+    font-family: monospace;
+    font-size: 1rem;
+    resize: vertical;
+    background: #111;
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 8px;
+}
