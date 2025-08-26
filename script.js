@@ -702,6 +702,8 @@ function switchView(view) {
     } else {
         console.error('Target view element not found for showing:', view);
     }
+
+    elements.globalBackToMain.classList.toggle('hidden', view === 'mainPage');
 }
 
 
@@ -1739,12 +1741,7 @@ function setupEventListeners() {
         }
         window.location.reload();
     };
-    elements.backToMainLobby.addEventListener('click', clearSessionAndReload);
     elements.restartDraft.addEventListener('click', clearSessionAndReload);
-    elements.backToMainBuilder.addEventListener('click', () => {
-        stopKeepAlive();
-        state.lobbyCode = ''; 
-        switchView('mainPage');
     });
     
     // Lobby Roster Controls
@@ -1860,6 +1857,11 @@ function setupEventListeners() {
         }
     });
 
+    elements.globalBackToMain.addEventListener('click', () => {
+        // Re-using the existing function is the cleanest way to reset everything.
+        clearSessionAndReload(); 
+    });
+
     // Timeline Toggle
     elements.viewToggleSwitch.addEventListener('change', (e) => {
         const isTimelineView = e.target.checked;
@@ -1942,7 +1944,6 @@ function setupEventListeners() {
     
     // --- START: NEW LISTENERS FOR ANALYZER & MENU ---
     elements.goToAnalyzer.addEventListener('click', () => switchView('analyzerPage'));
-    elements.backToMainAnalyzer.addEventListener('click', () => switchView('mainPage'));
 
     // Handle the new main menu buttons
     elements.createLobbyMainBtn.addEventListener('click', () => {
@@ -2236,8 +2237,7 @@ function cacheDOMElements() {
         confirmJoinBtn: document.getElementById('confirm-join-btn'),
 
         // Shared
-        backToMainLobby: document.getElementById('back-to-main-lobby'),
-        backToMainBuilder: document.getElementById('back-to-main-builder'),
+        globalBackToMain: document.getElementById('global-back-to-main'),
         connectionStatus: document.getElementById('connection-status'),
         notification: document.getElementById('notification'),
         
@@ -2360,7 +2360,6 @@ function cacheDOMElements() {
 
          // anaylzer
         analyzerPage: document.getElementById('analyzer-page'),
-        backToMainAnalyzer: document.getElementById('back-to-main-analyzer'),
         goToAnalyzer: document.getElementById('go-to-analyzer'),
         draftImportCode: document.getElementById('draft-import-code'),
         analyzeDraftBtn: document.getElementById('analyze-draft-btn'),
