@@ -684,7 +684,7 @@ function switchView(view) {
     console.log('Switching to view:', view);
     state.currentView = view;
     
-    ['mainPage', 'lobbyView', 'completedView', 'rosterBuilderPage', 'timelineWrapper'].forEach(pageId => {
+    ['mainPage', 'lobbyView', 'completedView', 'rosterBuilderPage', 'analyzerPage', 'timelineWrapper'].forEach(pageId => {
         const el = elements[pageId];
         if (el) {
             el.classList.add('hidden');
@@ -1659,27 +1659,11 @@ function setupFilterBar(barId, filterStateObject) {
 
 function setupEventListeners() {
     // Main Page
-    elements.createLobbyBtn.addEventListener('click', () => {
-        const playerName = validateAndTrimInput(elements.playerNameInput.value, 'your name');
-        if (!playerName) {
-            return; // Stop if name is empty
-        }
-        const options = {
-            name: playerName,
-            draftLogic: elements.draftLogicSelect.value,
-            matchType: elements.matchTypeSelect.value,
-            timerEnabled: elements.timerToggle.value === 'true',
-            rosterSize: elements.rosterSizeSelect.value
-        };
-        sendMessage({ type: 'createLobby', options });
-    });
-    
     elements.goToBuilder.addEventListener('click', () => {
         state.builderSelectedSinner = "Yi Sang";
         switchView('rosterBuilderPage');
         renderRosterBuilder();
     });
-
     elements.showRulesBtn.addEventListener('click', () => elements.rulesModal.classList.remove('hidden'));
     elements.closeRulesBtn.addEventListener('click', () => elements.rulesModal.classList.add('hidden'));
 
@@ -1687,7 +1671,6 @@ function setupEventListeners() {
     elements.lobbyCodeDisplay.addEventListener('click', async () => {
         try {
             await navigator.clipboard.writeText(state.lobbyCode);
-            // Show brief visual feedback
             const originalText = elements.lobbyCodeDisplay.textContent;
             elements.lobbyCodeDisplay.textContent = 'COPIED!';
             elements.lobbyCodeDisplay.style.color = '#4CAF50';
@@ -1696,15 +1679,12 @@ function setupEventListeners() {
                 elements.lobbyCodeDisplay.style.color = '';
             }, 800);
         } catch (err) {
-            // Fallback for older browsers
             const textArea = document.createElement('textarea');
             textArea.value = state.lobbyCode;
             document.body.appendChild(textArea);
             textArea.select();
             document.execCommand('copy');
             document.body.removeChild(textArea);
-            
-            // Show brief visual feedback
             const originalText = elements.lobbyCodeDisplay.textContent;
             elements.lobbyCodeDisplay.textContent = 'COPIED!';
             elements.lobbyCodeDisplay.style.color = '#4CAF50';
@@ -1715,23 +1695,14 @@ function setupEventListeners() {
         }
     });
 
-    elements.enterLobbyByCode.addEventListener('click', () => {
-        const playerName = validateAndTrimInput(elements.playerNameInput.value, 'your name');
-        if (!playerName) {
-            return; // Stop if name is empty
-        }
-        const lobbyCode = validateAndTrimInput(elements.lobbyCodeInput.value, 'lobby code');
-        if (lobbyCode) {
-            sendMessage({ type: 'getLobbyInfo', lobbyCode: lobbyCode.toUpperCase() });
-        }
-    });
+    // NOTE: The original 'createLobbyBtn' and 'enterLobbyByCode' listeners have been removed from here.
 
     elements.closeRoleModalBtn.addEventListener('click', () => elements.roleSelectionModal.classList.add('hidden'));
     elements.confirmJoinBtn.addEventListener('click', () => {
         const playerName = validateAndTrimInput(elements.playerNameInput.value, 'your name');
         if (!playerName) {
-            elements.roleSelectionModal.classList.add('hidden'); // Close modal if name is missing
-            return; // Stop if name is empty
+            elements.roleSelectionModal.classList.add('hidden');
+            return;
         }
         if (state.joinTarget.lobbyCode && state.joinTarget.role) {
             sendMessage({
@@ -1760,7 +1731,7 @@ function setupEventListeners() {
     elements.cancelRejoinBtn.addEventListener('click', cancelRejoinAction);
 
     const clearSessionAndReload = () => {
-        stopKeepAlive(); // Stop keep-alive before leaving
+        stopKeepAlive();
         try {
             localStorage.removeItem('limbusDraftSession');
         } catch (error) {
@@ -1771,7 +1742,7 @@ function setupEventListeners() {
     elements.backToMainLobby.addEventListener('click', clearSessionAndReload);
     elements.restartDraft.addEventListener('click', clearSessionAndReload);
     elements.backToMainBuilder.addEventListener('click', () => {
-        stopKeepAlive(); // Stop keep-alive when leaving lobby
+        stopKeepAlive();
         state.lobbyCode = ''; 
         switchView('mainPage');
     });
@@ -1807,11 +1778,11 @@ function setupEventListeners() {
             const newSize = parseInt(button.dataset.size, 10);
             if (newSize !== state.builderRosterSize) {
                 state.builderRosterSize = newSize;
-                state.builderRoster = []; // Clear roster on size change
+                state.builderRoster = [];
                 elements.builderRosterSizeSelector.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
                 button.classList.add('active');
                 renderRosterBuilder();
-                setupAdvancedRandomUI(); // Re-setup sliders with new roster size
+                setupAdvancedRandomUI();
             }
         }
     });
@@ -1827,11 +1798,9 @@ function setupEventListeners() {
     elements.builderCopyCode.addEventListener('click', () => {
         const code = elements.builderRosterCodeDisplay.textContent;
         if (!navigator.clipboard) {
-            // Fallback for browsers without clipboard API
             showNotification("Clipboard not supported. Please copy manually.", true);
             return;
         }
-        
         navigator.clipboard.writeText(code).then(() => {
             showNotification("Roster code copied to clipboard!");
         }).catch((error) => {
@@ -1846,29 +1815,25 @@ function setupEventListeners() {
             if (roster) {
                 state.builderRoster = roster;
                 state.builderRosterSize = roster.length;
-                
                 elements.builderRosterSizeSelector.querySelectorAll('button').forEach(btn => {
                     btn.classList.toggle('active', parseInt(btn.dataset.size) === state.builderRosterSize);
                 });
-
                 renderRosterBuilder();
                 setupAdvancedRandomUI();
                 showNotification(`Roster for ${roster.length} IDs loaded successfully!`);
             }
         }
     });
-
     elements.toggleAdvancedRandom.addEventListener('click', () => {
         elements.advancedRandomOptions.classList.toggle('hidden');
     });
     elements.builderAdvancedRandom.addEventListener('click', generateAdvancedRandomRoster);
 
-
     // EGO Search with debouncing
     const debouncedRenderEgoBanPhase = createDebounceFunction(renderEgoBanPhase, 300);
     elements.egoSearchInput.addEventListener('input', (e) => {
         state.egoSearch = e.target.value;
-        debouncedRenderEgoBanPhase(); // Use debounced version
+        debouncedRenderEgoBanPhase();
     });
 
     // Draft controls
@@ -1903,54 +1868,37 @@ function setupEventListeners() {
         elements.viewToggleLabel.textContent = isTimelineView ? 'View Final Rosters' : 'View Timeline';
     });
 
-
     // Universal Tooltip Logic for ID and EGO
     let tooltipTimer = null;
-
     function getTooltipData(element) {
-        // Try ID first
         const idSlug = element.dataset.id;
         let data = state.masterIDList.find(id => id.id === idSlug);
         if (data) return { name: data.name };
-        // Try EGO
         data = state.masterEGOList && state.masterEGOList.find(ego => ego.id === idSlug);
         if (data) return { name: data.name };
-        // Fallback: try text content
         return { name: element.textContent || '' };
     }
-
     const showTooltip = (element) => {
-        if (getTooltipElement()) return; // Tooltip already exists
-
+        if (getTooltipElement()) return;
         const tooltipData = getTooltipData(element);
         if (!tooltipData || !tooltipData.name) return;
-
         const tooltip = document.createElement('div');
         tooltip.id = 'id-tooltip';
         tooltip.textContent = tooltipData.name;
-
-        // Position off-screen initially to get accurate dimensions
         tooltip.style.position = 'fixed';
         tooltip.style.top = '-9999px';
         tooltip.style.left = '-9999px';
         tooltip.style.opacity = '0';
-
         document.body.appendChild(tooltip);
         elements.idTooltip = tooltip;
-
         requestAnimationFrame(() => {
             const rect = element.getBoundingClientRect();
             const tooltipRect = tooltip.getBoundingClientRect();
-
-            // Calculate ideal position (centered above the element)
             let top = rect.top - tooltipRect.height - 8;
             let left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
-
-            // Boundary checks and adjustments
             const margin = 8;
             const viewportWidth = window.innerWidth;
             const viewportHeight = window.innerHeight;
-
             if (top < margin) {
                 top = rect.bottom + 8;
             }
@@ -1964,13 +1912,11 @@ function setupEventListeners() {
             }
             left = Math.max(margin, Math.min(left, viewportWidth - tooltipRect.width - margin));
             top = Math.max(margin, Math.min(top, viewportHeight - tooltipRect.height - margin));
-
             tooltip.style.top = `${top}px`;
             tooltip.style.left = `${left}px`;
             tooltip.style.opacity = '1';
         });
     };
-
     const hideTooltip = () => {
         clearTimeout(tooltipTimer);
         const tooltip = getTooltipElement();
@@ -1979,8 +1925,6 @@ function setupEventListeners() {
             elements.idTooltip = null;
         }
     };
-
-    // Listen for hover on both .id-item and .ego-item everywhere
     document.body.addEventListener('mouseover', (e) => {
         const targetElement = e.target.closest('.id-item, .ego-item');
         if (targetElement) {
@@ -1995,6 +1939,96 @@ function setupEventListeners() {
         }
     });
     window.addEventListener('scroll', hideTooltip, true);
+    
+    // --- START: NEW LISTENERS FOR ANALYZER & MENU ---
+    elements.goToAnalyzer.addEventListener('click', () => switchView('analyzerPage'));
+    elements.backToMainAnalyzer.addEventListener('click', () => switchView('mainPage'));
+
+    // Handle the new main menu buttons
+    elements.createLobbyMainBtn.addEventListener('click', () => {
+        const playerName = validateAndTrimInput(elements.playerNameInput.value, 'your name');
+        if (!playerName) {
+            return; // Stop if name is empty
+        }
+        const options = {
+            name: playerName,
+            draftLogic: elements.draftLogicSelect.value,
+            matchType: elements.matchTypeSelect.value,
+            timerEnabled: elements.timerToggle.value === 'true',
+            rosterSize: elements.rosterSizeSelect.value
+        };
+        sendMessage({ type: 'createLobby', options });
+    });
+    elements.joinLobbyMainBtn.addEventListener('click', () => {
+        const playerName = validateAndTrimInput(elements.playerNameInput.value, 'your name');
+        if (!playerName) {
+            return; // Stop if name is empty
+        }
+        const lobbyCode = validateAndTrimInput(elements.lobbyCodeInputMain.value, 'lobby code');
+        if (lobbyCode) {
+            sendMessage({ type: 'getLobbyInfo', lobbyCode: lobbyCode.toUpperCase() });
+        }
+    });
+
+    // Event listener for the new EXPORT button
+    elements.exportDraftBtn.addEventListener('click', () => {
+        try {
+            const draftData = {
+                participants: {
+                    p1: { name: state.participants.p1.name },
+                    p2: { name: state.participants.p2.name }
+                },
+                roster: state.roster,
+                draft: state.draft
+            };
+            const jsonString = JSON.stringify(draftData);
+            const exportCode = btoa(jsonString); // Encode to Base64
+            
+            navigator.clipboard.writeText(exportCode).then(() => {
+                showNotification("Draft export code copied to clipboard!");
+            }).catch(err => {
+                console.error('Failed to copy export code:', err);
+                showNotification("Failed to copy. Please copy the code manually from the console.", true);
+                console.log("EXPORT CODE:", exportCode);
+            });
+        } catch (error) {
+            console.error("Error exporting draft:", error);
+            showNotification("Could not generate export code.", true);
+        }
+    });
+
+    // Event listener for the new ANALYZE button
+    elements.analyzeDraftBtn.addEventListener('click', () => {
+        const importCode = elements.draftImportCode.value.trim();
+        if (!importCode) {
+            showNotification("Please paste an export code.", true);
+            return;
+        }
+        try {
+            const jsonString = atob(importCode); // Decode from Base64
+            const importedData = JSON.parse(jsonString);
+
+            // Validate the imported data structure
+            if (!importedData.participants || !importedData.roster || !importedData.draft) {
+                throw new Error("Invalid or corrupted draft data.");
+            }
+
+            // Update the global state with the imported data
+            state.participants.p1.name = importedData.participants.p1.name;
+            state.participants.p2.name = importedData.participants.p2.name;
+            state.roster = importedData.roster;
+            state.draft = importedData.draft;
+            
+            // Switch to the completed view and render it with the new data
+            switchView('completedView');
+            renderCompletedView();
+            showNotification("Draft analysis loaded successfully!");
+
+        } catch (error) {
+            console.error("Error analyzing draft code:", error);
+            showNotification("Invalid or corrupted export code. Could not load draft.", true);
+        }
+    });
 }
 
 function createFilterBarHTML(options = {}) {
@@ -2317,13 +2351,23 @@ function cacheDOMElements() {
         globalFilterBarBuilder: document.getElementById('global-filter-bar-builder'),
         globalFilterBarDraft: document.getElementById('global-filter-bar-draft'),
 
-        // Inside the `elements` object in the cacheDOMElements function
-        // Add these new properties
+        //
         timelineWrapper: document.getElementById('timeline-wrapper'),
         timelineRosterP1: document.getElementById('timeline-roster-p1-grid'),
         timelineRosterP2: document.getElementById('timeline-roster-p2-grid'),
         timelineRosterP1Name: document.getElementById('timeline-roster-p1-name'),
         timelineRosterP2Name: document.getElementById('timeline-roster-p2-name'),
+
+         // anaylzer
+        analyzerPage: document.getElementById('analyzer-page'),
+        backToMainAnalyzer: document.getElementById('back-to-main-analyzer'),
+        goToAnalyzer: document.getElementById('go-to-analyzer'),
+        draftImportCode: document.getElementById('draft-import-code'),
+        analyzeDraftBtn: document.getElementById('analyze-draft-btn'),
+        exportDraftBtn: document.getElementById('export-draft-btn'),
+        createLobbyMainBtn: document.getElementById('create-lobby-main'),
+        joinLobbyMainBtn: document.getElementById('join-lobby-main'),
+        lobbyCodeInputMain: document.getElementById('lobby-code-input-main'),
 
         // Dynamic tooltip element (will be created/destroyed)
         idTooltip: null
