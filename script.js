@@ -1742,7 +1742,6 @@ function setupEventListeners() {
         window.location.reload();
     };
     elements.restartDraft.addEventListener('click', clearSessionAndReload);
-    });
     
     // Lobby Roster Controls
     ['p1', 'p2'].forEach(player => {
