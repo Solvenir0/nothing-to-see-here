@@ -243,6 +243,7 @@ const idCsvData = `Name,Keywords,SinAffinities,Rarity
 "Lobotomy E.G.O::Solemn Lament Yi Sang","Ammo,Sinking","Pride,Gloom,Sloth","000"
 "Liu Association South Section 3 Yi Sang","Burn","Sloth,Wrath,Envy","000"
 "N Corp. E.G.O::Fell Bullet Yi Sang","Bleed,Poise","Wrath,Lust,Pride","000"
+"Heishou Pack - Wu Branch Adept Yi Sang","Aggro,Rupture,Tremor","Sloth,Envy,Gluttony","000"
 "W Corp. L2 Cleanup Agent Faust","Charge","Envy,Gloom,Wrath","00"
 "Lobotomy Corp. Remnant Faust","Poise,Rupture","Sloth,Gloom,Envy","000"
 "Zwei Association South Section 4 Faust","Aggro","Envy,Gloom,Lust","00"
@@ -344,6 +345,7 @@ const idCsvData = `Name,Keywords,SinAffinities,Rarity
 "Devyat' Association North Section 3 Sinclair","Rupture","Lust,Gluttony,Wrath","000"
 "The Middle Little Brother Sinclair","Aggro,Bleed","Lust,Gluttony,Wrath","000"
 "The Thumb East Soldato II Sinclair","Ammo,Burn,Tremor","Lust,Sloth,Wrath","000"
+"Heishou Pack - You Branch Sinclair","Burn,Rupture","Lust,Gluttony,Wrath","000"
 "Blade Lineage Salsu Outis","Poise","Wrath,Lust,Pride","00"
 "G Corp. Head Manager Outis","Sinking","Sloth,Gluttony,Gloom","00"
 "Cinq Association South Section 4 Outis","Aggro,Poise","Pride,Gloom,Lust","00"
@@ -1097,3 +1099,4 @@ setInterval(cleanupInactiveLobbies, 30 * 60 * 1000);
 
 const PORT = process.env.PORT || 8080;
 server.listen(PORT, () => logInfo('SERVER', `Server started and listening on port ${PORT}`));
+
