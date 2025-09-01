@@ -388,9 +388,25 @@ function getEgoDisplayName(egoData) {
         return egoData.name; // Return full English name with sinner
     }
     
-    // Get Korean name if available, otherwise fall back to English
-    const koreanName = koreanEgoNames[egoData.egoName] || egoData.egoName;
-    return `${koreanName} (${egoData.sinner})`;
+    // Extract the EGO name without the sinner part
+    const fullName = egoData.name;
+    const sinnerMatch = fullName.match(/^(.+?)\s*\(([^)]+)\)$/);
+    
+    if (sinnerMatch) {
+        const egoNameOnly = sinnerMatch[1].trim();
+        const sinnerName = sinnerMatch[2];
+        
+        // Get Korean EGO name if available, otherwise use English
+        const koreanEgoName = koreanEgoNames[egoNameOnly] || egoNameOnly;
+        
+        // Get Korean sinner name if available, otherwise use English
+        const koreanSinnerName = koreanSinnerNames[sinnerName] || sinnerName;
+        
+        return `${koreanEgoName} (${koreanSinnerName})`;
+    }
+    
+    // If no sinner name found, just return the name as is
+    return egoData.name;
 }
 
 // ======================
@@ -601,27 +617,6 @@ function createIdElement(idData, options = {}) {
 // ======================
 // EGO DISPLAY FUNCTIONS
 // ======================
-function getEgoDisplayName(egoData) {
-    // Only show Korean name if Korean mode is enabled and a Korean name exists
-    if (state.koreanMode && koreanEgoNames[egoData.name]) {
-        // Extract the sinner name in parentheses from the original name
-        const sinnerMatch = egoData.name.match(/\(([^)]+)\)$/);
-        if (sinnerMatch) {
-            const sinnerName = sinnerMatch[1];
-            const koreanName = koreanEgoNames[egoData.name];
-            
-            // Use Korean sinner name if available, otherwise use English
-            const displaySinnerName = koreanSinnerNames[sinnerName] || sinnerName;
-            return `${koreanName} (${displaySinnerName})`;
-        } else {
-            // No sinner name in parentheses, just return Korean EGO name
-            return koreanEgoNames[egoData.name];
-        }
-    }
-    
-    // Default to English name
-    return egoData.name;
-}
 
 function createEgoElement(egoData, options = {}) {
     const { clickHandler, isHovered } = options;
@@ -2009,6 +2004,10 @@ function setupEventListeners() {
             // Re-render completed view if visible
             if (state.currentView === 'completedView') {
                 renderCompletedView();
+            }
+            // Re-render draft instructions to update any EGO names there
+            if (state.currentView === 'draftPhase') {
+                updateDraftInstructions();
             }
             showNotification(`EGO names switched to ${state.koreanMode ? 'Korean' : 'English'}`);
         });
