@@ -10,6 +10,26 @@ const zayinBanExceptions = [
     "Legerdemain (Gregor)"
 ];
 
+// ======================
+// CLIENT-SIDE SETTINGS
+// ======================
+function loadKoreanModeFromStorage() {
+    try {
+        const saved = localStorage.getItem('limbusKoreanMode');
+        return saved === 'true';
+    } catch (e) {
+        return false; // Default to English if localStorage fails
+    }
+}
+
+function saveKoreanModeToStorage(enabled) {
+    try {
+        localStorage.setItem('limbusKoreanMode', enabled.toString());
+    } catch (e) {
+        console.warn('Could not save Korean mode preference:', e);
+    }
+}
+
 // Timing constants (in milliseconds)
 const TIMING = {
     NOTIFICATION_HIDE_DELAY: 3000,
@@ -82,6 +102,7 @@ const state = {
     filters: { sinner: "", sinAffinity: "", keyword: "", rosterSearch: "" },
     draftFilters: { sinner: "", sinAffinity: "", keyword: "", rosterSearch: "" },
     egoSearch: "",
+    koreanMode: loadKoreanModeFromStorage(), // Korean language toggle for EGO names (client-side only)
     timerInterval: null,
     keepAliveInterval: null,
     lastCountdownSecond: null, // Track last played countdown second to prevent duplicates
@@ -352,11 +373,24 @@ function parseEGOData(data) {
         
         egoList.push({
             id: createSlug(`${name} ${sinner}`),
-            name: `${name} (${sinner})`, sinner, rarity, sin, color,
+            name: `${name} (${sinner})`, 
+            egoName: name, // Store the EGO name without sinner for Korean translation
+            sinner, rarity, sin, color,
             cssColor: bgColorMap[color] || 'rgba(128, 128, 128, 0.7)'
         });
     });
     return egoList;
+}
+
+// Helper function to get display name (English or Korean)
+function getEgoDisplayName(egoData) {
+    if (!state.koreanMode) {
+        return egoData.name; // Return full English name with sinner
+    }
+    
+    // Get Korean name if available, otherwise fall back to English
+    const koreanName = koreanEgoNames[egoData.egoName] || egoData.egoName;
+    return `${koreanName} (${egoData.sinner})`;
 }
 
 // ======================
@@ -564,6 +598,31 @@ function createIdElement(idData, options = {}) {
     return idElement;
 }
 
+// ======================
+// EGO DISPLAY FUNCTIONS
+// ======================
+function getEgoDisplayName(egoData) {
+    // Only show Korean name if Korean mode is enabled and a Korean name exists
+    if (state.koreanMode && koreanEgoNames[egoData.name]) {
+        // Extract the sinner name in parentheses from the original name
+        const sinnerMatch = egoData.name.match(/\(([^)]+)\)$/);
+        if (sinnerMatch) {
+            const sinnerName = sinnerMatch[1];
+            const koreanName = koreanEgoNames[egoData.name];
+            
+            // Use Korean sinner name if available, otherwise use English
+            const displaySinnerName = koreanSinnerNames[sinnerName] || sinnerName;
+            return `${koreanName} (${displaySinnerName})`;
+        } else {
+            // No sinner name in parentheses, just return Korean EGO name
+            return koreanEgoNames[egoData.name];
+        }
+    }
+    
+    // Default to English name
+    return egoData.name;
+}
+
 function createEgoElement(egoData, options = {}) {
     const { clickHandler, isHovered } = options;
     const egoElement = document.createElement('div');
@@ -577,9 +636,10 @@ function createEgoElement(egoData, options = {}) {
     egoElement.dataset.id = egoData.id;
     egoElement.style.borderLeftColor = egoData.cssColor;
 
+    const displayName = getEgoDisplayName(egoData);
     egoElement.innerHTML = `
         <div class="ego-header"><span class="ego-rarity">${egoData.rarity}</span></div>
-        <div class="ego-name">${egoData.name}</div>`;
+        <div class="ego-name">${displayName}</div>`;
     
     if (clickHandler && !isBanned) {
         egoElement.addEventListener('click', () => clickHandler(egoData.id));
@@ -922,7 +982,8 @@ function renderBannedEgosDisplay() {
             const item = document.createElement('div');
             item.className = 'banned-ego-item';
             item.style.backgroundColor = ego.cssColor;
-            item.innerHTML = `<span class="rarity">[${ego.rarity}]</span> <span class="name">${ego.name}</span>`;
+            const displayName = getEgoDisplayName(ego);
+            item.innerHTML = `<span class="rarity">[${ego.rarity}]</span> <span class="name">${displayName}</span>`;
             container.appendChild(item);
         });
     };
@@ -992,6 +1053,10 @@ function updateDraftUI() {
 
 let isUpdatingDraftInstructions = false;
 
+// Track previous state for turn notifications
+let previousPhase = null;
+let previousCurrentPlayer = null;
+
 function updateDraftInstructions() {
     // Prevent race conditions from multiple simultaneous updates
     if (isUpdatingDraftInstructions) {
@@ -1002,6 +1067,20 @@ function updateDraftInstructions() {
     try {
         let phaseText = "", actionDesc = "";
         const { phase, currentPlayer, action, actionCount, egoBans, hovered, matchType } = state.draft;
+        
+        // Check if this is a new turn for the current user and play notification sound
+        const isPlayerTurn = (state.userRole === currentPlayer);
+        const isActionPhase = ['egoBan', 'ban', 'pick', 'midBan', 'pick2', 'pick_s2'].includes(phase);
+        const isTurnChange = (phase !== previousPhase) || (currentPlayer !== previousCurrentPlayer);
+        
+        if (isPlayerTurn && isActionPhase && isTurnChange && previousPhase !== null) {
+            // It's now the user's turn to act - play notification sound
+            playTurnNotificationSound(phase);
+        }
+        
+        // Update tracking variables
+        previousPhase = phase;
+        previousCurrentPlayer = currentPlayer;
     
     const hub = elements.draftInteractionHub;
     const existingPool = hub.querySelector('.sinner-grouped-roster');
@@ -1012,40 +1091,55 @@ function updateDraftInstructions() {
     switch(phase) {
         case "roster": 
             phaseText = "Roster Selection";
-            actionDesc = `Players select ${state.draft.rosterSize} IDs. Referee starts the draft when both are ready.`;
+            actionDesc = `Select ${state.draft.rosterSize} IDs for your roster, then ready up`;
             break;
         case "coinFlip":
             phaseText = "Coin Flip";
-            actionDesc = "Winner of the coin flip will decide who goes first.";
+            actionDesc = "Winner chooses turn order";
             break;
         case "egoBan":
             const totalEgoBansPerPlayer = (state.draft.egoBanSteps || 10) / 2;
             const bansDoneByCurrentPlayer = egoBans[currentPlayer] ? egoBans[currentPlayer].length : 0;
-            phaseText = `EGO Ban Phase - ${state.participants[currentPlayer].name}'s turn`;
-            actionDesc = `Select and confirm 1 EGO to ban. (${bansDoneByCurrentPlayer}/${totalEgoBansPerPlayer} total for you)`;
+            phaseText = `EGO Ban Phase - ${state.participants[currentPlayer].name}'s Turn`;
+            actionDesc = `Ban 1 EGO (${bansDoneByCurrentPlayer}/${totalEgoBansPerPlayer} bans)`;
             break;
         case "ban":
+            phaseText = `ID Ban Phase - ${state.participants[currentPlayer].name}'s Turn`;
+            const totalBans = 6; // Standard ban count
+            const currentBans = (state.draft.idBans[currentPlayer] || []).length;
+            actionDesc = `Ban ${actionCount} IDs (${currentBans}/${totalBans} bans)`;
+            break;
         case "pick":
+            phaseText = `ID Pick Phase 1 - ${state.participants[currentPlayer].name}'s Turn`;
+            const totalPicks1 = 6;
+            const currentPicks1 = (state.draft.picks[currentPlayer] || []).length;
+            actionDesc = `Pick ${actionCount} IDs (${currentPicks1}/${totalPicks1} picks)`;
+            break;
         case "midBan":
+            phaseText = `Mid-Draft Ban Phase - ${state.participants[currentPlayer].name}'s Turn`;
+            const midBanCount = matchType === 'allSections' ? 4 : 3;
+            const currentMidBans = (state.draft.idBans[currentPlayer] || []).length - 6; // Subtract initial bans
+            actionDesc = `Ban ${actionCount} IDs (${Math.max(0, currentMidBans)}/${midBanCount} mid-bans)`;
+            break;
         case "pick2":
+            phaseText = `ID Pick Phase 2 - ${state.participants[currentPlayer].name}'s Turn`;
+            const totalPicks2 = matchType === 'allSections' ? 12 : 6;
+            const currentPicks2 = (state.draft.picks[currentPlayer] || []).length - 6; // Subtract phase 1 picks
+            actionDesc = `Pick ${actionCount} IDs (${Math.max(0, currentPicks2)}/${totalPicks2} picks)`;
+            break;
         case "pick_s2":
-            let displayAction = phase;
-            if (phase === 'midBan') displayAction = `Mid-Draft Ban (${matchType === 'allSections' ? 4 : 3} each)`;
-            if (phase === 'pick') displayAction = 'Pick Phase 1 (6 each)';
-            if (phase === 'pick2') displayAction = `Pick Phase 2 (${matchType === 'allSections' ? 12 : 6} each)`;
-            if (phase === 'pick_s2') displayAction = 'Pick Phase 3 (Sec 2/3 - 6 each)';
-
-            phaseText = `${displayAction.charAt(0).toUpperCase() + displayAction.slice(1)}`;
-            
-            let actionVerb = (phase.includes('ban')) ? 'ban' : 'pick';
-            actionDesc = `${state.participants[currentPlayer].name} to ${actionVerb} ${actionCount} ID(s)`;
+            phaseText = `Section 2/3 Pick Phase - ${state.participants[currentPlayer].name}'s Turn`;
+            const totalS2Picks = 6;
+            const currentS2Picks = (state.draft.picks_s2[currentPlayer] || []).length;
+            actionDesc = `Pick ${actionCount} Section 2/3 IDs (${currentS2Picks}/${totalS2Picks} picks)`;
             break;
         case "complete":
-            phaseText = "Draft Completed!";
-            actionDesc = "All picks and bans are finalized.";
+            phaseText = "Draft Complete";
+            actionDesc = "All selections finalized";
             break;
         default:
-            phaseText = "Waiting for draft to start...";
+            phaseText = "Waiting for Draft to Start";
+            actionDesc = "Waiting for referee to start";
     }
 
     if (['ban', 'pick', 'midBan', 'pick2', 'pick_s2'].includes(phase)) {
@@ -1122,18 +1216,18 @@ function displayCoinFlipResultAndChoices() {
         elements.turnChoiceButtons.classList.add('hidden');
     } else {
         elements.coinIcon.classList.remove('flipping');
-        elements.coinFlipStatus.textContent = `${winnerName} wins the toss!`;
+        elements.coinFlipStatus.textContent = `${winnerName} wins! Choose turn order`;
         
         const canChoose = state.userRole === coinFlipWinner || state.userRole === 'ref';
 
         if (canChoose) {
             elements.turnChoiceButtons.classList.remove('hidden');
             if (state.userRole === 'ref' && state.userRole !== coinFlipWinner) {
-                 elements.coinFlipStatus.innerHTML = `${winnerName} wins the toss!<br><small>Waiting for them to choose (or you can choose for them).</small>`;
+                 elements.coinFlipStatus.innerHTML = `${winnerName} wins! Choose turn order<br><small>Waiting for them to choose (or you can choose for them).</small>`;
             }
         } else {
             elements.turnChoiceButtons.classList.add('hidden');
-            elements.coinFlipStatus.textContent += `\nWaiting for the turn order to be decided...`;
+            elements.coinFlipStatus.textContent = `${winnerName} wins! Waiting for choice...`;
         }
     }
 }
@@ -1473,6 +1567,71 @@ function playFallbackBeep(secondsRemaining) {
         audio.play().catch(e => console.log('Fallback audio failed:', e));
     } catch (error) {
         console.error('Fallback audio error:', error);
+    }
+}
+
+// Function to play turn notification sounds
+function playTurnNotificationSound(phase) {
+    try {
+        // Create audio context for notification sounds
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // Resume audio context if it's suspended (browser policy)
+        if (audioContext.state === 'suspended') {
+            audioContext.resume().then(() => {
+                playTurnBeep(audioContext, phase);
+            });
+        } else {
+            playTurnBeep(audioContext, phase);
+        }
+    } catch (error) {
+        console.error('Turn notification audio error:', error);
+        // Fallback: try HTML5 audio
+        playFallbackTurnBeep(phase);
+    }
+}
+
+function playTurnBeep(audioContext, phase) {
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    // Different sounds for different phases
+    if (phase.includes('ban') || phase === 'egoBan') {
+        // Ban phases: Lower, more serious tone (double beep)
+        oscillator.frequency.setValueAtTime(400, audioContext.currentTime);
+        oscillator.frequency.setValueAtTime(500, audioContext.currentTime + 0.15);
+        oscillator.type = 'sine';
+        gainNode.gain.setValueAtTime(0.15, audioContext.currentTime);
+        gainNode.gain.setValueAtTime(0.05, audioContext.currentTime + 0.1);
+        gainNode.gain.setValueAtTime(0.15, audioContext.currentTime + 0.15);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
+        
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.4);
+    } else {
+        // Pick phases: Higher, more pleasant tone (single beep)
+        oscillator.frequency.setValueAtTime(600, audioContext.currentTime);
+        oscillator.type = 'sine';
+        gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.25);
+        
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.25);
+    }
+}
+
+function playFallbackTurnBeep(phase) {
+    // Simple fallback beep
+    try {
+        const audioData = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmAbBj2Y2+/XfS4EOIX+/L1mHgU7k9H0wn0uBSGG5P+pYhQKT6jc84ZhNAU7k9H0wn0uBS'; 
+        const audio = new Audio(audioData);
+        audio.volume = 0.15;
+        audio.play().catch(e => console.log('Turn notification audio failed:', e));
+    } catch (error) {
+        console.error('Fallback turn notification audio error:', error);
     }
 }
 
@@ -1831,6 +1990,29 @@ function setupEventListeners() {
         state.egoSearch = e.target.value;
         debouncedRenderEgoBanPhase();
     });
+
+    // Korean Language Toggle (Client-side only)
+    if (elements.koreanToggle) {
+        // Set initial state from localStorage
+        elements.koreanToggle.checked = state.koreanMode;
+        
+        elements.koreanToggle.addEventListener('change', (e) => {
+            state.koreanMode = e.target.checked;
+            saveKoreanModeToStorage(state.koreanMode);
+            
+            // Re-render any visible ego lists to update names
+            if (state.currentView === 'draftPhase' && state.draft.phase === 'egoBan') {
+                renderEgoBanPhase();
+            }
+            // Re-render banned EGOs display if visible
+            renderBannedEgosDisplay();
+            // Re-render completed view if visible
+            if (state.currentView === 'completedView') {
+                renderCompletedView();
+            }
+            showNotification(`EGO names switched to ${state.koreanMode ? 'Korean' : 'English'}`);
+        });
+    }
 
     // Draft controls
     elements.startCoinFlip.addEventListener('click', () => sendMessage({ type: 'startCoinFlip', lobbyCode: state.lobbyCode }));
@@ -2221,6 +2403,7 @@ function cacheDOMElements() {
         matchTypeSelect: document.getElementById('match-type-select'),
         timerToggle: document.getElementById('timer-toggle'),
         rosterSizeSelect: document.getElementById('roster-size-select'),
+        koreanToggle: document.getElementById('korean-display-toggle'),
         showRulesBtn: document.getElementById('show-rules-btn'),
         lobbyCodeInput: document.getElementById('lobby-code-input'),
         enterLobbyByCode: document.getElementById('enter-lobby-by-code'),

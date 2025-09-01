@@ -1,3 +1,124 @@
+// Korean EGO Name Mappings
+// Instructions: Add Korean translations for EGO names here
+// Format: "English EGO Name": "Korean EGO Name"
+// Only the EGO name part will be translated - sinner names and rarities remain unchanged
+// Example: "Magic Bullet (Outis)" will become "마탄의 사수 (Outis)" when Korean mode is enabled
+const koreanEgoNames = {
+    // ==========================================
+    // COMPLETE EGO LIST - Ready for Korean Names
+    // Just replace the "" with Korean translations
+    // ==========================================
+    
+    // Yi Sang EGOs
+    "Crow's Eye View": "오감도",
+    "Bygone Days": "지난 날",
+    "4th Match Flame": "4번째 성냥불",
+    "Wishing Cairn": "소망석",
+    "Dimension Shredder": "차원찢개",
+    "Fell Bullet": "흉탄",
+    "Sunshower": "여우비",
+    
+    // Faust EGOs
+    "Representation Emitter": "표상 방출기",
+    "Hex Nail": "저주못",
+    "9:2": "9장 2절",
+    "Lasso": "올가미",
+    "Fluid Sac": "물주머니",
+    "Telepole": "전봇대",
+    "Thoracalgia": "흉통",
+    "Everlasting": "영속",
+    
+    // Don Quixote EGOs
+    "La Sangre de Sancho": "라 샹그레 데 산쵸",
+    "Lifetime Stew": "평생 스튜",
+    "Electric Screaming": "전기울음",
+    "Red Sheet": "홍적",
+    "Yearning-Mircalla": "갈망 - 미르칼라",
+    "In the Name of Love and Hate": "사랑과 증오의 이름으로",
+    
+    // Ryōshū EGOs
+    "Forest for the Flames": "삼라염상",
+    "Soda": "소다",
+    "Red Eyes": "적안",
+    "Blind Obsession": "맹목",
+    "Red Eyes (Open)": "적안(開)",
+    "Contempt, Awe": "경멸, 경외",
+    
+    // Meursault EGOs
+    "Chains of Others": "타인의 사슬",
+    "Screwloose Wallop": "나사빠진 일격",
+    "Regret": "후회",
+    "Pursuance": "집행",
+    "Capote": "카포테",
+    "Crushbound Past": "분쇄될 과거",
+    
+    // Hong Lu EGOs
+    "Land of Illusion": "허환경",
+    "Roseate Desire": "분홍욕망",
+    "Cavernous Wailing": "낮은울음",
+    "Effervescent Corrosion": "들끓는 부식",
+    "Tears of the Tarnished Blood [汚血泣淚]": "오혈읍루 [汚血泣淚]",
+    
+    // Heathcliff EGOs
+    "Bodysack": "시체자루",
+    "Holiday": "홀리데이",
+    "AEDD": "AEDD",
+    "Ya Śūnyatā Tad Rūpam": "공즉시색",
+    "Asymmetrical Inertia": "쏠린 관성",
+    "Binds": "구속",
+    
+    // Ishmael EGOs
+    "Snagharpoon": "작살박이",
+    "Hundred-Footed Death Maggot [蝍蛆殺]": "즉저살 [蝍蛆殺]",
+    "Ardor Blossom Star": "홍염살",
+    "Wingbeat": "날갯짓",
+    "Christmas Nightmare": "크리스마스 악몽",
+    
+    // Rodion EGOs
+    "What is Cast": "던져지는 것",
+    "Rime Shank": "얼음다리",
+    "Sanguine Desire": "핏빛욕망",
+    "Indicant's Trial": "지정 재판",
+    
+    // Sinclair EGOs
+    "Branch of Knowledge": "지식나무의 가지",
+    "Impending Day": "다가올날",
+    "Lantern": "초롱",
+    
+    // Outis EGOs
+    "To Páthos Máthos": "토 파토스 마토스",
+    "Ebony Stem": "검은줄기",
+    "Magic Bullet": "마탄",
+    
+    // Gregor EGOs
+    "Suddenly, One Day": "어느날 갑자기",
+    "Legerdemain": "눈속임",
+    "Solemn Lament": "엄숙한 애도",
+    "Garden of Thorns": "가시 화원",
+    
+};
+
+// ==========================================
+// KOREAN SINNER NAMES
+// Add Korean translations for sinner names here
+// Format: "English Name": "Korean Name"
+// ==========================================
+const koreanSinnerNames = {
+    // Add Korean sinner name translations here:
+    // "Yi Sang": "",
+    // "Faust": "",
+    // "Don Quixote": "",
+    // "Ryōshū": "",
+    // "Meursault": "",
+    // "Hong Lu": "",
+    // "Heathcliff": "",
+    // "Ishmael": "",
+    // "Rodion": "",
+    // "Sinclair": "",
+    // "Outis": "",
+    // "Gregor": "",
+};
+
 const idCsvData = `Name,Keywords,SinAffinities,Rarity
 "Seven Association South Section 6 Yi Sang","Rupture","Gloom,Gluttony,Sloth","00"
 "Molar Office Fixer Yi Sang","Discard,Tremor","Lust,Sloth,Wrath","00"
@@ -210,7 +331,7 @@ Effervescent Corrosion Rodion - TETH - Gluttony - Green
 4th Match Flame Rodion - HE - Wrath - Red
 Pursuance Rodion - HE - Sloth - Yellow
 Hex Nail Rodion - HE - Envy - Purple
-Sanguine Desire Rodion - HE - Lust - Orange
+Sanguine Desire Rodion - WAW - Lust - Orange
 Indicant's Trial Rodion - WAW - Wrath - Red
 Branch of Knowledge Sinclair - ZAYIN - Gluttony - Green
 Cavernous Wailing Sinclair - ZAYIN - Gloom - Blue
