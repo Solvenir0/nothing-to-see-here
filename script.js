@@ -931,7 +931,8 @@ function renderEgoBanPhase() {
         const item = document.createElement('div');
         item.className = 'banned-ego-item';
         item.style.borderLeft = `3px solid ${ego.cssColor}`;
-        item.innerHTML = `<span class="rarity">[${ego.rarity}]</span> <span class="name" style="text-decoration: none;">${ego.name}</span>`;
+        const displayName = getEgoDisplayName(ego);
+        item.innerHTML = `<span class="rarity">[${ego.rarity}]</span> <span class="name" style="text-decoration: none;">${displayName}</span>`;
         bansContainer.appendChild(item);
     });
     
@@ -959,7 +960,8 @@ function renderEgoBanPhase() {
             const item = document.createElement('div');
             item.className = 'banned-ego-item';
             item.style.backgroundColor = ego.cssColor;
-            item.innerHTML = `<span class="rarity">[${ego.rarity}]</span> <span class="name">${ego.name}</span>`;
+            const displayName = getEgoDisplayName(ego);
+            item.innerHTML = `<span class="rarity">[${ego.rarity}]</span> <span class="name">${displayName}</span>`;
             listEl.appendChild(item);
         });
     } else {
