@@ -280,6 +280,7 @@ Lasso Faust - TETH - Gluttony - Green
 Fluid Sac Faust - HE - Gloom - Blue
 Telepole Faust - HE - Envy - Purple
 Thoracalgia Faust - HE - Pride - Indigo
+Command : Meltdown Faust - HE - Gluttony - Green
 Everlasting Faust - WAW - Sloth - Yellow
 La Sangre de Sancho Don Quixote - ZAYIN - Lust - Orange
 Lifetime Stew Don Quixote - TETH - Lust - Orange
@@ -313,6 +314,7 @@ Cavernous Wailing Hong Lu - TETH - Sloth - Yellow
 Lasso Hong Lu - TETH - Gluttony - Green
 Dimension Shredder Hong Lu - HE - Pride - Indigo
 Effervescent Corrosion Hong Lu - HE - Gluttony - Green
+To Remain Oneself [宁作吾] Hong Lu - HE - Pride - Indigo
 Tears of the Tarnished Blood [汚血泣淚] Hong Lu - WAW - Gluttony - Green
 Bodysack Heathcliff - ZAYIN - Envy - Purple
 Holiday Heathcliff - ZAYIN - Gluttony - Green
@@ -330,6 +332,7 @@ Bygone Days Ishmael - TETH - Gloom - Blue
 Ardor Blossom Star Ishmael - HE - Wrath - Red
 Wingbeat Ishmael - HE - Gluttony - Green
 Christmas Nightmare Ishmael - HE - Gluttony - Green
+Tidal Elegy Ishmael - HE - Gloom - Blue
 Blind Obsession Ishmael - WAW - Pride - Indigo
 What is Cast Rodion - ZAYIN - Pride - Indigo
 Rime Shank Rodion - TETH - Gloom - Blue
@@ -363,4 +366,5 @@ AEDD Gregor - HE - Gloom - Blue
 Solemn Lament Gregor - HE - Gloom - Blue
 Christmas Nightmare Gregor - HE - Sloth - Yellow
 Garden of Thorns Gregor - WAW - Lust - Orange
+Unbrilliant Glory Gregor - WAW - Sloth - Yellow
 `;
