@@ -356,6 +356,7 @@ const idCsvData = `Name,Keywords,SinAffinities,Rarity
 "The Middle Little Brother Sinclair","Aggro,Bleed","Lust,Gluttony,Wrath","000"
 "The Thumb East Soldato II Sinclair","Ammo,Burn,Tremor","Lust,Sloth,Wrath","000"
 "Heishou Pack - You Branch Sinclair","Burn,Rupture","Lust,Gluttony,Wrath","000"
+"The House of Spiders: The Pinky Apprentice Sinclair","Bleed,Poise","Gloom,Pride,Wrath",000"
 "Blade Lineage Salsu Outis","Poise","Wrath,Lust,Pride","00"
 "G Corp. Head Manager Outis","Sinking","Sloth,Gluttony,Gloom","00"
 "Cinq Association South Section 4 Outis","Aggro,Poise","Pride,Gloom,Lust","00"
