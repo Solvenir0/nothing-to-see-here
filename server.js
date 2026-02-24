@@ -381,6 +381,7 @@ const idCsvData = `Name,Keywords,SinAffinities,Rarity
 "Firefist Office Survivor Gregor","Burn","Lust,Wrath,Wrath","000"
 "Heishou Pack - Si Branch Gregor","Poise,Rupture","Pride,Gluttony,Envy","000"
 "Night Awls Capitano Gregor","Bleed,Tremor","Sloth,Lust,Pride","000"
+"Lobotomy E.G.O::Lamp Gregor","Burn,Sinking","Wrath,Gloom,Pride","000"
 `;
 const masterIDList = parseIDCSV(idCsvData);
 const allIds = Object.freeze(masterIDList.map(item => item.id));
