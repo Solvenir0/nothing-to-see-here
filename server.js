@@ -244,6 +244,7 @@ const idCsvData = `Name,Keywords,SinAffinities,Rarity
 "Liu Association South Section 3 Yi Sang","Burn","Sloth,Wrath,Envy","000"
 "N Corp. E.G.O::Fell Bullet Yi Sang","Bleed,Poise","Wrath,Lust,Pride","000"
 "Heishou Pack - Wu Branch Adept Yi Sang","Aggro,Rupture,Tremor","Sloth,Envy,Gluttony","000"
+"The House of Spiders: The Index Nursefather Yi Sang","Burn,Poise,Sinking","Gluttony,Pride,Gloom","000"
 "W Corp. L2 Cleanup Agent Faust","Charge","Envy,Gloom,Wrath","00"
 "Lobotomy Corp. Remnant Faust","Poise,Rupture","Sloth,Gloom,Envy","00"
 "Zwei Association South Section 4 Faust","Aggro","Envy,Gloom,Lust","00"
@@ -281,6 +282,7 @@ const idCsvData = `Name,Keywords,SinAffinities,Rarity
 "Heishou Pack - Mao Branch Ryōshū","Rupture","Lust,Gluttony,Pride","000"
 "N Corp. E.G.O::Contempt, Awe Ryōshū","Bleed,Tremor","Envy,Wrath,Lust","000"
 "Drifting Blade of Hongyuan Ryōshū","Poise,Rupture","Gloom,Gluttony,Pride","000"
+"Lobotomy E.G.O::Faint Aroma & Solitude Ryōshū","Ammo,Sinking,Tremor","Sloth,Envy,Gloom","000"
 "Liu Association South Section 6 Meursault","Burn","Lust,Sloth,Wrath","00"
 "Rosespanner Workshop Fixer Meursault","Charge,Tremor","Gloom,Pride,Sloth","00"
 "The Middle Little Brother Meursault","Bleed","Sloth,Envy,Wrath","00"
@@ -293,6 +295,7 @@ const idCsvData = `Name,Keywords,SinAffinities,Rarity
 "Cinq Association West Section 3 Meursault","Poise,Rupture","Pride,Gluttony,Gloom","000"
 "The Thumb East Capo IIII Meursault","Ammo,Burn,Tremor","Sloth,Lust,Wrath","000"
 "The Prince of La Manchaland Meursault","Bleed,Rupture","Envy,Pride,Lust","000"
+"Lobotomy E.G.O::Hornet【Alteration】Meursault","Ammo,Bleed,Burn","Lust,Wrath,Wrath","000"
 "Kurokumo Clan Wakashu Hong Lu","Bleed","Lust,Pride,Sloth","00"
 "Liu Association South Section 5 Hong Lu","Burn","Gloom,Lust,Wrath","00"
 "W Corp. L2 Cleanup Agent Hong Lu","Charge,Rupture","Pride,Wrath,Gluttony","00"
@@ -330,6 +333,7 @@ const idCsvData = `Name,Keywords,SinAffinities,Rarity
 "Kurokumo Clan Captain Ishmael","Bleed","Envy,Pride,Lust","000"
 "Family Hierarch Candidate Ishmael","Poise,Rupture","Gloom,Gluttony,Envy","000"
 "Jeong's Office Rep Ishmael","Discard,Sinking,Tremor","Wrath,Sloth,Gloom,Envy","000"
+"The House of Spiders: The Middle Apprentice Ishmael","Aggro,Bleed,Burn","Lust,Wrath,Envy","000"
 "LCCB Assistant Manager Rodion","","Pride,Gluttony,Envy","00"
 "N Corp. Mittelhammer Rodion","Bleed","Pride,Lust,Wrath","00"
 "Zwei Association South Section 5 Rodion","Aggro,Poise","Wrath,Sloth,Gloom","00"
@@ -383,6 +387,7 @@ const idCsvData = `Name,Keywords,SinAffinities,Rarity
 "Heishou Pack - Si Branch Gregor","Poise,Rupture","Pride,Gluttony,Envy","000"
 "Night Awls Capitano Gregor","Bleed,Tremor","Sloth,Lust,Pride","000"
 "Lobotomy E.G.O::Lamp Gregor","Burn,Sinking","Wrath,Gloom,Pride","000"
+"LCE E.G.O::AEDD Gregor","Charge,Rupture","Gluttony,Gloom,Envy","000"
 `;
 const masterIDList = parseIDCSV(idCsvData);
 const allIds = Object.freeze(masterIDList.map(item => item.id));
