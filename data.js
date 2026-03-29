@@ -80,7 +80,7 @@ const koreanEgoNames = {
     "Sanguine Desire": "핏빛욕망",
     "Indicant's Trial": "지정 재판",
     
-    // Sinclair EGOs
+    // ir EGOs
     "Branch of Knowledge": "지식나무의 가지",
     "Impending Day": "다가올날",
     "Lantern": "초롱",
@@ -249,7 +249,7 @@ const idCsvData = `Name,Keywords,SinAffinities,Rarity
 "The Middle Little Brother Sinclair","Aggro,Bleed","Lust,Gluttony,Wrath","000"
 "The Thumb East Soldato II Sinclair","Ammo,Burn,Tremor","Lust,Sloth,Wrath","000"
 "Heishou Pack - You Branch Sinclair","Burn,Rupture","Lust,Gluttony,Wrath","000"
-"The House of Spiders: The Pinky Apprentice Sinclair","Bleed,Poise","Gloom,Pride,Wrath",000"
+"The House of Spiders: The Pinky Apprentice Sinclair","Bleed,Poise","Gloom,Pride,Wrath","000"
 "Blade Lineage Salsu Outis","Poise","Wrath,Lust,Pride","00"
 "G Corp. Head Manager Outis","Sinking","Sloth,Gluttony,Gloom","00"
 "Cinq Association South Section 4 Outis","Aggro,Poise","Pride,Gloom,Lust","00"
