@@ -209,4 +209,175 @@ Keep-alive: client sends `keepAlive` every 4 min while in active draft phases; s
 - **Shared ID data**: `idCsvData` exists in `data.js` (client) and is separately mirrored server-side in `idData.js`; long-term these should share a single `ids.csv`
 - `client/js/handlers/eventHandlers.js` is 621 lines — only file above the 400-line target; candidate for splitting if it grows further
 
+---
+
+## Feature Roadmap
+
+### 1. CSS Design System ✅
+- `client/css/design-system.css` — annotated reference: all tokens, component classes, naming rules, do/don't guide
+- `styleguide.html` — dev-only rendered preview of every component; open at `http://localhost:8080/styleguide.html`
+- Naming convention: flat utility base + modifier (`.btn`, `.btn-primary`); new tool pages prefix classes (`.calc-`, `.team-`, `.skill-`, `.enemy-`, `.turn-`)
+
+---
+
+### 2. Slug Generation Robustness ✅
+- Both `createSlug()` copies (server + client) are **in sync** — identical transformations, verified.
+- Fixed CSV typo in `data.js` and `server/utils/idData.js`: missing opening `"` on Pinky Apprentice Sinclair's rarity field, which caused that row to be skipped during parsing.
+- `scripts/audit-slugs.js` — run `npm run audit:slugs`; exits 0 if all 157 IDs match an image in `uploads/`. Reports MISSING (slug has no image), ORPHANED (image has no ID), and COLLISION (duplicate slugs).
+- Single source of truth: both CSV copies must be kept manually in sync; no bundler in this project, so a shared module is not viable without one. When adding new IDs, update **both** `data.js` (client) and `server/utils/idData.js` (server), then re-run `npm run audit:slugs`.
+
+---
+
+### 3. Robust Identity Database
+Expanded ID data model to include skill descriptions, status effects, and level/uptie scaling. **Data to be provided by user.**
+- Design the schema first — extend the existing CSV or move to JSON:
+  ```js
+  {
+    id: string,          // slug
+    name: string,
+    sinner: string,
+    rarity: '00'|'000',
+    skills: [
+      { name, type, basePower, coinCount, coinPower, effects: string[] }
+    ],
+    passives: [{ name, activation, description }],
+    uptieScaling: { 1: {...}, 2: {...}, 3: {...}, 4: {...} }
+  }
+  ```
+- Build a parser/loader that merges the existing CSV (for draft compatibility) with the new JSON data
+- Keep the draft system reading from the lean CSV; richer data only loaded in tools that need it
+- New file target: `data/ids.json` (or `data/ids/[sinner].json` if per-sinner split is cleaner)
+
+---
+
+### 4. Robust EGO Database + Images
+Expanded EGO data model with images and full metadata. **Data to be provided by user.**
+- Extend current `egoData` (plain text) to structured JSON:
+  ```js
+  {
+    id: string,
+    name: string,
+    sinner: string,
+    rarity: 'ZAYIN'|'TETH'|'HE'|'WAW'|'ALEPH',
+    sinCost: { [sinType]: number },
+    skill: { name, basePower, coinCount, coinPower, effects: string[] },
+    passive: { name, activation, description },
+    imageFile: string    // in uploads/ego/
+  }
+  ```
+- Add `uploads/ego/` directory for EGO portraits
+- Update `parseEGOData()` in `rendering/idElements.js` to consume JSON instead of the raw text format
+- Update `createEgoElement()` in `egoElements.js` to render images if available
+
+---
+
+### 5. Damage Formula Script
+Full implementation of the Limbus Company damage formula. **Reference sheet to be provided by user.**
+- New module: `client/js/tools/damageCalc.js`
+- Inputs (based on known formula structure):
+  - Skill base power, coin count, coin power, heads/tails outcome
+  - Attack level vs defense level differential
+  - Offense/defense level modifiers
+  - Relevant status effects (Burn, Rupture, Bleed stacks etc.)
+  - Clash outcome modifier (if applicable)
+- Output: final damage value with breakdown by component
+- No UI at this stage — pure calculation function, tested independently before wiring to a UI
+
+---
+
+### 6. Enemy Database
+Structured database of enemy units for use in the damage calculator and team builder.
+- New file: `data/enemies.json`
+- Schema:
+  ```js
+  {
+    id: string,
+    name: string,
+    chapter: string,
+    baseDefense: number,
+    defenseLevel: number,
+    resistances: { [sinType]: 'normal'|'fatal'|'endure'|'ineffective'|'immune' },
+    statusImmunities: string[],
+    skills: [{ name, basePower, coinCount, effects: string[] }]
+  }
+  ```
+- New module: `client/js/tools/enemyData.js` — loads and indexes enemy data
+- UI later: searchable enemy list with filter by chapter/type
+
+---
+
+### 7. Turn Damage Calculator
+UI tool that combines the damage formula, ID database, and enemy database to calculate single-turn damage output.
+- New page: `tools/damage-calculator.html` (or a new view within the existing SPA)
+- Inputs:
+  - Select attacking ID + skill slot
+  - Select target enemy
+  - Set coin results (heads/tails per coin)
+  - Set active status effects on attacker and target
+  - Set passive activations (see #10)
+- Output: damage number with formula breakdown
+- **Prerequisite**: items 3, 5, 6 must be complete
+
+---
+
+### 8. Skill Bag Counter
+Each ID contributes a fixed number of skills to the cycle skill pool. This tool counts available skills for a selected team.
+- Input: a roster of up to 4 IDs (team for a node)
+- Output: total skill count per cycle, broken down by sin affinity and type (attack/defense/special)
+- Data needed: skill counts per ID per uptie level (part of item 3's schema)
+- New module: `client/js/tools/skillBag.js`
+- Compact UI — likely a panel within the team builder (item 9)
+
+---
+
+### 9. Comprehensive Team Builder
+Tool for constructing and evaluating a 4-ID team (node lineup) beyond roster selection.
+- Builds on the existing Roster Builder page — add a "Team" mode
+- Features:
+  - Select 4 IDs from a roster or the full pool
+  - Display aggregated sin affinity spread (for passive activation thresholds)
+  - Display skill bag count (item 8)
+  - Show support passives that activate given the team's affinity spread (item 10)
+  - Show damage estimates against a selected enemy (item 7)
+- New module: `client/js/tools/teamBuilder.js`
+- New rendering: `client/js/rendering/teamBuilderView.js`
+
+---
+
+### 10. Support Passive Activation Boxes
+Visual tool showing which support passives activate based on the sin affinities present in a team.
+- Each ID has support passives with activation conditions (e.g. "3 Wrath skill slots in your team")
+- Component: checklist/grid of all support passives for the IDs in the current team, each marked active/inactive based on the team's affinity counts
+- Embedded within the team builder (item 9) as a collapsible panel
+- Data needed: passive activation conditions from the ID database (item 3)
+- New module: `client/js/tools/passiveActivation.js`
+
+---
+
+### 11. Turn State Screen
+Extension of the turn damage calculator — a full turn state input panel that captures all active combat states before calculating damage.
+- Inputs:
+  - All attacker buffs: Poise, Charge, Burn, Bleed, Rupture, Tremor, Sinking, Discard stacks, etc.
+  - All target debuffs and their stack counts
+  - Clash context (clashing vs unopposed)
+  - Coin probability modifier (e.g. Sanity level affecting heads chance)
+  - Any on-hit triggered effects
+- Output feeds directly into the damage formula (item 5) and displays per-hit and total damage
+- **Prerequisite**: item 7 (turn damage calculator) must be wired first; this expands it
+
+---
+
+### Implementation Order (suggested)
+1. **CSS design system** — no data dependency, unblocks all future UI work
+2. **Slug audit script** — quick win, fixes existing broken images
+3. **ID database schema + parser** — foundation for items 7–11
+4. **EGO database** — parallel to #3, same pattern
+5. **Damage formula** — pure logic, no UI needed yet
+6. **Enemy database** — data entry, then skill bag + team builder can start
+7. **Skill bag counter** — small, embeds in team builder
+8. **Team builder** — wires #3, #8, #10 together
+9. **Turn damage calculator** — wires #3, #5, #6
+10. **Turn state screen** — expands #9
+
+
 

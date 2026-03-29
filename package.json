@@ -4,15 +4,20 @@
   "description": "A multiplayer draft tool for Limbus Company.",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev": "nodemon server.js --watch server",
+    "audit:slugs": "node scripts/audit-slugs.js"
   },
   "author": "",
   "license": "ISC",
   "engines": {
-    "node": "18.x || 20.x"
+    "node": "18.x || 20.x || 22.x"
   },
   "dependencies": {
     "express": "^4.18.2",
     "ws": "^8.13.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
   }
 }

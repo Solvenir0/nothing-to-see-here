@@ -1,0 +1,284 @@
+/* ============================================
+   LIMBUS DRAFT HUB — DESIGN SYSTEM REFERENCE
+   ============================================
+   This file is the single source of truth for
+   the visual language. Every new page or feature
+   MUST use these tokens and component classes
+   rather than writing new raw values.
+
+   DO NOT add feature-specific styles here.
+   This file is imported by styleguide.html only —
+   all tokens are already in variables.css which is
+   loaded globally.
+   ============================================ */
+
+
+/* ============================================
+   1. COLOUR TOKENS
+   ============================================
+   All defined in :root inside variables.css.
+   Reference only — do not redefine here.
+
+   Core
+   ─────────────────────────────────────────────
+   --bg            #121212      Page background
+   --panel         #1E1E1E      Cards / panels
+   --secondary     #2a2a2e      Slightly lighter panel
+   --border        #444         Dividers, input borders
+   --text          #F0F0F0      Primary body text
+   #aaa                         Secondary / muted text (use literal)
+   #ccc                         Label / heading text (use literal)
+
+   Brand
+   ─────────────────────────────────────────────
+   --primary       #B31B1B      Default button, error notifications
+   --primary-dark  #800000      Gradient dark end
+   --accent        #FFD700      Gold — headings, active states, focus rings
+   --hover         #ffeb3b      Hovered accent items
+
+   Rarity
+   ─────────────────────────────────────────────
+   --rarity-0      #cccccc      Base rarity (unused in current data)
+   --rarity-00     #B22222      00 rarity (red)
+   --rarity-000    #FFD700      000 rarity (gold)
+
+   Sin Affinities (background colours)
+   ─────────────────────────────────────────────
+   --sin-wrath-bg    rgba(129,44,33,255)
+   --sin-lust-bg     rgba(177,97,46,255)
+   --sin-sloth-bg    rgba(226,136,3,255)
+   --sin-gluttony-bg rgba(106,190,48,255)
+   --sin-gloom-bg    rgba(45,102,116,255)
+   --sin-pride-bg    rgba(22,81,131,255)
+   --sin-envy-bg     rgba(128,0,128,255)
+
+   Status
+   ─────────────────────────────────────────────
+   --connected     #4caf50      Green — connected, ready, success
+   --disconnected  #f44336      Red — error, disconnected
+   --warning       #ff9800      Orange — in-progress, caution
+   --ready         #4caf50      Alias of --connected (ready state)
+   --drafting      #2196F3      Blue — active drafting turn
+   ============================================ */
+
+
+/* ============================================
+   2. TYPOGRAPHY SCALE
+   ============================================
+   Font: 'Inter' (Google Fonts) — weights 400, 700, 900
+   Monospace: 'Courier New' — used in disclaimers / code display
+   Base size: 16px (browser default)
+
+   Class / Element     Size        Weight    Color
+   ─────────────────────────────────────────────────
+   h1                  3.5rem      900       var(--text)
+   h2                  2.2rem      700       var(--accent) + bottom border
+   h3                  1.5rem      400       var(--text)
+   h4                  1.2rem      700       #ccc + bottom border
+   p / body            1.1rem      400       #aaa
+   label               1rem        400       #ccc + uppercase + letter-spacing:1px
+   .filter-label       0.9rem      400       #ccc
+   .btn                1.1rem      700       uppercase + letter-spacing:1px
+   .btn-small          0.9rem      700
+   .btn-large          1.3rem      700
+   ============================================ */
+
+
+/* ============================================
+   3. SPACING & LAYOUT
+   ============================================
+   Base unit: 5px. Use multiples of 5.
+
+   Common values in use:
+   5px   — tight gap (icon + text inside badges)
+   8px   — input padding sides, gap inside filter bar
+   10px  — btn-small padding, small margins
+   15px  — btn padding, filter bar padding
+   20px  — standard section gap, form-group margin
+   30px  — card padding, large section gap
+   40px  — modal padding
+
+   Max content width: 1800px (.container)
+   ============================================ */
+
+
+/* ============================================
+   4. COMPONENT CLASSES
+   ============================================ */
+
+/* --- 4a. Buttons ---
+   Always use .btn as the base. Add one modifier.
+
+   .btn                Default (red gradient)          Primary action
+   .btn.btn-primary    Gold gradient, black text        Confirm / CTA
+   .btn.btn-secondary  Grey gradient                    Cancel / secondary
+   .btn.btn-ready      Green gradient, black text       Ready confirmation
+   .btn.btn-large      Larger padding + font            Hero actions
+   .btn.btn-small      Smaller padding + font           Inline / tight UI
+   .btn:disabled       Auto-handled — do not override
+
+   NEW buttons follow the same pattern:
+   .btn.btn-[name] { background-image: linear-gradient(45deg, [dark], [light]); }
+   ─────────────────────────────────────────────────────────────────────────── */
+
+/* --- 4b. Cards & Panels ---
+   .card               Frosted glass panel (blur + dark bg + subtle border)
+                       Use for any major content section.
+
+   Do NOT use raw background / border-radius on new sections.
+   Wrap content in .card or .action-card instead.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+/* --- 4c. Status Chips ---
+   Used for player ready/drafting states.
+   Always pair a base class with a state modifier: */
+.status-chip {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.status-chip.status-waiting    { background: var(--warning);  color: #000; }
+.status-chip.status-ready      { background: var(--ready);    color: #000; }
+.status-chip.status-drafting   { background: var(--drafting); color: #fff; }
+.status-chip.status-disconnected { background: var(--disconnected); color: #fff; }
+
+/* --- 4d. Notification Toast ---
+   Managed by showNotification() in utils/core.js.
+   Do NOT create custom toasts — call showNotification(text, isError).
+   ─────────────────────────────────────────────────────────────────────────── */
+
+/* --- 4e. Filter Bar ---
+   Use .filter-bar > .filter-group > label + input/select.
+   createFilterBarHTML() in rosterPhase.js generates the standard bar.
+   Only add extra .filter-group entries — do not rebuild the container.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+/* --- 4f. Section Headings ---
+   h2 with var(--accent) border — auto-styled by base.css.
+   h3 for sub-sections — plain var(--text).
+   h4 for labelled groups — #ccc with var(--border) bottom border.
+   Never use coloured text on headings other than var(--accent) on h2.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+/* --- 4g. Phase Sections ---
+   .phase-section      Wraps each phase's UI block inside .card
+                       Hidden by default; shown/hidden by navigation.js
+   ─────────────────────────────────────────────────────────────────────────── */
+
+/* --- 4h. Rarity Badges ---
+   Used on ID and EGO items. */
+.rarity-badge {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.rarity-badge.rarity-00  { background: var(--rarity-00);  color: #fff; }
+.rarity-badge.rarity-000 { background: var(--rarity-000); color: #000; }
+
+/* --- 4i. Sin Affinity Badges ---
+   Use inline style `background: var(--sin-[name]-bg)` on the element,
+   or use the data-attribute pattern below for JS-generated elements. */
+.sin-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+.sin-badge[data-sin="Wrath"]    { background: var(--sin-wrath-bg); }
+.sin-badge[data-sin="Lust"]     { background: var(--sin-lust-bg); }
+.sin-badge[data-sin="Sloth"]    { background: var(--sin-sloth-bg); color: #000; }
+.sin-badge[data-sin="Gluttony"] { background: var(--sin-gluttony-bg); color: #000; }
+.sin-badge[data-sin="Gloom"]    { background: var(--sin-gloom-bg); }
+.sin-badge[data-sin="Pride"]    { background: var(--sin-pride-bg); }
+.sin-badge[data-sin="Envy"]     { background: var(--sin-envy-bg); }
+
+/* --- 4j. Dividers ---
+   Use <hr class="divider"> or border-top: 1px solid var(--border).
+   Never use a full-width coloured bar as a divider. */
+.divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 20px 0;
+}
+
+/* --- 4k. Scrollable Containers ---
+   Any list taller than ~300px should scroll rather than expand the page. */
+.scroll-panel {
+    max-height: 400px;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+
+/* ============================================
+   5. NAMING CONVENTIONS
+   ============================================
+   Pattern: [block]__[element]--[modifier]  (loose BEM)
+
+   Blocks (page-level containers):
+     #main-page, #lobby-view, #roster-builder-page,
+     #completed-view, #analyzer-page
+     New pages: #[feature]-page
+
+   Blocks (reusable UI):
+     .card, .filter-bar, .player-panel, .phase-section,
+     .action-card, .modal-overlay, .modal-content
+
+   Elements (children of a block):
+     .player-panel .player-header
+     .player-panel .player-name
+     .filter-bar .filter-group
+     New: .[block]-[child]  (e.g. .skill-card-header)
+
+   Modifiers (state / variant):
+     .btn-primary, .btn-small, .status-ready, .hidden
+     New: --[state] or --[variant]  (e.g. .skill-card--active)
+
+   ID selectors:
+     Use only for unique singleton elements (connection-status,
+     notification, phase-timer, etc.). Do not style by ID in
+     new feature CSS — use classes.
+
+   Class prefixes for new tool pages:
+     .calc-       damage calculator
+     .team-       team builder
+     .skill-      skill/ability display
+     .enemy-      enemy database
+     .turn-       turn state screen
+   ============================================ */
+
+
+/* ============================================
+   6. DO / DON'T QUICK REFERENCE
+   ============================================
+
+   ✅ DO
+   - Use var(--token) for every colour, never raw hex in new CSS
+   - Use .btn + modifier for every clickable action
+   - Wrap new page sections in .card or .action-card
+   - Use .hidden to toggle visibility (JS sets/removes it)
+   - Use showNotification() for all user feedback messages
+   - Use gap + flexbox for spacing children (not margin on each child)
+   - All new files go in client/css/[feature].css, imported in index.html
+
+   ❌ DON'T
+   - Don't use inline style="" except for dynamic values set by JS
+     (e.g. left/top position, generated colours from data)
+   - Don't hardcode #B31B1B, #FFD700 etc. — use the var()
+   - Don't create new z-index values above 9999
+     (existing stack: 100 conn-status, 1000 notification,
+      9998 modal-overlay, 9999 rejoin-overlay, 10001 tooltip)
+   - Don't use !important except on .hidden and .btn-ready (already done)
+   - Don't write media queries in feature CSS files — add to responsive.css
+   ============================================ */
