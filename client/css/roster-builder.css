@@ -1,0 +1,158 @@
+/* ============================================
+   ROSTER BUILDER PAGE
+   ============================================ */
+
+#roster-builder-page .card {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.builder-content-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.builder-sinner-nav {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.sinner-nav-btn {
+    padding: 6px 10px;
+    font-size: 0.9rem;
+    flex-grow: 1;
+    text-align: center;
+    background: var(--secondary);
+    border: 1px solid var(--border);
+}
+
+.sinner-nav-btn.selected {
+    background: var(--primary);
+    color: var(--accent);
+    border-bottom: 4px solid var(--accent);
+    border-left: 1px solid var(--border);
+}
+
+.builder-main-panel {
+    background: rgba(0,0,0,0.2);
+    padding: 15px;
+    border-radius: 10px;
+}
+
+.builder-side-panel {
+    background: var(--secondary);
+    padding: 20px;
+    border-radius: 10px;
+    align-self: stretch;
+}
+
+.builder-id-pool {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 10px;
+    max-height: 70vh;
+    overflow-y: auto;
+    padding: 10px;
+}
+
+#builder-roster-code {
+    word-wrap: break-word;
+    background: #111;
+    padding: 10px;
+    border-radius: 5px;
+    font-family: monospace;
+    min-height: 50px;
+    margin-top: 10px;
+}
+
+.roster-code-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.roster-code-actions input {
+    flex-grow: 1;
+}
+
+.roster-code-actions .btn {
+    padding: 14px;
+}
+
+/* --- Advanced Random section --- */
+.advanced-random-container {
+    margin-top: 20px;
+    border-top: 1px solid var(--border);
+    padding-top: 20px;
+}
+
+#advanced-random-options {
+    margin-top: 15px;
+    padding: 15px;
+    background: rgba(0,0,0,0.2);
+    border-radius: 8px;
+}
+
+#advanced-random-options h4 {
+    margin-top: 0;
+    text-align: center;
+}
+
+#advanced-random-options p {
+    font-size: 0.9rem;
+    text-align: center;
+    margin-bottom: 15px;
+}
+
+#sinner-sliders-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    max-height: 300px;
+    overflow-y: auto;
+    padding-right: 10px;
+}
+
+.sinner-slider-group {
+    display: grid;
+    grid-template-columns: 70px 1fr;
+    gap: 10px;
+    align-items: center;
+}
+
+.sinner-slider-group label {
+    font-size: 1rem;
+    font-weight: bold;
+}
+
+.slider-container {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.slider-row {
+    display: grid;
+    grid-template-columns: 30px 1fr 25px;
+    gap: 8px;
+    align-items: center;
+    font-size: 0.9rem;
+}
+
+.slider-value {
+    font-weight: bold;
+    color: var(--accent);
+    text-align: right;
+}
+
+.advanced-random-summary {
+    margin-top: 15px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+    text-align: center;
+    font-weight: bold;
+}

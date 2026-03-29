@@ -1,0 +1,50 @@
+/* ============================================
+   CONNECTION STATUS & NOTIFICATIONS
+   ============================================ */
+
+.connection-status {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 8px 15px;
+    border-radius: 20px;
+    font-weight: bold;
+    color: #000;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    z-index: 100;
+    background: var(--disconnected);
+    transition: background-color 0.3s;
+}
+
+.connection-status.connecting {
+    background: var(--warning);
+}
+
+.connection-status.connected {
+    background: var(--connected);
+}
+
+.notification {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 15px 25px;
+    background: var(--primary);
+    border-radius: 8px;
+    color: white;
+    font-weight: bold;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.3s, transform 0.3s;
+    max-width: 90%;
+    text-align: center;
+}
+
+.notification.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(10px);
+}

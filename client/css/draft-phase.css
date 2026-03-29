@@ -1,0 +1,166 @@
+/* ============================================
+   DRAFT PHASE — TRIPTYCH LAYOUT & STATUS PANEL
+   ============================================ */
+
+/* --- Active-turn glow animations --- */
+@keyframes active-glow {
+    0%   { box-shadow: 0 0 25px var(--accent); border: 2px solid var(--accent); }
+    100% { box-shadow: 0 0 35px var(--accent), 0 0 60px rgba(255, 140, 0, 0.3); border: 2px solid var(--accent); }
+}
+
+@keyframes active-glow-red {
+    0%   { box-shadow: 0 0 25px var(--primary); border: 2px solid var(--primary); }
+    100% { box-shadow: 0 0 35px var(--primary), 0 0 60px rgba(179, 27, 27, 0.3); border: 2px solid var(--primary); }
+}
+
+/* Draft-active column/hub highlight */
+.draft-player-column.draft-active,
+.draft-interaction-hub.draft-active {
+    box-shadow: 0 0 25px var(--accent);
+    border: 2px solid var(--accent);
+    transform: scale(1.01);
+}
+
+/* Ban phase overrides active highlight to red */
+.draft-ban-phase .draft-player-column.draft-active,
+.draft-ban-phase .draft-interaction-hub.draft-active {
+    box-shadow: 0 0 25px var(--primary);
+    border: 2px solid var(--primary);
+}
+
+/* Animated glow on the active player column */
+.draft-player-column.draft-active {
+    animation: active-glow 1.5s ease-in-out infinite alternate;
+}
+
+.draft-ban-phase .draft-player-column.draft-active {
+    animation: active-glow-red 1.5s ease-in-out infinite alternate;
+}
+
+/* --- Timer display --- */
+.timer-display {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--accent);
+    padding: 10px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 8px;
+    margin-top: 10px;
+    min-width: 140px;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.timer-display.reserve-active {
+    color: var(--warning);
+    animation: pulse-warning 1.5s infinite;
+}
+
+/* --- Triptych (three-column draft layout) --- */
+.triptych-layout {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+}
+
+.draft-player-column {
+    flex: 1;
+    min-width: 250px;
+    background: var(--secondary);
+    padding: 15px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    height: 100%;
+    transition: all 0.3s ease;
+}
+
+.reserve-timer-display {
+    background: rgba(0,0,0,0.2);
+    color: var(--warning);
+    padding: 5px 10px;
+    border-radius: 5px;
+    text-align: center;
+    font-weight: bold;
+    margin: 10px 0;
+    font-size: 1rem;
+}
+
+.draft-interaction-hub {
+    flex: 2;
+    min-width: 400px;
+    background: var(--panel);
+    padding: 20px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    transition: all 0.3s ease;
+}
+
+.draft-pool-container {
+    margin-bottom: 20px;
+}
+
+.draft-controls {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+/* --- Floating Draft Status Panel --- */
+#draft-status-panel {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 99;
+    background: rgba(30, 30, 30, 0.95);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--border);
+    border-top: 3px solid var(--accent);
+    border-radius: 12px;
+    padding: 20px;
+    width: auto;
+    min-width: 380px;
+    max-width: 450px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.5);
+    text-align: left;
+    transition: all 0.3s ease;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+}
+
+.status-text {
+    flex-grow: 1;
+}
+
+#draft-status-panel #current-phase {
+    font-size: 1.4rem;
+    margin: 0 0 8px 0;
+    padding: 0;
+    border: none;
+    color: var(--accent);
+    font-weight: 700;
+}
+
+#draft-status-panel #draft-action-description {
+    font-size: 1.0rem;
+    color: #ddd;
+    min-height: 0;
+    margin: 0;
+    line-height: 1.4;
+}
+
+.status-timer {
+    text-align: center;
+}
+
+#draft-status-panel .timer-display {
+    margin: 0;
+    font-size: 2.2rem;
+}
+
+#draft-status-panel #ref-timer-control {
+    padding: 8px 10px;
+    font-size: 0.9rem;
+}

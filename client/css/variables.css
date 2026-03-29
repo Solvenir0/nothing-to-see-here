@@ -1,0 +1,88 @@
+/* ============================================
+   GLOBAL RESET, CSS VARIABLES & UTILITIES
+   ============================================ */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Inter', sans-serif;
+}
+
+:root {
+    --primary: #B31B1B;
+    --primary-dark: #800000;
+    --secondary: #2a2a2e;
+    --accent: #FFD700;
+    --text: #F0F0F0;
+    --bg: #121212;
+    --panel: #1E1E1E;
+    --border: #444;
+    --rarity-0: #cccccc;
+    --rarity-00: #B22222;
+    --rarity-000: #FFD700;
+    --sin-wrath-bg: rgba(129,44,33,255);
+    --sin-lust-bg: rgba(177,97,46,255);
+    --sin-sloth-bg: rgba(226,136,3,255);
+    --sin-gluttony-bg: rgba(106, 190, 48, 255);
+    --sin-gloom-bg: rgba(45,102,116,255);
+    --sin-pride-bg: rgba(22,81,131,255);
+    --sin-envy-bg: rgba(128, 0, 128, 255);
+    --connected: #4caf50;
+    --disconnected: #f44336;
+    --warning: #ff9800;
+    --ready: #4caf50;
+    --drafting: #2196F3;
+    --hover: #ffeb3b;
+}
+
+/* Dark scrollbars to match theme */
+*::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+*::-webkit-scrollbar-track {
+    background: #1a1a1a;
+}
+*::-webkit-scrollbar-thumb {
+    background: #333;
+    border-radius: 8px;
+    border: 2px solid #1a1a1a;
+}
+*::-webkit-scrollbar-thumb:hover {
+    background: #444;
+}
+
+/* Firefox scrollbar */
+* {
+    scrollbar-color: #333 #1a1a1a;
+    scrollbar-width: thin;
+}
+
+/* Improve keyboard focus visibility without white outlines */
+.btn:focus-visible,
+input:focus-visible,
+select:focus-visible {
+    outline: 2px solid rgba(255, 215, 0, 0.6);
+    outline-offset: 2px;
+}
+
+/* Tooltip Style */
+#id-tooltip {
+    position: fixed;
+    background-color: rgba(0, 0, 0, 0.95);
+    color: var(--accent);
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--accent);
+    font-size: 0.95rem;
+    font-weight: bold;
+    z-index: 10001;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+    max-width: 300px;
+    overflow-wrap: anywhere;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(4px);
+}

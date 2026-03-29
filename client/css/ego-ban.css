@@ -1,0 +1,198 @@
+/* ============================================
+   EGO BAN PHASE
+   ============================================ */
+
+.ego-ban-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+#ego-ban-main-panel {
+    flex: 3;
+    background: var(--panel);
+    padding: 20px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+}
+
+#ego-ban-side-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+#ego-ban-player-bans-section,
+#opponent-roster-display {
+    background: var(--secondary);
+    padding: 20px;
+    border-radius: 10px;
+    border-top: 4px solid var(--accent);
+}
+
+/* Opponent roster in ego-ban side panel */
+#opponent-roster-display .sinner-grouped-roster {
+    max-height: 400px;
+}
+
+#opponent-roster-display .sinner-id-container {
+    grid-template-columns: repeat(auto-fill, 100px);
+    gap: 8px;
+    justify-content: start;
+}
+
+#opponent-roster-display .id-item {
+    width: 100px;
+    height: 100px;
+    min-width: 100px;
+    max-width: 100px;
+}
+
+#opponent-roster-display .id-item .id-icon {
+    width: 100px;
+    height: 100px;
+    object-fit: cover;
+}
+
+/* Current player's pending bans list */
+#current-player-ego-bans {
+    margin-top: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 240px;
+}
+
+#current-player-ego-bans .banned-ego-item {
+    text-decoration: none;
+    background: var(--primary-dark);
+    border: 1px solid var(--border);
+}
+
+/* EGO selection grid */
+.ego-ban-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 10px;
+    max-height: 70vh;
+    overflow-y: auto;
+    padding: 10px;
+}
+
+/* Individual EGO card */
+.ego-item {
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    border: 1px solid var(--border);
+    border-left-width: 5px;
+    position: relative;
+}
+
+.ego-item:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    border-color: var(--primary);
+}
+
+.ego-item.hovered {
+    border-color: var(--primary) !important;
+    box-shadow: 0 0 10px var(--primary);
+}
+
+.ego-item.banned {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: #222;
+}
+
+.ego-item.banned::after {
+    content: '\f05e';
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    color: var(--primary);
+    background: rgba(0,0,0,0.4);
+    border-radius: 8px;
+}
+
+.ego-header {
+    display: flex;
+    justify-content: flex-end;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.ego-rarity {
+    padding: 2px 6px;
+    border-radius: 4px;
+    background-color: rgba(0,0,0,0.2);
+    color: #fff;
+}
+
+.ego-name {
+    color: var(--text);
+    font-size: 1.0rem;
+    font-weight: bold;
+    flex-grow: 1;
+    min-height: 2.5em;
+    display: flex;
+    align-items: center;
+    line-height: 1.25;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+}
+
+/* --- Banned EGOs display --- */
+.banned-egos-display {
+    background: var(--panel);
+    padding: 15px;
+    border-radius: 10px;
+    margin: 20px 0;
+    border: 1px solid var(--border);
+}
+
+.banned-egos-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+}
+
+.banned-ego-item {
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-size: 0.9rem;
+    text-align: center;
+    color: var(--text);
+    border: 1px solid transparent;
+}
+
+.banned-ego-item .rarity {
+    font-weight: bold;
+    margin-right: 5px;
+    background: rgba(0,0,0,0.2);
+    padding: 2px 4px;
+    border-radius: 3px;
+    color: #fff;
+}
+
+.banned-ego-item .name {
+    text-decoration: line-through;
+}

@@ -8,33 +8,22 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css">
-    <style>
-        .site-disclaimers {
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 0.9rem;
-            color: #aaa;
-            border-top: 1px dashed #444;
-            padding-top: 15px;
-            margin-top: 20px;
-        }
-        .site-disclaimers h4 {
-            font-family: 'Inter', sans-serif; /* Revert heading font */
-            color: #ccc;
-            font-size: 1.1rem;
-        }
-        .site-disclaimers ul {
-            list-style-position: inside;
-        }
-    </style>
+    <link rel="stylesheet" href="client/css/variables.css">
+    <link rel="stylesheet" href="client/css/base.css">
+    <link rel="stylesheet" href="client/css/buttons.css">
+    <link rel="stylesheet" href="client/css/forms.css">
+    <link rel="stylesheet" href="client/css/connection.css">
+    <link rel="stylesheet" href="client/css/main-page.css">
+    <link rel="stylesheet" href="client/css/roster-phase.css">
+    <link rel="stylesheet" href="client/css/id-items.css">
+    <link rel="stylesheet" href="client/css/ego-ban.css">
+    <link rel="stylesheet" href="client/css/draft-phase.css">
+    <link rel="stylesheet" href="client/css/roster-builder.css">
+    <link rel="stylesheet" href="client/css/completed-view.css">
+    <link rel="stylesheet" href="client/css/modals.css">
+    <link rel="stylesheet" href="client/css/responsive.css">
 </head>
 <body>
-    <div id="rejoin-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999; color: white; display: none; flex-direction: column; align-items: center; justify-content: center; font-size: 2rem; gap: 20px;">
-        <i class="fas fa-sync fa-spin"></i>
-        <p>Attempting to rejoin lobby...</p>
-        <button class="btn btn-secondary" id="cancel-rejoin-btn" style="margin-top: 20px;">Cancel</button>
-    </div>
-
     <div class="connection-status" id="connection-status">
         <i class="fas fa-plug"></i>
         <span>Connecting...</span>
@@ -123,7 +112,6 @@
                  <input type="text" id="player-name" placeholder="Enter your name" maxlength="50" required>
             </div>
 
-            <!-- REPLACE the entire <div class="action-container">...</div> with this new layout -->
             <div class="lobby-access-card">
                 <div class="action-card">
                     <div class="action-icon"><i class="fas fa-plus-circle"></i></div>
@@ -520,8 +508,7 @@
         </div>
     </div>
 
-    <script src="data.js"></script>
-    <script src="script.js"></script>
+    <script type="module" src="client/js/handlers/main.js"></script>
 </body>
 </html>
 

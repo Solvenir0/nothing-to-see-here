@@ -1,0 +1,143 @@
+/* ============================================
+   RESPONSIVE BREAKPOINTS
+   ============================================ */
+
+/* --- Small desktop adjustments --- */
+@media (max-width: 1200px) {
+    #main-page { max-width: 100%; padding: 0 10px; }
+    .action-container { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+    .draft-interaction-hub { min-width: 320px; }
+}
+
+/* --- Tablet --- */
+@media (max-width: 992px) {
+    .player-area { flex-direction: column; }
+    .draft-interaction-hub, .draft-player-column { min-width: unset; width: 100%; }
+    .triptych-layout { flex-direction: column; }
+    .ego-ban-layout { flex-direction: column; }
+    .builder-content-wrapper { flex-direction: column; }
+    .filter-bar { gap: 10px; padding: 10px; }
+    .controls { gap: 8px; }
+}
+
+/* --- Mobile landscape / small tablet --- */
+@media (max-width: 768px) {
+    h1 { font-size: clamp(1.8rem, 5vw, 2.6rem); }
+    h2 { font-size: clamp(1.4rem, 3.5vw, 1.8rem); }
+    .btn { padding: 12px 18px; font-size: 1rem; }
+    .controls .btn { min-width: 120px; }
+    .id-icon { width: 100px; height: 100px; }
+    .id-name { font-size: 0.9rem; }
+    .roster-selection { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+    .builder-id-pool { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+    .draft-interaction-hub { padding: 15px; }
+    .compact-id-list { grid-template-columns: repeat(auto-fill, 90px); }
+
+    /* Repeated from second 768 block below — merged here */
+    .container { max-width: 100%; }
+    .action-container { grid-template-columns: 1fr; }
+    .final-player-panel { min-width: 100%; }
+    .lobby-info { flex-direction: column; gap: 20px; }
+    .code-display { font-size: 1.5rem; letter-spacing: 4px; }
+    .role-options { flex-direction: column; }
+    .phase-container, .player-area { flex-direction: column; }
+    .connection-status { top: 5px; right: 5px; font-size: 0.8rem; padding: 5px 10px; }
+    #draft-status-panel { bottom: 10px; right: 10px; left: 10px; width: auto; max-width: none; }
+    .public-lobby-item { grid-template-columns: 1fr auto; grid-template-rows: auto auto; }
+    .public-lobby-item .btn { grid-column: 2 / 3; grid-row: 1 / 3; }
+    .top-left-controls { top: 10px; left: 10px; }
+}
+
+/* --- Small mobile --- */
+@media (max-width: 576px) {
+    body { padding: 12px; }
+    .top-left-controls { top: 10px; left: 10px; }
+    .btn-small { padding: 6px 10px; font-size: 0.85rem; }
+    .roster-load-form { flex-direction: column; align-items: stretch; }
+    .roster-load-form input { width: 100%; }
+    .filter-group { min-width: 120px; }
+    .slider-row { grid-template-columns: 26px 1fr 22px; }
+    .compact-id-list { grid-template-columns: repeat(auto-fill, 70px); }
+}
+
+/* --- Medium screens and up: ego-ban and builder layout --- */
+@media (min-width: 992px) {
+    .ego-ban-layout {
+        flex-direction: row;
+        align-items: flex-start;
+    }
+
+    #ego-ban-main-panel {
+        flex: 2;
+    }
+
+    #ego-ban-side-panel {
+        flex: 1.2;
+        min-width: 350px;
+    }
+
+    #roster-builder-page .card {
+        flex-direction: row;
+    }
+
+    .builder-sinner-nav {
+        flex-direction: column;
+        flex-wrap: nowrap;
+        flex: 0 0 130px;
+        gap: 4px;
+    }
+
+    .sinner-nav-btn {
+        text-align: left;
+    }
+
+    .sinner-nav-btn.selected {
+        border-bottom: 1px solid var(--border);
+        border-left: 4px solid var(--accent);
+    }
+
+    .builder-content-wrapper {
+        flex: 1;
+        display: flex;
+        flex-direction: row;
+    }
+
+    .builder-main-panel {
+        flex: 2;
+        min-width: 350px;
+    }
+
+    .builder-side-panel {
+        flex: 1;
+        min-width: 280px;
+    }
+}
+
+/* --- Large screens: triptych and builder spacing --- */
+@media (min-width: 1400px) {
+    .builder-side-panel { flex: 1.2; }
+    .draft-player-column { flex: 1; }
+    .draft-interaction-hub { flex: 2.5; }
+
+    #ego-ban-side-panel {
+        flex: 1.4;
+        min-width: 400px;
+    }
+
+    #opponent-roster-display .sinner-id-container {
+        grid-template-columns: repeat(auto-fill, 100px);
+        gap: 12px;
+        justify-content: start;
+    }
+
+    #opponent-roster-display .id-item .id-icon {
+        width: 100px;
+        height: 100px;
+    }
+}
+
+/* --- Triptych column stacking on small screens --- */
+@media (max-width: 991px) {
+    .triptych-layout { flex-direction: column; }
+    .draft-player-column, .draft-interaction-hub { width: 100%; }
+}

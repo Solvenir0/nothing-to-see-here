@@ -1,0 +1,70 @@
+/* ============================================
+   BUTTONS
+   ============================================ */
+
+.btn {
+    padding: 15px 30px;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    background-image: linear-gradient(45deg, var(--primary-dark), var(--primary));
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-size: 1.1rem;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.btn:hover:not(:disabled) {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+    background-image: linear-gradient(45deg, var(--primary), #ff4d4d);
+}
+
+.btn:disabled {
+    background: #444;
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.btn-primary {
+    background-image: linear-gradient(45deg, #FFC107, var(--accent));
+    color: #000;
+}
+
+.btn-primary:hover:not(:disabled) {
+    background-image: linear-gradient(45deg, var(--accent), #fff200);
+}
+
+.btn-secondary {
+    background-image: linear-gradient(45deg, #333, #555);
+}
+
+.btn-secondary:hover:not(:disabled) {
+    background-image: linear-gradient(45deg, #444, #666);
+}
+
+.btn-large {
+    padding: 18px 35px;
+    font-size: 1.3rem;
+}
+
+.btn-small {
+    padding: 8px 15px;
+    font-size: 0.9rem;
+}
+
+.btn-ready {
+    background-image: linear-gradient(45deg, #1D976C, #93F9B9) !important;
+    color: black !important;
+}
+
+.btn-ready:disabled {
+    opacity: 0.8;
+}

@@ -1,0 +1,118 @@
+/* ============================================
+   FORMS, INPUTS & FILTERS
+   ============================================ */
+
+.form-group {
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 1rem;
+    color: #ccc;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+input, select {
+    width: 100%;
+    padding: 14px;
+    border-radius: 8px;
+    background: #111;
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 1.1rem;
+    transition: all 0.2s;
+}
+
+input:focus, select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.2);
+}
+
+.filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: flex-end;
+    padding: 15px;
+    background: rgba(0,0,0,0.2);
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.filter-group {
+    flex: 1;
+    min-width: 150px;
+}
+
+.filter-label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 0.9rem;
+    color: #ccc;
+}
+
+/* Dark themed range sliders */
+.slider-row input[type="range"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 100%;
+    height: 6px;
+    background: #333;
+    border-radius: 4px;
+    outline: none;
+}
+.slider-row input[type="range"]::-ms-fill-lower,
+.slider-row input[type="range"]::-ms-fill-upper {
+    background: #333;
+    border: none;
+}
+.slider-row input[type="range"]::-webkit-slider-thumb {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 2px solid #000;
+    cursor: pointer;
+    box-shadow: 0 0 6px rgba(255, 215, 0, 0.4);
+}
+.slider-row input[type="range"]::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 2px solid #000;
+    cursor: pointer;
+    box-shadow: 0 0 6px rgba(255, 215, 0, 0.4);
+}
+.slider-row input[type="range"]::-ms-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 2px solid #000;
+    cursor: pointer;
+}
+.slider-row input[type="range"]::-webkit-slider-runnable-track {
+    height: 6px;
+    background: #333;
+    border-radius: 4px;
+}
+.slider-row input[type="range"]::-moz-range-track {
+    height: 6px;
+    background: #333;
+    border-radius: 4px;
+}
+.slider-row input[type="range"]::-ms-track {
+    height: 6px;
+    background: #333;
+    border-radius: 4px;
+    border-color: transparent;
+    color: transparent;
+}

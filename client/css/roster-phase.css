@@ -1,0 +1,268 @@
+/* ============================================
+   ROSTER SELECTION PHASE & LOBBY INFO
+   ============================================ */
+
+/* Animations used in this phase */
+@keyframes gentle-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.7; transform: scale(1.1); }
+}
+
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.4); filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.4)); }
+    70% { box-shadow: 0 0 0 10px rgba(255, 215, 0, 0); filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.7)); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.4)); }
+}
+
+@keyframes pulse-warning {
+    0% { box-shadow: 0 0 5px 0px var(--warning); }
+    50% { box-shadow: 0 0 15px 5px var(--warning); }
+    100% { box-shadow: 0 0 5px 0px var(--warning); }
+}
+
+/* --- Lobby Info Bar --- */
+.lobby-info {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    align-items: center;
+    gap: 20px;
+    background: var(--secondary);
+    padding: 20px;
+    border-radius: 12px;
+    margin-bottom: 30px;
+    position: relative;
+    border: 1px solid var(--border);
+}
+
+.lobby-info > div {
+    text-align: center;
+}
+
+.code-display {
+    font-family: monospace;
+    font-size: 2rem;
+    letter-spacing: 6px;
+    padding: 12px 25px;
+    background: #000;
+    border-radius: 8px;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
+    transition: filter 0.3s ease;
+    user-select: none;
+    cursor: pointer;
+}
+
+.code-display:hover {
+    background: #1a1a1a;
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+}
+
+.code-display.hidden {
+    filter: blur(6px);
+    user-select: none;
+}
+
+.code-display-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+#toggle-code-visibility {
+    padding: 10px 12px;
+}
+
+.participants {
+    display: flex;
+    gap: 15px;
+    font-size: 1.1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.participant {
+    background: #333;
+    padding: 10px 20px;
+    border-radius: 25px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: transform 0.3s;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+}
+
+.participant:hover {
+    transform: translateY(-5px);
+}
+
+.participant.current-user {
+    background: var(--primary-dark);
+    border: 2px solid var(--accent);
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+}
+
+.back-button {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 10;
+}
+
+/* --- Role Selection --- */
+.role-options {
+    display: flex;
+    gap: 15px;
+    margin-top: 10px;
+}
+
+.role-option {
+    flex: 1;
+    text-align: center;
+    padding: 15px;
+    background: #222;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s;
+    border: 2px solid transparent;
+}
+
+.role-option.selected {
+    background: var(--primary);
+    border-color: var(--accent);
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
+}
+
+.role-option.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    background: #111;
+}
+
+.role-option i {
+    font-size: 2rem;
+    margin-bottom: 10px;
+    color: var(--accent);
+}
+
+/* --- Player Phase Panels --- */
+.phase-section {
+    flex: 1;
+    min-width: 300px;
+}
+
+.player-area {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.player-panel {
+    flex: 1;
+    min-width: 280px;
+    background: var(--secondary);
+    border-radius: 10px;
+    padding: 15px;
+    border: 1px solid var(--border);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.player-panel.locked::after {
+    content: 'LOCKED';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    color: var(--accent);
+    font-weight: bold;
+    z-index: 5;
+    border-radius: 10px;
+    backdrop-filter: blur(2px);
+}
+
+.controls {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    gap: 10px;
+    margin-top: 20px;
+    position: relative;
+    z-index: 6;
+    flex-wrap: wrap;
+}
+
+.player-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+}
+
+.player-name {
+    font-size: 1.4rem;
+    font-weight: bold;
+    color: var(--accent);
+}
+
+.player-status {
+    background: var(--primary);
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+}
+
+.your-side-indicator {
+    color: var(--accent);
+    font-size: 0.9rem;
+    margin-left: 8px;
+    animation: gentle-pulse 2s infinite;
+}
+
+/* Status badge variants */
+.status-ready    { background: var(--ready)    !important; color: #fff !important; }
+.status-drafting { background: var(--drafting) !important; color: #fff !important; }
+.status-waiting  { background: #a0a0a0         !important; color: #fff !important; }
+
+/* --- Roster counter & misc --- */
+.counter {
+    text-align: center;
+    margin: 10px 0;
+    font-size: 1.1rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+}
+
+.counter strong {
+    color: var(--accent);
+    font-size: 1.3rem;
+}
+
+.roster-complete {
+    background: rgba(0, 100, 0, 0.3);
+    padding: 10px;
+    border-radius: 5px;
+    text-align: center;
+    margin-top: 10px;
+    font-weight: bold;
+    border: 1px solid rgba(0, 200, 0, 0.3);
+}
+
+.roster-load-form {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-top: 10px;
+}

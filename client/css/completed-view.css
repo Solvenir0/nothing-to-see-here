@@ -1,0 +1,201 @@
+/* ============================================
+   COMPLETED DRAFT VIEW & TIMELINE
+   ============================================ */
+
+#completed-view {
+    text-align: center;
+    display: none;
+}
+
+.final-rosters-container {
+    display: flex;
+    gap: 30px;
+    margin: 30px 0;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.final-player-panel {
+    flex: 1;
+    min-width: 400px;
+    max-width: 500px;
+    background: var(--panel);
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.7);
+    border: 1px solid var(--border);
+    border-top: 4px solid var(--primary);
+}
+
+.final-player-panel h2 {
+    font-size: 1.8rem;
+}
+
+.final-player-panel h3 {
+    font-size: 1.2rem;
+    margin-top: 20px;
+    color: #ccc;
+    border-top: 1px solid var(--border);
+    padding-top: 15px;
+}
+
+.final-player-panel h4 {
+    font-size: 1.1rem;
+    color: var(--accent);
+    margin-top: 15px;
+    margin-bottom: 5px;
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+/* Final picks/bans grids */
+.final-picks,
+.final-bans {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, 100px);
+    gap: 8px;
+    margin-top: 15px;
+    background: rgba(0,0,0,0.2);
+    padding: 10px;
+    border-radius: 8px;
+    justify-content: center;
+}
+
+.final-picks .id-item,
+.final-bans .id-item {
+    padding: 0;
+    background: transparent;
+    border: none;
+    width: 100px;
+    height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.final-picks .id-item .id-name,
+.final-bans .id-item .id-name {
+    display: none;
+}
+
+.final-picks .id-item .id-icon,
+.final-bans .id-item .id-icon {
+    width: 100px;
+    height: 100px;
+    aspect-ratio: 1 / 1;
+    border-radius: 6px;
+    border: none;
+    object-fit: cover;
+    transition: all 0.2s ease;
+}
+
+.final-bans .id-item .id-icon {
+    filter: grayscale(80%);
+    opacity: 0.7;
+}
+
+#restart-draft {
+    margin: 20px auto;
+}
+
+/* --- View toggle (Rosters / Timeline switch) --- */
+.view-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 10px;
+}
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+/* .slider here is the toggle slider, not the range slider */
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+}
+
+input:checked + .slider {
+    background-color: var(--primary);
+}
+
+input:focus + .slider {
+    box-shadow: 0 0 1px var(--primary);
+}
+
+input:checked + .slider:before {
+    transform: translateX(26px);
+}
+
+.slider.round {
+    border-radius: 34px;
+}
+
+.slider.round:before {
+    border-radius: 50%;
+}
+
+/* --- Timeline view --- */
+#timeline-view {
+    padding: 20px 0;
+}
+
+.timeline-container {
+    width: 100%;
+    max-width: 950px;
+    margin: 0 auto;
+    position: relative;
+    padding: 20px 0;
+}
+
+.timeline-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 3px;
+    height: 100%;
+    background-image: linear-gradient(to bottom, var(--accent), var(--primary), var(--accent));
+    border-radius: 2px;
+}
+
+.timeline-event {
+    padding: 5px 30px;
+    position: relative;
+    width: 50%;
+    box-sizing: border-box;
+    margin-top: -35px;
+}
+
+.timeline-container > .timeline-event:first-child {
+    margin-top: 0;
+}
