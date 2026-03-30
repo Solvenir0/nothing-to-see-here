@@ -1,5 +1,57 @@
 # Limbus Company Draft Hub — Agent Reference
 
+---
+
+## How to Add a New Identity
+
+1. **Add the entry to `data/identities.json`** — insert in sinner + release order. Fields:
+   ```json
+   {
+     "name": "Full Identity Name SinnerName",
+     "keywords": ["Keyword1", "Keyword2"],
+     "sinAffinities": ["Wrath", "Gloom", "Pride"],
+     "rarity": "00"
+   }
+   ```
+   - `name` must end with the exact sinner name (e.g. `"... Yi Sang"`) — the sinner is extracted by regex match
+   - `rarity`: `"0"`, `"00"`, or `"000"`
+   - `sinAffinities`: up to 3 values from `Wrath Lust Sloth Gluttony Gloom Pride Envy`
+
+2. **Run the number assignment script:**
+   ```
+   node scripts/update-id-numbers.js
+   ```
+   This appends the new slug to the end of that sinner's entry in `data/id-numbers.json`. Never edit that file manually.
+
+3. **Add the identity image** to `uploads/identity/` — filename must be the slug of the identity name (lowercase, spaces → hyphens, special chars stripped) with `.webp` extension. Use `node scripts/list-slugs.js id SinnerName` to check slugs.
+
+4. **Commit both** `data/identities.json` and `data/id-numbers.json` together.
+
+---
+
+## How to Add a New EGO
+
+1. **Add the entry to `data/egos.json`** — insert in sinner + release order. Fields:
+   ```json
+   {
+     "name": "EGO Name",
+     "sinner": "SinnerName",
+     "rarity": "ZAYIN",
+     "sin": "Sloth"
+   }
+   ```
+   - `rarity`: `"ZAYIN"`, `"TETH"`, `"HE"`, or `"WAW"`
+   - `sin`: one of `Wrath Lust Sloth Gluttony Gloom Pride Envy`
+   - `sinner`: exact sinner name as it appears in `SINNER_ORDER`
+
+2. **Add the EGO image** to `uploads/ego/` — filename must be the slug of `"EGO Name-SinnerName"` (lowercase, spaces → hyphens, special chars stripped) with `.webp` extension. Use `node scripts/list-slugs.js ego SinnerName` to check slugs.
+
+3. **Commit** `data/egos.json`.
+
+> EGOs have no separate numbering table — they are not part of roster codes.
+
+---
+
 Real-time multiplayer drafting app for Limbus Company tournaments.  
 **Stack**: Node.js + Express + `ws` (CommonJS) / Vanilla JS ES Modules (no bundler) / HTML+CSS.  
 **Entry points**: `server.js` (backend) → `client/js/handlers/main.js` (frontend via `<script type="module">`).

@@ -30,9 +30,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     try {
         // Fetch JSON data files (single source of truth)
-        const [identities, egos] = await Promise.all([
+        const [identities, egos, idNumbers] = await Promise.all([
             fetch('/data/identities.json').then(r => r.json()),
             fetch('/data/egos.json').then(r => r.json()),
+            fetch('/data/id-numbers.json').then(r => r.json()),
         ]);
 
         cacheDOMElements();
@@ -60,6 +61,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         state.idsBySinner = {};
         SINNER_ORDER.forEach(sinnerName => {
             state.idsBySinner[sinnerName] = state.builderMasterIDList.filter(id => id.sinner === sinnerName);
+        });
+
+        // Build roster-code lookup tables from id-numbers.json
+        SINNER_ORDER.forEach((sinnerName, sinnerIdx) => {
+            (idNumbers[sinnerName] || []).forEach((slug, pos) => {
+                const value = sinnerIdx * 40 + pos;
+                state.idSlotMap[slug] = value;
+                state.slotToId[value] = slug;
+            });
         });
 
         setupAdvancedRandomUI();

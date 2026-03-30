@@ -27,6 +27,8 @@ export const state = {
     builderMasterIDList: [],
     masterEGOList: [],
     idsBySinner: null,
+    idSlotMap: {},   // slug → Uint16 value (sinnerIndex * 40 + withinSinnerIndex)
+    slotToId: {},    // Uint16 value → slug
     builderSelectedSinner: "Yi Sang",
     draft: {
         phase: "roster",
