@@ -59,8 +59,9 @@
     padding: 10px;
 }
 
-#builder-roster-code {
-    word-wrap: break-word;
+#builder-roster-code-display {
+    overflow-wrap: break-word;
+    word-break: break-all;
     background: #111;
     padding: 10px;
     border-radius: 5px;
