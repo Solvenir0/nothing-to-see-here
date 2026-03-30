@@ -4,7 +4,7 @@
 import { SINNER_ORDER, GAME_CONFIG } from '../config.js';
 import { state, elements } from '../state.js';
 import { filterIDs, renderIDList, renderGroupedView } from './idElements.js';
-import { getSliderElements, clearDynamicElementCache, showNotification } from '../utils/core.js';
+import { getSliderElements, clearDynamicElementCache, showNotification, fisherYatesShuffle } from '../utils/core.js';
 import { generateRosterCode } from '../utils/storage.js';
 
 // toggleBuilderIdSelection is injected from handlers/actions.js to avoid circular deps
@@ -159,7 +159,7 @@ export function generateAdvancedRandomRoster() {
             showNotification(`Not enough IDs for ${sinner} to meet the minimum of ${min}.`, true);
             return;
         }
-        const shuffled = [...available].sort(() => 0.5 - Math.random());
+        const shuffled = fisherYatesShuffle([...available]);
         roster.push(...shuffled.slice(0, min));
     }
 

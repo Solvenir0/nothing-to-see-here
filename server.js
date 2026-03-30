@@ -27,3 +27,8 @@ startCleanupJob();
 const PORT = process.env.PORT || 8080;
 server.listen(PORT, () => require('./server/utils/logger').logInfo('SERVER', `Server started and listening on port ${PORT}`));
 
+server.on('error', (err) => {
+    require('./server/utils/logger').logError('SERVER', `Failed to start: ${err.message}`, err);
+    process.exit(1);
+});
+

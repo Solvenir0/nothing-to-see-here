@@ -28,7 +28,7 @@
 }
 
 .btn:disabled {
-    background: #444;
+    background: var(--disabled);
     cursor: not-allowed;
     opacity: 0.5;
 }
@@ -60,9 +60,13 @@
     font-size: 0.9rem;
 }
 
-.btn-ready {
-    background-image: linear-gradient(45deg, #1D976C, #93F9B9) !important;
-    color: black !important;
+.btn.btn-ready {
+    background-image: linear-gradient(45deg, #1D976C, #93F9B9);
+    color: black;
+}
+
+.btn.btn-ready:hover:not(:disabled) {
+    background-image: linear-gradient(45deg, #24b882, #a8ffc8);
 }
 
 .btn-ready:disabled {

@@ -33,7 +33,10 @@
     --warning: #ff9800;
     --ready: #4caf50;
     --drafting: #2196F3;
-    --hover: #ffeb3b;
+    --text-muted: #aaa;
+    --text-secondary: #ccc;
+    --disabled: #444;
+    --status-waiting: #a0a0a0;
 }
 
 /* Dark scrollbars to match theme */

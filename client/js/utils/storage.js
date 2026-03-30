@@ -38,7 +38,7 @@ export function loadRosterFromCode(code) {
         const uint16 = new Uint16Array(bytes.buffer);
         const rosterSize = uint16.length;
 
-        if (rosterSize !== 42 && rosterSize !== 52) {
+        if (rosterSize !== 42) {
             showNotification(`Invalid roster code: unsupported size (${rosterSize}).`, true);
             return null;
         }

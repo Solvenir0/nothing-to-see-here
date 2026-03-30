@@ -5,7 +5,7 @@ import { TIMING, SINNER_ORDER, saveKoreanModeToStorage } from '../config.js';
 import { state, elements } from '../state.js';
 import { validateAndTrimInput, validateRosterSize, validateRosterCodeSize, validateUserPermission } from '../utils/validation.js';
 import { createDebounceFunction } from '../utils/debounce.js';
-import { showNotification, getTooltipElement } from '../utils/core.js';
+import { showNotification, getTooltipElement, fisherYatesShuffle } from '../utils/core.js';
 import { loadRosterFromCode } from '../utils/storage.js';
 import { stopKeepAlive } from '../utils/keepAlive.js';
 import { switchView } from '../rendering/navigation.js';
@@ -310,9 +310,11 @@ export function setupEventListeners() {
         }
         elements.rejoinOverlay.style.display = 'none';
         if (state.socket && state.socket.readyState !== WebSocket.CLOSED) {
+            state.socket.onclose = () => connectWebSocket();
             state.socket.close();
+        } else {
+            connectWebSocket();
         }
-        setTimeout(connectWebSocket, TIMING.WEBSOCKET_RETRY_DELAY);
         showNotification('Rejoin attempt cancelled.');
     };
     elements.cancelRejoinBtn.addEventListener('click', cancelRejoinAction);
@@ -374,7 +376,7 @@ export function setupEventListeners() {
         }
     });
     elements.builderRandom.addEventListener('click', () => {
-        const shuffled = [...state.builderMasterIDList].sort(() => 0.5 - Math.random());
+        const shuffled = fisherYatesShuffle([...state.builderMasterIDList]);
         state.builderRoster = shuffled.slice(0, state.builderRosterSize).map(id => id.id);
         renderRosterBuilder();
     });

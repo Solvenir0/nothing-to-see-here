@@ -76,7 +76,16 @@ export function renderEgoBanPhase() {
         item.className = 'banned-ego-item';
         item.style.borderLeft = `3px solid ${ego.cssColor}`;
         const displayName = getEgoDisplayName(ego);
-        item.innerHTML = `<span class="rarity">[${ego.rarity}]</span> <span class="name" style="text-decoration: none;">${displayName}</span>`;
+        const raritySpan = document.createElement('span');
+        raritySpan.className = 'rarity';
+        raritySpan.textContent = `[${ego.rarity}]`;
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'name';
+        nameSpan.style.textDecoration = 'none';
+        nameSpan.textContent = displayName;
+        item.appendChild(raritySpan);
+        item.appendChild(document.createTextNode(' '));
+        item.appendChild(nameSpan);
         bansContainer.appendChild(item);
     });
 

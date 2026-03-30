@@ -232,7 +232,7 @@
 /* Status badge variants */
 .status-ready    { background: var(--ready)    !important; color: #fff !important; }
 .status-drafting { background: var(--drafting) !important; color: #fff !important; }
-.status-waiting  { background: #a0a0a0         !important; color: #fff !important; }
+.status-waiting  { background: var(--status-waiting) !important; color: #fff !important; }
 
 /* --- Roster counter & misc --- */
 .counter {

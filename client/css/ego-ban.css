@@ -111,14 +111,14 @@
 }
 
 .ego-item.hovered {
-    border-color: var(--primary) !important;
+    border-color: var(--primary);
     box-shadow: 0 0 10px var(--primary);
 }
 
 .ego-item.banned {
     opacity: 0.5;
     cursor: not-allowed;
-    background: #222;
+    background: var(--secondary);
 }
 
 .ego-item.banned::after {

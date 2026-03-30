@@ -34,6 +34,14 @@ export function createSlug(name) {
     return slug;
 }
 
+export function fisherYatesShuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+}
+
 // Dynamic DOM element cache helpers (used by rendering modules)
 export function getReserveTimeElement(role) {
     const elementKey = `${role}ReserveTime`;

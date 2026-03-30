@@ -79,7 +79,15 @@ export function refreshInterfaceBasedOnGameState() {
                 ? ` <i class="fas fa-check-circle" style="color:var(--ready);"></i>`
                 : ` <i class="fas fa-dot-circle" style="color:var(--connected);"></i>`;
         }
-        el.innerHTML = `<i class="fas ${icon}"></i> ${displayName} ${statusIcon}`;
+        const iconSpan = document.createElement('span');
+        iconSpan.innerHTML = `<i class="fas ${icon}"></i> `;
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = displayName;
+        const statusSpan = document.createElement('span');
+        statusSpan.innerHTML = ` ${statusIcon}`;
+        el.appendChild(iconSpan);
+        el.appendChild(nameSpan);
+        el.appendChild(statusSpan);
         elements.participantsList.appendChild(el);
 
         if ((role === 'p1' || role === 'p2') && p.reserveTime !== undefined) {

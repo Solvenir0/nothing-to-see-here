@@ -23,13 +23,25 @@ export function createEgoElement(egoData, options = {}) {
     egoElement.dataset.id = egoData.id;
     egoElement.style.borderLeftColor = egoData.cssColor;
 
-    const imgTag = egoData.imageFile
-        ? `<img class="ego-icon" src="/uploads/ego/${egoData.imageFile}" alt="${egoData.egoName}" onerror="this.style.display='none'">`
-        : '';
-    egoElement.innerHTML = `
-        ${imgTag}
-        <div class="ego-header"><span class="ego-rarity">${egoData.rarity}</span></div>
-        <div class="ego-name">${egoData.name}</div>`;
+    if (egoData.imageFile) {
+        const img = document.createElement('img');
+        img.className = 'ego-icon';
+        img.src = `/uploads/ego/${egoData.imageFile}`;
+        img.alt = egoData.egoName;
+        img.onerror = function() { this.style.display = 'none'; };
+        egoElement.appendChild(img);
+    }
+    const header = document.createElement('div');
+    header.className = 'ego-header';
+    const raritySpan = document.createElement('span');
+    raritySpan.className = 'ego-rarity';
+    raritySpan.textContent = egoData.rarity;
+    header.appendChild(raritySpan);
+    egoElement.appendChild(header);
+    const nameDiv = document.createElement('div');
+    nameDiv.className = 'ego-name';
+    nameDiv.textContent = egoData.name;
+    egoElement.appendChild(nameDiv);
 
     if (clickHandler && !isBanned) {
         egoElement.addEventListener('click', () => clickHandler(egoData.id));
@@ -47,7 +59,15 @@ export function renderBannedEgosDisplay() {
             const item = document.createElement('div');
             item.className = 'banned-ego-item';
             item.style.backgroundColor = ego.cssColor;
-            item.innerHTML = `<span class="rarity">[${ego.rarity}]</span> <span class="name">${ego.name}</span>`;
+            const raritySpan = document.createElement('span');
+            raritySpan.className = 'rarity';
+            raritySpan.textContent = `[${ego.rarity}]`;
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'name';
+            nameSpan.textContent = ego.name;
+            item.appendChild(raritySpan);
+            item.appendChild(document.createTextNode(' '));
+            item.appendChild(nameSpan);
             container.appendChild(item);
         });
     };

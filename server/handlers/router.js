@@ -13,6 +13,15 @@ const { handleTimer, setTimerForLobby, computeBanPools, handleDraftConfirm } = r
 
 const LOBBY_TTL = 2 * 60 * 60 * 1000; // 2 hours
 
+function fisherYatesShuffle(arr) {
+    const copy = [...arr];
+    for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+    return copy;
+}
+
 let _wss = null;
 let _crypto = null;
 
@@ -30,7 +39,8 @@ function init(wss, crypto) {
             catch (e) { logError('WEBSOCKET', 'Invalid JSON received', message); return; }
 
             const { lobbyCode: rawLobbyCode, role, player, id, action, payload, name, roster, options, choice } = incomingData;
-            const lobbyCode = rawLobbyCode ? rawLobbyCode.toUpperCase() : null;
+            const lobbyCode = rawLobbyCode ? String(rawLobbyCode).toUpperCase().slice(0, 10) : null;
+            if (lobbyCode && !/^[A-Z0-9]{1,10}$/.test(lobbyCode)) return;
             let lobbyData = lobbyCode ? lobbies[lobbyCode] : null;
 
             switch (incomingData.type) {
@@ -127,6 +137,7 @@ function init(wss, crypto) {
                 case 'rosterSelect': {
                     if (!validatePlayerAccess(ws, player, lobbyData)) return;
                     if (!validatePlayerNotReady(lobbyData, player)) return;
+                    if (typeof id !== 'string' || !allIds.includes(id)) return;
                     const currentRoster = lobbyData.roster[player];
                     const index = currentRoster.indexOf(id);
                     if (index === -1) { if (currentRoster.length < lobbyData.draft.rosterSize) currentRoster.push(id); }
@@ -150,7 +161,7 @@ function init(wss, crypto) {
                 case 'rosterRandomize': {
                     if (!validatePlayerAccess(ws, player, lobbyData)) return;
                     if (!validatePlayerNotReady(lobbyData, player)) return;
-                    const shuffled = [...allIds].sort(() => 0.5 - Math.random());
+                    const shuffled = fisherYatesShuffle(allIds);
                     lobbyData.roster[player] = shuffled.slice(0, lobbyData.draft.rosterSize);
                     updateLobbyActivity(lobbyCode);
                     broadcastState(lobbyCode);
@@ -186,7 +197,8 @@ function init(wss, crypto) {
                 }
 
                 case 'setTurnOrder': {
-                    if (!lobbyData || (ws.userRole !== lobbyData.draft.coinFlipWinner && ws.userRole !== 'ref')) return;
+                    if (!lobbyData || !lobbyData.draft.coinFlipWinner) return;
+                    if (ws.userRole !== lobbyData.draft.coinFlipWinner && ws.userRole !== 'ref') return;
 
                     const { draft } = lobbyData;
                     let rolesSwapped = false;
@@ -219,11 +231,12 @@ function init(wss, crypto) {
                 }
 
                 case 'draftHover': {
-                    if (!lobbyData) return;
-                    const { id: hoveredId } = payload;
+                    if (!lobbyData || !payload) return;
+                    const hoveredId = typeof payload.id === 'string' ? payload.id : null;
+                    if (!hoveredId) return;
                     const { draft } = lobbyData;
                     const { currentPlayer } = draft;
-                    if (ws.userRole !== currentPlayer && ws.userRole !== 'ref') return;
+                    if (!currentPlayer || (ws.userRole !== currentPlayer && ws.userRole !== 'ref')) return;
 
                     if (['ban', 'pick', 'midBan', 'pick2', 'pick_s2'].includes(draft.phase)) {
                         const isBanAction = (draft.phase === 'ban' || draft.phase === 'midBan');
@@ -330,6 +343,13 @@ function cleanupInactiveLobbies() {
             }
             delete lobbies[lobbyCode];
         }
+    }
+
+    // Clean up stale rate limit entries to prevent memory leak
+    const nowMs = Date.now();
+    for (const ip in rateLimit) {
+        rateLimit[ip] = rateLimit[ip].filter(t => nowMs - t < RATE_LIMIT_WINDOW);
+        if (rateLimit[ip].length === 0) delete rateLimit[ip];
     }
 }
 

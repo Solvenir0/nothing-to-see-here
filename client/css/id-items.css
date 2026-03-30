@@ -114,7 +114,7 @@
 .compact-id-list .id-item.hovered,
 .final-picks .id-item.hovered,
 .final-bans .id-item.hovered {
-    transform: none !important;
+    transform: none;
 }
 
 /* Shared / duplicate indicator icon */

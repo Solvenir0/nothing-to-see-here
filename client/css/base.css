@@ -20,11 +20,6 @@ body {
     display: none !important;
 }
 
-/* Hide lobby/builder pages by default — JS controls visibility */
-#lobby-view, #roster-builder-page {
-    display: none;
-}
-
 header {
     text-align: center;
     padding: 20px 0;
@@ -51,7 +46,7 @@ h1 {
 }
 
 p {
-    color: #aaa;
+    color: var(--text-muted);
     font-size: 1.1rem;
 }
 
@@ -73,7 +68,7 @@ h3 {
 
 h4 {
     font-size: 1.2rem;
-    color: #ccc;
+    color: var(--text-secondary);
     margin-top: 20px;
     margin-bottom: 10px;
     font-weight: 700;

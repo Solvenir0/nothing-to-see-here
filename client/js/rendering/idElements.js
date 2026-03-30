@@ -62,11 +62,24 @@ export function createIdElement(idData, options = {}) {
     if (isHovered) idElement.classList.add('hovered');
 
     idElement.dataset.id = idData.id;
-    let html = `<img class="id-icon" src="/uploads/identity/${idData.imageFile}" alt="${idData.name}"><div class="id-name">${idData.name}</div>`;
+
+    const img = document.createElement('img');
+    img.className = 'id-icon';
+    img.src = `/uploads/identity/${idData.imageFile}`;
+    img.alt = idData.name;
+    idElement.appendChild(img);
+
+    const nameDiv = document.createElement('div');
+    nameDiv.className = 'id-name';
+    nameDiv.textContent = idData.name;
+    idElement.appendChild(nameDiv);
+
     if (isShared) {
-        html += '<div class="shared-icon"><i class="fas fa-link"></i></div>';
+        const sharedDiv = document.createElement('div');
+        sharedDiv.className = 'shared-icon';
+        sharedDiv.innerHTML = '<i class="fas fa-link"></i>';
+        idElement.appendChild(sharedDiv);
     }
-    idElement.innerHTML = html;
 
     if (clickHandler) {
         idElement.addEventListener('click', () => clickHandler(idData.id));

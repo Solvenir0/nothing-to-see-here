@@ -11,6 +11,9 @@ import { refreshInterfaceBasedOnGameState } from '../rendering/navigation.js';
 export let rejoinTimeout;
 
 export function connectWebSocket() {
+    if (state.socket && state.socket.readyState !== WebSocket.CLOSED) {
+        state.socket.close();
+    }
     const loc = window.location;
     const wsProtocol = loc.protocol === 'https:' ? 'wss:' : 'ws:';
     const remoteUrl = `${wsProtocol}//${window.location.host}`;

@@ -121,20 +121,36 @@ export function renderTimelineView() {
             const eventBody = document.createElement('div');
             eventBody.className = 'event-body';
 
-            const imageHTML = isBan && type.includes('EGO')
-                ? `<i class="fas fa-shield-alt fa-2x" style="width: 60px; text-align: center;"></i>`
-                : `<img src="/uploads/${targetData.imageFile}" alt="${targetData.name}">`;
-
-            eventBody.innerHTML = `${imageHTML}<span class="target-name">${targetData.name}</span>`;
+            if (isBan && type.includes('EGO')) {
+                const icon = document.createElement('i');
+                icon.className = 'fas fa-shield-alt fa-2x';
+                icon.style.width = '60px';
+                icon.style.textAlign = 'center';
+                eventBody.appendChild(icon);
+            } else {
+                const img = document.createElement('img');
+                img.src = `/uploads/${targetData.imageFile}`;
+                img.alt = targetData.name;
+                eventBody.appendChild(img);
+            }
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'target-name';
+            nameSpan.textContent = targetData.name;
+            eventBody.appendChild(nameSpan);
             eventsContainer.appendChild(eventBody);
         });
 
-        card.innerHTML = `
-            <div class="event-header">
-                <span class="player-name">${state.participants[player].name}</span>
-                <span class="action-type">${actionText}${countText}</span>
-            </div>
-        `;
+        const headerDiv = document.createElement('div');
+        headerDiv.className = 'event-header';
+        const playerNameSpan = document.createElement('span');
+        playerNameSpan.className = 'player-name';
+        playerNameSpan.textContent = state.participants[player].name;
+        const actionTypeSpan = document.createElement('span');
+        actionTypeSpan.className = 'action-type';
+        actionTypeSpan.textContent = `${actionText}${countText}`;
+        headerDiv.appendChild(playerNameSpan);
+        headerDiv.appendChild(actionTypeSpan);
+        card.appendChild(headerDiv);
         card.appendChild(eventsContainer);
         eventElement.appendChild(card);
         timelineContainer.appendChild(eventElement);

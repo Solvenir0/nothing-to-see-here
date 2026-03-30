@@ -3,7 +3,7 @@
 
 const { lobbies, lobbyTimers } = require('../store');
 const { TIMERS, DRAFT_LOGIC } = require('../config/draftLogic');
-const { logInfo } = require('../utils/logger');
+const { logInfo, logError } = require('../utils/logger');
 const { broadcastState, updateLobbyActivity } = require('../lobby/manager');
 
 function handleTimer(lobbyCode) {
@@ -23,6 +23,7 @@ function handleTimer(lobbyCode) {
         draft.timer.running = true;
         draft.timer.endTime = Date.now() + reserveDuration * 1000;
 
+        if (lobbyTimers[lobbyCode]?.timeoutId) clearTimeout(lobbyTimers[lobbyCode].timeoutId);
         const timeoutId = setTimeout(() => handleTimer(lobbyCode), reserveDuration * 1000);
         lobbyTimers[lobbyCode] = { timeoutId };
 
@@ -91,6 +92,11 @@ function advancePhase(lobbyData) {
 
     const logicKey = draft.matchType === 'allSections' ? `${draft.draftLogic}-extended` : draft.draftLogic;
     const logic = DRAFT_LOGIC[logicKey] || DRAFT_LOGIC[draft.draftLogic];
+
+    if (!logic) {
+        logError('DRAFT', 'No draft logic found for key', { draftLogic: draft.draftLogic, matchType: draft.matchType });
+        return lobbyData;
+    }
 
     switch (draft.phase) {
         case "egoBan":
@@ -231,7 +237,7 @@ function handleDraftConfirm(lobbyCode, lobbyData, ws) {
         }
     }
 
-    if (draft.timer.isReserve) {
+    if (draft.timer.isReserve && participant) {
         if (lobbyTimers[lobbyCode]) clearTimeout(lobbyTimers[lobbyCode].timeoutId);
         const timeUsed = Math.ceil((Date.now() - draft.timer.reserveStartTime) / 1000);
         participant.reserveTime = Math.max(0, participant.reserveTime - timeUsed);
