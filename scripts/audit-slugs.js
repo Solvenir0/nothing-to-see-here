@@ -1,47 +1,41 @@
 #!/usr/bin/env node
 // scripts/audit-slugs.js
-// Verifies that every ID in the CSV has a matching image in uploads/,
-// and flags any image files in uploads/ that have no matching ID.
+// Verifies that every ID has a matching image in uploads/identity/,
+// every EGO has a matching image in uploads/ego/,
+// and flags any orphaned image files.
 // Run from project root: node scripts/audit-slugs.js
 
 const fs = require('fs');
 const path = require('path');
 
-// ─── Load the shared data from the server module ────────────────────────────
+// ─── Load the shared slug helper and identity/ego data from JSON ─────────────
 const { allIds, createSlug } = require('../server/utils/idData');
+const identities = require('../data/identities.json');
+const egos       = require('../data/egos.json');
 
-// Also re-read the raw CSV names so we can report human-readable names.
-// We duplicate the minimal parsing here to stay self-contained.
-const idDataSrc = fs.readFileSync(path.join(__dirname, '../server/utils/idData.js'), 'utf8');
-const csvMatch  = idDataSrc.match(/const idCsvData\s*=\s*`([\s\S]*?)`;/);
-if (!csvMatch) {
-    console.error('ERROR: Could not extract idCsvData from server/utils/idData.js');
-    process.exit(1);
-}
-const rawCsv = csvMatch[1].trim();
-
-function parseNames(csv) {
-    const lines = csv.split('\n').filter(l => l.trim());
-    // skip header
-    return lines.slice(1).map(line => {
-        const m = line.match(/^"([^"]+)"/);
-        return m ? m[1] : null;
-    }).filter(Boolean);
+// Compute ego slugs the same way parseEGOData does in the client
+function egoSlug(entry) {
+    return createSlug(`${entry.name}-${entry.sinner}`);
 }
 
-const names = parseNames(rawCsv);
-
-// ─── Load uploads/ directory ─────────────────────────────────────────────────
-const uploadsDir = path.join(__dirname, '../uploads');
-const uploadFiles = new Set(
-    fs.readdirSync(uploadsDir)
+// ─── Load uploads/identity/ directory ────────────────────────────────────────
+const identityDir = path.join(__dirname, '../uploads/identity');
+const identityFiles = new Set(
+    fs.readdirSync(identityDir)
         .filter(f => f.endsWith('.webp'))
-        .map(f => f.replace(/\.webp$/, ''))       // strip extension for comparison
+        .map(f => f.replace(/\.webp$/, ''))
+);
+
+// ─── Load uploads/ego/ directory ─────────────────────────────────────────────
+const egoDir = path.join(__dirname, '../uploads/ego');
+const egoFiles = new Set(
+    fs.readdirSync(egoDir)
+        .filter(f => f.endsWith('.webp'))
+        .map(f => f.replace(/\.webp$/, ''))
 );
 
 // ─── Known non-ID images (excluded from "orphaned" report) ───────────────────
-// Add any additional non-ID uploads here.
-const EXCLUDED = new Set([
+const EXCLUDED_IDENTITY = new Set([
     'cropped-limbus_logo_feather',
     'lcb-sinner-don-quixote',
     'lcb-sinner-faust',
@@ -57,39 +51,50 @@ const EXCLUDED = new Set([
     'lcb-sinner-yi-sang',
 ]);
 
-// ─── Audit ────────────────────────────────────────────────────────────────────
-const missing   = [];   // IDs with no image file
-const orphaned  = [];   // image files with no matching ID
-const ok        = [];   // everything matched
+// ─── Audit identities ─────────────────────────────────────────────────────────
+const idMissing  = [];
+const idOrphaned = [];
+const idOk       = [];
+const seenIdSlugs = new Set();
 
-const seenSlugs = new Set();
-
-for (const name of names) {
-    const slug = createSlug(name);
-
-    if (!slug) {
-        missing.push({ name, slug, reason: 'createSlug returned empty string' });
-        continue;
-    }
-
-    if (seenSlugs.has(slug)) {
-        missing.push({ name, slug, reason: 'COLLISION — duplicate slug' });
-        continue;
-    }
-    seenSlugs.add(slug);
-
-    if (uploadFiles.has(slug)) {
-        ok.push({ name, slug });
+for (const entry of identities) {
+    const slug = createSlug(entry.name);
+    if (!slug) { idMissing.push({ name: entry.name, slug, reason: 'createSlug returned empty string' }); continue; }
+    if (seenIdSlugs.has(slug)) { idMissing.push({ name: entry.name, slug, reason: 'COLLISION — duplicate slug' }); continue; }
+    seenIdSlugs.add(slug);
+    if (identityFiles.has(slug)) {
+        idOk.push({ name: entry.name, slug });
     } else {
-        missing.push({ name, slug, reason: 'no matching .webp in uploads/' });
+        idMissing.push({ name: entry.name, slug, reason: 'no matching .webp in uploads/identity/' });
     }
 }
 
-// Find orphaned files (in uploads/ but not matched by any ID and not excluded)
-for (const file of uploadFiles) {
-    if (!EXCLUDED.has(file) && !seenSlugs.has(file)) {
-        orphaned.push(file);
+for (const file of identityFiles) {
+    if (!EXCLUDED_IDENTITY.has(file) && !seenIdSlugs.has(file)) {
+        idOrphaned.push(file);
     }
+}
+
+// ─── Audit EGOs ──────────────────────────────────────────────────────────────
+const egoMissing  = [];
+const egoOrphaned = [];
+const egoOk       = [];
+const seenEgoSlugs = new Set();
+
+for (const entry of egos) {
+    const slug = egoSlug(entry);
+    if (!slug) { egoMissing.push({ name: `${entry.name} (${entry.sinner})`, slug, reason: 'createSlug returned empty string' }); continue; }
+    if (seenEgoSlugs.has(slug)) { egoMissing.push({ name: `${entry.name} (${entry.sinner})`, slug, reason: 'COLLISION — duplicate slug' }); continue; }
+    seenEgoSlugs.add(slug);
+    if (egoFiles.has(slug)) {
+        egoOk.push({ name: `${entry.name} (${entry.sinner})`, slug });
+    } else {
+        egoMissing.push({ name: `${entry.name} (${entry.sinner})`, slug, reason: 'no matching .webp in uploads/ego/' });
+    }
+}
+
+for (const file of egoFiles) {
+    if (!seenEgoSlugs.has(file)) egoOrphaned.push(file);
 }
 
 // ─── Report ──────────────────────────────────────────────────────────────────
@@ -103,39 +108,57 @@ const RESET  = '\x1b[0m';
 console.log(`\n${HR}`);
 console.log(' LIMBUS DRAFT HUB — SLUG AUDIT REPORT');
 console.log(HR);
-console.log(` IDs in CSV   : ${names.length}`);
-console.log(` Images found : ${uploadFiles.size - EXCLUDED.size} (${EXCLUDED.size} excluded)`);
+console.log(` Identities in JSON : ${identities.length}`);
+console.log(` EGOs in JSON       : ${egos.length}`);
+console.log(` Identity images    : ${identityFiles.size} (${EXCLUDED_IDENTITY.size} excluded)`);
+console.log(` EGO images         : ${egoFiles.size}`);
 console.log(HR);
 
-if (missing.length === 0 && orphaned.length === 0) {
-    console.log(`${GREEN} ✓ All ${ok.length} IDs have matching image files. No orphans.${RESET}`);
+// ── Identity results ──────────────────────────────────────────────────────────
+console.log('\n IDENTITIES (uploads/identity/)');
+if (idMissing.length === 0 && idOrphaned.length === 0) {
+    console.log(`${GREEN} ✓ All ${idOk.length} identities have matching image files. No orphans.${RESET}`);
 } else {
-    if (missing.length > 0) {
-        console.log(`\n${RED} MISSING images (${missing.length})${RESET}`);
-        for (const { name, slug, reason } of missing) {
+    if (idMissing.length > 0) {
+        console.log(`\n${RED} MISSING images (${idMissing.length})${RESET}`);
+        for (const { name, slug, reason } of idMissing) {
             console.log(`  ${RED}✗${RESET} ${name}`);
             console.log(`      slug   : ${slug || '(empty)'}`);
             console.log(`      reason : ${reason}`);
         }
     }
+    if (idOrphaned.length > 0) {
+        console.log(`\n${YELLOW} ORPHANED identity images (${idOrphaned.length})${RESET}`);
+        for (const file of idOrphaned.sort()) console.log(`  ${YELLOW}?${RESET} ${file}.webp`);
+    }
+}
 
-    if (orphaned.length > 0) {
-        console.log(`\n${YELLOW} ORPHANED images (${orphaned.length}) — no matching ID in CSV${RESET}`);
-        for (const file of orphaned.sort()) {
-            console.log(`  ${YELLOW}?${RESET} ${file}.webp`);
+// ── EGO results ───────────────────────────────────────────────────────────────
+console.log('\n EGOS (uploads/ego/)');
+if (egoMissing.length === 0 && egoOrphaned.length === 0 && egoFiles.size === 0) {
+    console.log(`${YELLOW} No EGO images yet — drop .webp files into uploads/ego/ to add them.${RESET}`);
+} else if (egoMissing.length === 0 && egoOrphaned.length === 0) {
+    console.log(`${GREEN} ✓ All ${egoOk.length} EGOs have matching image files. No orphans.${RESET}`);
+} else {
+    if (egoMissing.length > 0) {
+        console.log(`\n${RED} MISSING EGO images (${egoMissing.length})${RESET}`);
+        for (const { name, slug, reason } of egoMissing) {
+            console.log(`  ${RED}✗${RESET} ${name}`);
+            console.log(`      slug   : ${slug || '(empty)'}`);
+            console.log(`      reason : ${reason}`);
         }
     }
-
-    if (ok.length > 0) {
-        console.log(`\n${GREEN} OK (${ok.length})${RESET}`);
-        for (const { slug } of ok) {
-            console.log(`  ${GREEN}✓${RESET} ${slug}`);
-        }
+    if (egoOrphaned.length > 0) {
+        console.log(`\n${YELLOW} ORPHANED EGO images (${egoOrphaned.length})${RESET}`);
+        for (const file of egoOrphaned.sort()) console.log(`  ${YELLOW}?${RESET} ${file}.webp`);
     }
 }
 
 console.log(`\n${HR}`);
-console.log(` Summary: ${GREEN}${ok.length} OK${RESET}, ${RED}${missing.length} MISSING${RESET}, ${YELLOW}${orphaned.length} ORPHANED${RESET}`);
+console.log(` IDs:  ${GREEN}${idOk.length} OK${RESET}, ${RED}${idMissing.length} MISSING${RESET}, ${YELLOW}${idOrphaned.length} ORPHANED${RESET}`);
+console.log(` EGOs: ${GREEN}${egoOk.length} OK${RESET}, ${RED}${egoMissing.length} MISSING${RESET}, ${YELLOW}${egoOrphaned.length} ORPHANED${RESET}`);
 console.log(`${HR}\n`);
 
-process.exit(missing.length > 0 ? 1 : 0);
+const hasErrors = idMissing.some(m => !m.reason.startsWith('no matching')) || egoMissing.some(m => !m.reason.startsWith('no matching'));
+process.exit(hasErrors ? 1 : 0);
+

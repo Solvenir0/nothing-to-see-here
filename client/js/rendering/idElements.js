@@ -5,78 +5,44 @@ import { SINNER_ORDER } from '../config.js';
 import { state } from '../state.js';
 import { createSlug } from '../utils/core.js';
 
-export function parseIDCSV(csv) {
-    const lines = csv.split('\n').filter(line => line.trim() !== '');
-    if (lines.length < 2) return [];
-    const regex = /(".*?"|[^",]+)(?=\s*,|\s*$)/g;
-    const headers = lines[0].split(',').map(h => h.trim());
-    const result = [];
-    for (let i = 1; i < lines.length; i++) {
-        const line = lines[i].trim();
-        if (!line) continue;
-        const values = line.match(regex) || [];
-        if (values.length !== headers.length) continue;
-        const obj = {};
-        headers.forEach((header, idx) => {
-            let value = values[idx].trim();
-            if (value.startsWith('"') && value.endsWith('"')) value = value.slice(1, -1);
-            obj[header] = value;
-        });
-
-        const name = obj.Name;
-        const sinnerMatch = name.match(/(Yi Sang|Faust|Don Quixote|Ryōshū|Meursault|Hong Lu|Heathcliff|Ishmael|Rodion|Sinclair|Outis|Gregor)/);
-        result.push({
-            id: createSlug(name),
-            name: name,
-            keywords: obj.Keywords ? obj.Keywords.split(',').map(k => k.trim()) : [],
-            sinAffinities: obj.SinAffinities ? obj.SinAffinities.split(',').map(s => s.trim()) : [],
-            rarity: obj.Rarity,
-            imageFile: `${createSlug(name)}.webp`,
+// Parse identities from data/identities.json (array of plain objects).
+export function parseIdentityData(jsonArray) {
+    return jsonArray.map(entry => {
+        const sinnerMatch = entry.name.match(/(Yi Sang|Faust|Don Quixote|Ryōshū|Meursault|Hong Lu|Heathcliff|Ishmael|Rodion|Sinclair|Outis|Gregor)/);
+        return {
+            id: createSlug(entry.name),
+            name: entry.name,
+            keywords: entry.keywords || [],
+            sinAffinities: entry.sinAffinities || [],
+            rarity: entry.rarity,
+            imageFile: `${createSlug(entry.name)}.webp`,
             sinner: sinnerMatch ? sinnerMatch[0] : 'Unknown',
-        });
-    }
-    return result;
+        };
+    });
 }
 
-export function parseEGOData(data) {
-    const lines = data.trim().split('\n');
-    const egoList = [];
-    const bgColorMap = {
-        'Yellow': 'var(--sin-sloth-bg)', 'Blue': 'var(--sin-gloom-bg)', 'Red': 'var(--sin-wrath-bg)',
-        'Indigo': 'var(--sin-pride-bg)', 'Purple': 'var(--sin-envy-bg)', 'Orange': 'var(--sin-lust-bg)',
-        'Green': 'var(--sin-gluttony-bg)'
-    };
+const sinColorMap = {
+    'Sloth':    'var(--sin-sloth-bg)',
+    'Gloom':    'var(--sin-gloom-bg)',
+    'Wrath':    'var(--sin-wrath-bg)',
+    'Pride':    'var(--sin-pride-bg)',
+    'Envy':     'var(--sin-envy-bg)',
+    'Lust':     'var(--sin-lust-bg)',
+    'Gluttony': 'var(--sin-gluttony-bg)',
+};
 
-    lines.forEach(line => {
-        if (!line.includes(' - ')) return;
-        const parts = line.split(' - ');
-        if (parts.length < 4) return;
-
-        const nameAndSinner = parts[0];
-        const rarity = parts[1].trim();
-        const sin = parts[2].trim();
-        const color = parts[3].trim();
-
-        let sinner = 'Unknown';
-        let name = nameAndSinner;
-
-        for (const s of SINNER_ORDER) {
-            if (nameAndSinner.includes(s)) {
-                sinner = s;
-                name = nameAndSinner.replace(s, '').trim();
-                break;
-            }
-        }
-
-        egoList.push({
-            id: createSlug(`${name} ${sinner}`),
-            name: `${name} (${sinner})`,
-            egoName: name,
-            sinner, rarity, sin, color,
-            cssColor: bgColorMap[color] || 'rgba(128, 128, 128, 0.7)'
-        });
-    });
-    return egoList;
+// Parse EGOs from data/egos.json (array of plain objects).
+export function parseEGOData(jsonArray) {
+    return jsonArray.map(entry => ({
+        id: createSlug(`${entry.name} ${entry.sinner}`),
+        name: `${entry.name} (${entry.sinner})`,
+        egoName: entry.name,
+        sinner: entry.sinner,
+        rarity: entry.rarity,
+        sin: entry.sin,
+        imageFile: `${createSlug(`${entry.name}-${entry.sinner}`)}.webp`,
+        cssColor: sinColorMap[entry.sin] || 'rgba(128, 128, 128, 0.7)',
+    }));
 }
 
 export function sortIdsByMasterList(idList) {
@@ -96,7 +62,7 @@ export function createIdElement(idData, options = {}) {
     if (isHovered) idElement.classList.add('hovered');
 
     idElement.dataset.id = idData.id;
-    let html = `<img class="id-icon" src="/uploads/${idData.imageFile}" alt="${idData.name}"><div class="id-name">${idData.name}</div>`;
+    let html = `<img class="id-icon" src="/uploads/identity/${idData.imageFile}" alt="${idData.name}"><div class="id-name">${idData.name}</div>`;
     if (isShared) {
         html += '<div class="shared-icon"><i class="fas fa-link"></i></div>';
     }

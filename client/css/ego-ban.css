@@ -95,6 +95,15 @@
     position: relative;
 }
 
+/* EGO image */
+.ego-icon {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    border-radius: 4px;
+    display: block;
+}
+
 .ego-item:hover {
     transform: translateY(-3px) scale(1.02);
     box-shadow: 0 4px 15px rgba(0,0,0,0.5);

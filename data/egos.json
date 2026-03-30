@@ -1,0 +1,644 @@
+[
+  {
+    "name": "Crow's Eye View",
+    "sinner": "Yi Sang",
+    "rarity": "ZAYIN",
+    "sin": "Sloth"
+  },
+  {
+    "name": "Bygone Days",
+    "sinner": "Yi Sang",
+    "rarity": "ZAYIN",
+    "sin": "Gloom"
+  },
+  {
+    "name": "4th Match Flame",
+    "sinner": "Yi Sang",
+    "rarity": "TETH",
+    "sin": "Wrath"
+  },
+  {
+    "name": "Wishing Cairn",
+    "sinner": "Yi Sang",
+    "rarity": "TETH",
+    "sin": "Sloth"
+  },
+  {
+    "name": "Dimension Shredder",
+    "sinner": "Yi Sang",
+    "rarity": "HE",
+    "sin": "Pride"
+  },
+  {
+    "name": "Fell Bullet",
+    "sinner": "Yi Sang",
+    "rarity": "HE",
+    "sin": "Pride"
+  },
+  {
+    "name": "Sunshower",
+    "sinner": "Yi Sang",
+    "rarity": "WAW",
+    "sin": "Sloth"
+  },
+  {
+    "name": "Great Trichiliocosm [三千大世界]",
+    "sinner": "Yi Sang",
+    "rarity": "WAW",
+    "sin": "Wrath"
+  },
+  {
+    "name": "Representation Emitter",
+    "sinner": "Faust",
+    "rarity": "ZAYIN",
+    "sin": "Pride"
+  },
+  {
+    "name": "Hex Nail",
+    "sinner": "Faust",
+    "rarity": "TETH",
+    "sin": "Envy"
+  },
+  {
+    "name": "9:2",
+    "sinner": "Faust",
+    "rarity": "TETH",
+    "sin": "Lust"
+  },
+  {
+    "name": "Lasso",
+    "sinner": "Faust",
+    "rarity": "TETH",
+    "sin": "Gluttony"
+  },
+  {
+    "name": "Fluid Sac",
+    "sinner": "Faust",
+    "rarity": "HE",
+    "sin": "Gloom"
+  },
+  {
+    "name": "Telepole",
+    "sinner": "Faust",
+    "rarity": "HE",
+    "sin": "Envy"
+  },
+  {
+    "name": "Thoracalgia",
+    "sinner": "Faust",
+    "rarity": "HE",
+    "sin": "Pride"
+  },
+  {
+    "name": "Command : Meltdown",
+    "sinner": "Faust",
+    "rarity": "HE",
+    "sin": "Gluttony"
+  },
+  {
+    "name": "Ardor Blossom Star",
+    "sinner": "Faust",
+    "rarity": "HE",
+    "sin": "Wrath"
+  },
+  {
+    "name": "Everlasting",
+    "sinner": "Faust",
+    "rarity": "WAW",
+    "sin": "Sloth"
+  },
+  {
+    "name": "La Sangre de Sancho",
+    "sinner": "Don Quixote",
+    "rarity": "ZAYIN",
+    "sin": "Lust"
+  },
+  {
+    "name": "Lifetime Stew",
+    "sinner": "Don Quixote",
+    "rarity": "TETH",
+    "sin": "Lust"
+  },
+  {
+    "name": "Wishing Cairn",
+    "sinner": "Don Quixote",
+    "rarity": "TETH",
+    "sin": "Sloth"
+  },
+  {
+    "name": "Electric Screaming",
+    "sinner": "Don Quixote",
+    "rarity": "TETH",
+    "sin": "Envy"
+  },
+  {
+    "name": "Fluid Sac",
+    "sinner": "Don Quixote",
+    "rarity": "HE",
+    "sin": "Gloom"
+  },
+  {
+    "name": "Telepole",
+    "sinner": "Don Quixote",
+    "rarity": "HE",
+    "sin": "Envy"
+  },
+  {
+    "name": "Red Sheet",
+    "sinner": "Don Quixote",
+    "rarity": "HE",
+    "sin": "Gluttony"
+  },
+  {
+    "name": "Yearning-Mircalla",
+    "sinner": "Don Quixote",
+    "rarity": "WAW",
+    "sin": "Lust"
+  },
+  {
+    "name": "In the Name of Love and Hate",
+    "sinner": "Don Quixote",
+    "rarity": "WAW",
+    "sin": "Envy"
+  },
+  {
+    "name": "Forest for the Flames",
+    "sinner": "Ryōshū",
+    "rarity": "ZAYIN",
+    "sin": "Lust"
+  },
+  {
+    "name": "Soda",
+    "sinner": "Ryōshū",
+    "rarity": "ZAYIN",
+    "sin": "Gloom"
+  },
+  {
+    "name": "Red Eyes",
+    "sinner": "Ryōshū",
+    "rarity": "TETH",
+    "sin": "Lust"
+  },
+  {
+    "name": "Blind Obsession",
+    "sinner": "Ryōshū",
+    "rarity": "TETH",
+    "sin": "Pride"
+  },
+  {
+    "name": "4th Match Flame",
+    "sinner": "Ryōshū",
+    "rarity": "HE",
+    "sin": "Wrath"
+  },
+  {
+    "name": "Red Eyes (Open)",
+    "sinner": "Ryōshū",
+    "rarity": "HE",
+    "sin": "Envy"
+  },
+  {
+    "name": "Thoracalgia",
+    "sinner": "Ryōshū",
+    "rarity": "HE",
+    "sin": "Pride"
+  },
+  {
+    "name": "Contempt, Awe",
+    "sinner": "Ryōshū",
+    "rarity": "WAW",
+    "sin": "Lust"
+  },
+  {
+    "name": "Great Trichiliocosm [三千大世界]",
+    "sinner": "Ryōshū",
+    "rarity": "WAW",
+    "sin": "Wrath"
+  },
+  {
+    "name": "Chains of Others",
+    "sinner": "Meursault",
+    "rarity": "ZAYIN",
+    "sin": "Pride"
+  },
+  {
+    "name": "Screwloose Wallop",
+    "sinner": "Meursault",
+    "rarity": "TETH",
+    "sin": "Envy"
+  },
+  {
+    "name": "Regret",
+    "sinner": "Meursault",
+    "rarity": "TETH",
+    "sin": "Wrath"
+  },
+  {
+    "name": "Electric Screaming",
+    "sinner": "Meursault",
+    "rarity": "TETH",
+    "sin": "Envy"
+  },
+  {
+    "name": "Pursuance",
+    "sinner": "Meursault",
+    "rarity": "HE",
+    "sin": "Sloth"
+  },
+  {
+    "name": "Capote",
+    "sinner": "Meursault",
+    "rarity": "HE",
+    "sin": "Wrath"
+  },
+  {
+    "name": "Yearning-Mircalla",
+    "sinner": "Meursault",
+    "rarity": "WAW",
+    "sin": "Lust"
+  },
+  {
+    "name": "Crushbound Past",
+    "sinner": "Meursault",
+    "rarity": "WAW",
+    "sin": "Sloth"
+  },
+  {
+    "name": "Land of Illusion",
+    "sinner": "Hong Lu",
+    "rarity": "ZAYIN",
+    "sin": "Gloom"
+  },
+  {
+    "name": "Roseate Desire",
+    "sinner": "Hong Lu",
+    "rarity": "TETH",
+    "sin": "Lust"
+  },
+  {
+    "name": "Soda",
+    "sinner": "Hong Lu",
+    "rarity": "TETH",
+    "sin": "Gloom"
+  },
+  {
+    "name": "Cavernous Wailing",
+    "sinner": "Hong Lu",
+    "rarity": "TETH",
+    "sin": "Sloth"
+  },
+  {
+    "name": "Lasso",
+    "sinner": "Hong Lu",
+    "rarity": "TETH",
+    "sin": "Gluttony"
+  },
+  {
+    "name": "Dimension Shredder",
+    "sinner": "Hong Lu",
+    "rarity": "HE",
+    "sin": "Pride"
+  },
+  {
+    "name": "Effervescent Corrosion",
+    "sinner": "Hong Lu",
+    "rarity": "HE",
+    "sin": "Gluttony"
+  },
+  {
+    "name": "To Remain Oneself [宁作吾]",
+    "sinner": "Hong Lu",
+    "rarity": "HE",
+    "sin": "Pride"
+  },
+  {
+    "name": "Tears of the Tarnished Blood [汚血泣淚]",
+    "sinner": "Hong Lu",
+    "rarity": "WAW",
+    "sin": "Gluttony"
+  },
+  {
+    "name": "Bodysack",
+    "sinner": "Heathcliff",
+    "rarity": "ZAYIN",
+    "sin": "Envy"
+  },
+  {
+    "name": "Holiday",
+    "sinner": "Heathcliff",
+    "rarity": "ZAYIN",
+    "sin": "Gluttony"
+  },
+  {
+    "name": "Move-in Reg.",
+    "sinner": "Heathcliff",
+    "rarity": "TETH",
+    "sin": "Envy"
+  },
+  {
+    "name": "AEDD",
+    "sinner": "Heathcliff",
+    "rarity": "TETH",
+    "sin": "Gloom"
+  },
+  {
+    "name": "Fell Bullet",
+    "sinner": "Heathcliff",
+    "rarity": "TETH",
+    "sin": "Pride"
+  },
+  {
+    "name": "Telepole",
+    "sinner": "Heathcliff",
+    "rarity": "HE",
+    "sin": "Envy"
+  },
+  {
+    "name": "Ya Śūnyatā Tad Rūpam",
+    "sinner": "Heathcliff",
+    "rarity": "HE",
+    "sin": "Lust"
+  },
+  {
+    "name": "Asymmetrical Inertia",
+    "sinner": "Heathcliff",
+    "rarity": "HE",
+    "sin": "Sloth"
+  },
+  {
+    "name": "Binds",
+    "sinner": "Heathcliff",
+    "rarity": "WAW",
+    "sin": "Gloom"
+  },
+  {
+    "name": "Snagharpoon",
+    "sinner": "Ishmael",
+    "rarity": "ZAYIN",
+    "sin": "Gloom"
+  },
+  {
+    "name": "Hundred-Footed Death Maggot [蝍蛆殺]",
+    "sinner": "Ishmael",
+    "rarity": "ZAYIN",
+    "sin": "Gloom"
+  },
+  {
+    "name": "Roseate Desire",
+    "sinner": "Ishmael",
+    "rarity": "TETH",
+    "sin": "Lust"
+  },
+  {
+    "name": "Capote",
+    "sinner": "Ishmael",
+    "rarity": "TETH",
+    "sin": "Wrath"
+  },
+  {
+    "name": "Bygone Days",
+    "sinner": "Ishmael",
+    "rarity": "TETH",
+    "sin": "Gloom"
+  },
+  {
+    "name": "Ardor Blossom Star",
+    "sinner": "Ishmael",
+    "rarity": "HE",
+    "sin": "Wrath"
+  },
+  {
+    "name": "Wingbeat",
+    "sinner": "Ishmael",
+    "rarity": "HE",
+    "sin": "Gluttony"
+  },
+  {
+    "name": "Christmas Nightmare",
+    "sinner": "Ishmael",
+    "rarity": "HE",
+    "sin": "Gluttony"
+  },
+  {
+    "name": "Tidal Elegy",
+    "sinner": "Ishmael",
+    "rarity": "HE",
+    "sin": "Gloom"
+  },
+  {
+    "name": "Blind Obsession",
+    "sinner": "Ishmael",
+    "rarity": "WAW",
+    "sin": "Pride"
+  },
+  {
+    "name": "What is Cast",
+    "sinner": "Rodion",
+    "rarity": "ZAYIN",
+    "sin": "Pride"
+  },
+  {
+    "name": "Rime Shank",
+    "sinner": "Rodion",
+    "rarity": "TETH",
+    "sin": "Gloom"
+  },
+  {
+    "name": "Effervescent Corrosion",
+    "sinner": "Rodion",
+    "rarity": "TETH",
+    "sin": "Gluttony"
+  },
+  {
+    "name": "4th Match Flame",
+    "sinner": "Rodion",
+    "rarity": "HE",
+    "sin": "Wrath"
+  },
+  {
+    "name": "Pursuance",
+    "sinner": "Rodion",
+    "rarity": "HE",
+    "sin": "Sloth"
+  },
+  {
+    "name": "Hex Nail",
+    "sinner": "Rodion",
+    "rarity": "HE",
+    "sin": "Envy"
+  },
+  {
+    "name": "Sanguine Desire",
+    "sinner": "Rodion",
+    "rarity": "WAW",
+    "sin": "Lust"
+  },
+  {
+    "name": "Indicant's Trial",
+    "sinner": "Rodion",
+    "rarity": "WAW",
+    "sin": "Wrath"
+  },
+  {
+    "name": "Branch of Knowledge",
+    "sinner": "Sinclair",
+    "rarity": "ZAYIN",
+    "sin": "Gluttony"
+  },
+  {
+    "name": "Cavernous Wailing",
+    "sinner": "Sinclair",
+    "rarity": "ZAYIN",
+    "sin": "Gloom"
+  },
+  {
+    "name": "Impending Day",
+    "sinner": "Sinclair",
+    "rarity": "TETH",
+    "sin": "Wrath"
+  },
+  {
+    "name": "Lifetime Stew",
+    "sinner": "Sinclair",
+    "rarity": "TETH",
+    "sin": "Lust"
+  },
+  {
+    "name": "Hex Nail",
+    "sinner": "Sinclair",
+    "rarity": "TETH",
+    "sin": "Envy"
+  },
+  {
+    "name": "Lantern",
+    "sinner": "Sinclair",
+    "rarity": "HE",
+    "sin": "Gluttony"
+  },
+  {
+    "name": "9:2",
+    "sinner": "Sinclair",
+    "rarity": "HE",
+    "sin": "Lust"
+  },
+  {
+    "name": "Harmony",
+    "sinner": "Sinclair",
+    "rarity": "HE",
+    "sin": "Wrath"
+  },
+  {
+    "name": "Tears of the Tarnished Blood [汚血泣淚]",
+    "sinner": "Sinclair",
+    "rarity": "WAW",
+    "sin": "Gluttony"
+  },
+  {
+    "name": "To Páthos Máthos",
+    "sinner": "Outis",
+    "rarity": "ZAYIN",
+    "sin": "Pride"
+  },
+  {
+    "name": "I'll Go fer Scissors. How 'Bout You?",
+    "sinner": "Outis",
+    "rarity": "ZAYIN",
+    "sin": "Envy"
+  },
+  {
+    "name": "Ya Śūnyatā Tad Rūpam",
+    "sinner": "Outis",
+    "rarity": "WAW",
+    "sin": "Lust"
+  },
+  {
+    "name": "Sunshower",
+    "sinner": "Outis",
+    "rarity": "TETH",
+    "sin": "Gluttony"
+  },
+  {
+    "name": "Ebony Stem",
+    "sinner": "Outis",
+    "rarity": "HE",
+    "sin": "Gluttony"
+  },
+  {
+    "name": "Holiday",
+    "sinner": "Outis",
+    "rarity": "HE",
+    "sin": "Wrath"
+  },
+  {
+    "name": "Dimension Shredder",
+    "sinner": "Outis",
+    "rarity": "HE",
+    "sin": "Envy"
+  },
+  {
+    "name": "Magic Bullet",
+    "sinner": "Outis",
+    "rarity": "HE",
+    "sin": "Pride"
+  },
+  {
+    "name": "Binds",
+    "sinner": "Outis",
+    "rarity": "WAW",
+    "sin": "Pride"
+  },
+  {
+    "name": "Suddenly, One Day",
+    "sinner": "Gregor",
+    "rarity": "ZAYIN",
+    "sin": "Sloth"
+  },
+  {
+    "name": "Legerdemain",
+    "sinner": "Gregor",
+    "rarity": "ZAYIN",
+    "sin": "Gluttony"
+  },
+  {
+    "name": "Lantern",
+    "sinner": "Gregor",
+    "rarity": "TETH",
+    "sin": "Gluttony"
+  },
+  {
+    "name": "Bygone Days",
+    "sinner": "Gregor",
+    "rarity": "TETH",
+    "sin": "Gloom"
+  },
+  {
+    "name": "AEDD",
+    "sinner": "Gregor",
+    "rarity": "HE",
+    "sin": "Gloom"
+  },
+  {
+    "name": "Solemn Lament",
+    "sinner": "Gregor",
+    "rarity": "HE",
+    "sin": "Gloom"
+  },
+  {
+    "name": "Christmas Nightmare",
+    "sinner": "Gregor",
+    "rarity": "HE",
+    "sin": "Sloth"
+  },
+  {
+    "name": "Garden of Thorns",
+    "sinner": "Gregor",
+    "rarity": "WAW",
+    "sin": "Lust"
+  },
+  {
+    "name": "Unbrilliant Glory",
+    "sinner": "Gregor",
+    "rarity": "WAW",
+    "sin": "Sloth"
+  }
+]

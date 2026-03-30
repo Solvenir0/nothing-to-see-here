@@ -3,8 +3,7 @@
 
 import { SINNER_ORDER } from '../config.js';
 import { state, elements } from '../state.js';
-import { idCsvData, egoData } from '../../../data.js';
-import { parseIDCSV, parseEGOData } from '../rendering/idElements.js';
+import { parseIdentityData, parseEGOData } from '../rendering/idElements.js';
 import { switchView } from '../rendering/navigation.js';
 import { renderRosterBuilder, setupAdvancedRandomUI } from '../rendering/rosterBuilder.js';
 import { createFilterBarHTML } from '../rendering/rosterPhase.js';
@@ -16,7 +15,7 @@ import { init as initRosterBuilder } from '../rendering/rosterBuilder.js';
 import { connectWebSocket, sendMessage } from './stateHandlers.js';
 import { cacheDOMElements, setupFilterBar, setupEventListeners } from './eventHandlers.js';
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     console.log('DOM Content Loaded - Starting initialization');
 
     // Create rejoin overlay dynamically so it's ready before cacheDOMElements
@@ -30,6 +29,12 @@ document.addEventListener('DOMContentLoaded', () => {
     document.body.prepend(rejoinOverlay);
 
     try {
+        // Fetch JSON data files (single source of truth)
+        const [identities, egos] = await Promise.all([
+            fetch('/data/identities.json').then(r => r.json()),
+            fetch('/data/egos.json').then(r => r.json()),
+        ]);
+
         cacheDOMElements();
 
         // Inject sendMessage into modules that need it
@@ -48,9 +53,9 @@ document.addEventListener('DOMContentLoaded', () => {
         setupFilterBar('global-filter-bar-draft', state.draftFilters);
 
         // Parse and cache data
-        state.masterIDList = parseIDCSV(idCsvData);
+        state.masterIDList = parseIdentityData(identities);
         state.builderMasterIDList = state.masterIDList.filter(id => !id.name.includes('LCB Sinner'));
-        state.masterEGOList = parseEGOData(egoData);
+        state.masterEGOList = parseEGOData(egos);
 
         state.idsBySinner = {};
         SINNER_ORDER.forEach(sinnerName => {
@@ -71,3 +76,4 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 });
+
