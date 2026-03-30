@@ -571,6 +571,15 @@ export function setupEventListeners() {
         }
     });
 
+    // Unicode-safe base64 helpers for draft export/import
+    function encodeBase64(str) {
+        return btoa(encodeURIComponent(str));
+    }
+    function decodeBase64(b64) {
+        // Strip whitespace in case the string was line-wrapped when pasted
+        return decodeURIComponent(atob(b64.replace(/\s+/g, '')));
+    }
+
     // Export draft — compact format, only what the analyzer needs.
     // Type tokens: P=ID_PICK, B=ID_BAN, E=EGO_BAN  |  Player tokens: 1=p1, 2=p2
     const DRAFT_TYPE_ENC = { 'ID_PICK': 'P', 'ID_BAN': 'B', 'EGO_BAN': 'E' };
@@ -587,13 +596,16 @@ export function setupEventListeners() {
                 pk2: [d.picks_s2.p1, d.picks_s2.p2],
                 h:   d.history.map(e => [DRAFT_TYPE_ENC[e.type] ?? e.type, e.player === 'p1' ? 1 : 2, e.targetId])
             };
-            const exportCode = btoa(JSON.stringify(compact));
+            const exportCode = encodeBase64(JSON.stringify(compact));
             navigator.clipboard.writeText(exportCode).then(() => {
                 showNotification('Draft export code copied to clipboard!');
-            }).catch(err => {
-                console.error('Failed to copy export code:', err);
-                showNotification('Failed to copy. Please copy the code manually from the console.', true);
-                console.log('EXPORT CODE:', exportCode);
+            }).catch(() => {
+                // Clipboard API unavailable (e.g. HTTP context) — show the code in the analyzer textarea so the user can copy it manually
+                if (elements.draftImportCode) {
+                    elements.draftImportCode.value = exportCode;
+                    elements.draftImportCode.select();
+                }
+                showNotification('Could not auto-copy. The code is shown in the analyzer box — copy it from there.', true);
             });
         } catch (error) {
             console.error('Error exporting draft:', error);
@@ -610,7 +622,7 @@ export function setupEventListeners() {
             return;
         }
         try {
-            const d = JSON.parse(atob(importCode));
+            const d = JSON.parse(decodeBase64(importCode));
             if (!d.n || !d.r || !d.h) throw new Error('Invalid or corrupted draft data.');
             state.participants.p1.name = d.n[0];
             state.participants.p2.name = d.n[1];

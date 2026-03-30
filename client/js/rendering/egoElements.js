@@ -58,16 +58,29 @@ export function renderBannedEgosDisplay() {
         bannedEgoObjects.forEach(ego => {
             const item = document.createElement('div');
             item.className = 'banned-ego-item';
-            item.style.backgroundColor = ego.cssColor;
+            item.style.borderColor = ego.cssColor;
+
+            if (ego.imageFile) {
+                const img = document.createElement('img');
+                img.className = 'banned-ego-thumb';
+                img.src = `/uploads/ego/${ego.imageFile}`;
+                img.alt = ego.egoName;
+                img.onerror = function() { this.style.display = 'none'; };
+                item.appendChild(img);
+            }
+
+            const textDiv = document.createElement('div');
+            textDiv.className = 'banned-ego-text';
             const raritySpan = document.createElement('span');
             raritySpan.className = 'rarity';
             raritySpan.textContent = `[${ego.rarity}]`;
             const nameSpan = document.createElement('span');
             nameSpan.className = 'name';
             nameSpan.textContent = ego.name;
-            item.appendChild(raritySpan);
-            item.appendChild(document.createTextNode(' '));
-            item.appendChild(nameSpan);
+            textDiv.appendChild(raritySpan);
+            textDiv.appendChild(document.createTextNode(' '));
+            textDiv.appendChild(nameSpan);
+            item.appendChild(textDiv);
             container.appendChild(item);
         });
     };
