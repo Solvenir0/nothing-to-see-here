@@ -3,6 +3,13 @@
 
 import { state, elements } from '../state.js';
 
+export function getEgoDisplayName(egoData) {
+    if (state.koreanMode && egoData.koreanName) {
+        return egoData.koreanName;
+    }
+    return egoData.name;
+}
+
 export function createEgoElement(egoData, options = {}) {
     const { clickHandler, isHovered } = options;
     const egoElement = document.createElement('div');
