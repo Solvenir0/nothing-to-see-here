@@ -415,13 +415,7 @@ function getEgoDisplayName(egoData) {
 function generateRosterCode() {
     if (state.builderRoster.length !== state.builderRosterSize) return null;
     try {
-        const indices = state.builderRoster.map(slug => {
-            const index = state.masterIDList.findIndex(id => id.id === slug);
-            return index > -1 ? index : 255; // Use 255 as an error/not found marker
-        });
-        const uint8Array = new Uint8Array(indices);
-        const binaryString = String.fromCharCode.apply(null, uint8Array);
-        return btoa(binaryString);
+        return btoa(state.builderRoster.join('|'));
     } catch (e) {
         console.error("Error generating roster code:", e);
         return null;
@@ -430,24 +424,24 @@ function generateRosterCode() {
 
 function loadRosterFromCode(code) {
     try {
-        const binaryString = atob(code);
-        const rosterSize = binaryString.length;
+        const decoded = atob(code);
+        const rosterSlugs = decoded.split('|');
+        const rosterSize = rosterSlugs.length;
 
         if (rosterSize !== 42 && rosterSize !== 52) {
             showNotification(`Invalid roster code: unsupported size (${rosterSize}).`, true);
             return null;
         }
 
-        const uint8Array = new Uint8Array(binaryString.split('').map(c => c.charCodeAt(0)));
-        const rosterSlugs = Array.from(uint8Array).map(index => {
-            return (index < state.masterIDList.length) ? state.masterIDList[index].id : null;
-        }).filter(Boolean);
+        const validated = rosterSlugs.map(slug =>
+            state.masterIDList.find(id => id.id === slug)?.id ?? null
+        );
 
-        if (rosterSlugs.length !== rosterSize) {
+        if (validated.includes(null)) {
             showNotification("Invalid roster code: contains invalid ID data.", true);
             return null;
         }
-        return rosterSlugs;
+        return validated;
     } catch (e) {
         console.error("Error decoding roster code:", e);
         showNotification("Invalid roster code format.", true);
@@ -2153,20 +2147,23 @@ function setupEventListeners() {
         }
     });
 
-    // Event listener for the new EXPORT button
+    // Export draft — compact format, only what the analyzer needs.
+    // Type tokens: P=ID_PICK, B=ID_BAN, E=EGO_BAN  |  Player tokens: 1=p1, 2=p2
+    const DRAFT_TYPE_ENC = { 'ID_PICK': 'P', 'ID_BAN': 'B', 'EGO_BAN': 'E' };
     elements.exportDraftBtn.addEventListener('click', () => {
         try {
-            const draftData = {
-                participants: {
-                    p1: { name: state.participants.p1.name },
-                    p2: { name: state.participants.p2.name }
-                },
-                roster: state.roster,
-                draft: state.draft
+            const d = state.draft;
+            const compact = {
+                n:   [state.participants.p1.name, state.participants.p2.name],
+                r:   [state.roster.p1, state.roster.p2],
+                m:   d.matchType === 'allSections' ? 1 : 0,
+                ib:  [d.idBans.p1,   d.idBans.p2],
+                eb:  [d.egoBans.p1,  d.egoBans.p2],
+                pk:  [d.picks.p1,    d.picks.p2],
+                pk2: [d.picks_s2.p1, d.picks_s2.p2],
+                h:   d.history.map(e => [DRAFT_TYPE_ENC[e.type] ?? e.type, e.player === 'p1' ? 1 : 2, e.targetId])
             };
-            const jsonString = JSON.stringify(draftData);
-            const exportCode = btoa(jsonString); // Encode to Base64
-            
+            const exportCode = btoa(JSON.stringify(compact));
             navigator.clipboard.writeText(exportCode).then(() => {
                 showNotification("Draft export code copied to clipboard!");
             }).catch(err => {
@@ -2180,7 +2177,8 @@ function setupEventListeners() {
         }
     });
 
-    // Event listener for the new ANALYZE button
+    // Analyze draft
+    const DRAFT_TYPE_DEC = { 'P': 'ID_PICK', 'B': 'ID_BAN', 'E': 'EGO_BAN' };
     elements.analyzeDraftBtn.addEventListener('click', () => {
         const importCode = elements.draftImportCode.value.trim();
         if (!importCode) {
@@ -2188,25 +2186,24 @@ function setupEventListeners() {
             return;
         }
         try {
-            const jsonString = atob(importCode); // Decode from Base64
-            const importedData = JSON.parse(jsonString);
-
-            // Validate the imported data structure
-            if (!importedData.participants || !importedData.roster || !importedData.draft) {
-                throw new Error("Invalid or corrupted draft data.");
-            }
-
-            // Update the global state with the imported data
-            state.participants.p1.name = importedData.participants.p1.name;
-            state.participants.p2.name = importedData.participants.p2.name;
-            state.roster = importedData.roster;
-            state.draft = importedData.draft;
-            
-            // Switch to the completed view and render it with the new data
+            const d = JSON.parse(atob(importCode));
+            if (!d.n || !d.r || !d.h) throw new Error("Invalid or corrupted draft data.");
+            state.participants.p1.name = d.n[0];
+            state.participants.p2.name = d.n[1];
+            state.roster               = { p1: d.r[0],   p2: d.r[1] };
+            state.draft.matchType      = d.m ? 'allSections' : 'section1';
+            state.draft.idBans         = { p1: d.ib[0],  p2: d.ib[1] };
+            state.draft.egoBans        = { p1: d.eb[0],  p2: d.eb[1] };
+            state.draft.picks          = { p1: d.pk[0],  p2: d.pk[1] };
+            state.draft.picks_s2       = { p1: d.pk2[0], p2: d.pk2[1] };
+            state.draft.history        = d.h.map(([t, pl, id]) => ({
+                type:     DRAFT_TYPE_DEC[t] ?? t,
+                player:   pl === 1 ? 'p1' : 'p2',
+                targetId: id
+            }));
             switchView('completedView');
             renderCompletedView();
             showNotification("Draft analysis loaded successfully!");
-
         } catch (error) {
             console.error("Error analyzing draft code:", error);
             showNotification("Invalid or corrupted export code. Could not load draft.", true);

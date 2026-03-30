@@ -7,13 +7,7 @@ import { showNotification } from './core.js';
 export function generateRosterCode() {
     if (state.builderRoster.length !== state.builderRosterSize) return null;
     try {
-        const indices = state.builderRoster.map(slug => {
-            const index = state.masterIDList.findIndex(id => id.id === slug);
-            return index > -1 ? index : 255;
-        });
-        const uint8Array = new Uint8Array(indices);
-        const binaryString = String.fromCharCode.apply(null, uint8Array);
-        return btoa(binaryString);
+        return btoa(state.builderRoster.join('|'));
     } catch (e) {
         console.error('Error generating roster code:', e);
         return null;
@@ -22,24 +16,24 @@ export function generateRosterCode() {
 
 export function loadRosterFromCode(code) {
     try {
-        const binaryString = atob(code);
-        const rosterSize = binaryString.length;
+        const decoded = atob(code);
+        const rosterSlugs = decoded.split('|');
+        const rosterSize = rosterSlugs.length;
 
         if (rosterSize !== 42 && rosterSize !== 52) {
             showNotification(`Invalid roster code: unsupported size (${rosterSize}).`, true);
             return null;
         }
 
-        const uint8Array = new Uint8Array(binaryString.split('').map(c => c.charCodeAt(0)));
-        const rosterSlugs = Array.from(uint8Array).map(index => {
-            return (index < state.masterIDList.length) ? state.masterIDList[index].id : null;
-        }).filter(Boolean);
+        const validated = rosterSlugs.map(slug =>
+            state.masterIDList.find(id => id.id === slug)?.id ?? null
+        );
 
-        if (rosterSlugs.length !== rosterSize) {
+        if (validated.includes(null)) {
             showNotification('Invalid roster code: contains invalid ID data.', true);
             return null;
         }
-        return rosterSlugs;
+        return validated;
     } catch (e) {
         console.error('Error decoding roster code:', e);
         showNotification('Invalid roster code format.', true);
