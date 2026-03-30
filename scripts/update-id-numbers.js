@@ -12,6 +12,7 @@
 
 const fs   = require('fs');
 const path = require('path');
+const { createSlug } = require('../server/utils/idData');
 
 const SINNER_ORDER = [
     "Yi Sang", "Faust", "Don Quixote", "Ryōshū", "Meursault",
@@ -29,15 +30,6 @@ if (fs.existsSync(idNumbersPath)) {
 }
 // Ensure every sinner has an array
 SINNER_ORDER.forEach(s => { if (!table[s]) table[s] = []; });
-
-// Build slug from name (must match client createSlug logic)
-function createSlug(name) {
-    return name
-        .toLowerCase()
-        .replace(/[^a-z0-9\s-]/g, '')
-        .trim()
-        .replace(/\s+/g, '-');
-}
 
 const identities = JSON.parse(fs.readFileSync(identitiesPath, 'utf8'));
 
