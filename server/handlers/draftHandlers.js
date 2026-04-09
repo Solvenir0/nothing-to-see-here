@@ -179,6 +179,7 @@ function handleDraftConfirm(lobbyCode, lobbyData, ws) {
     }
 
     if (phase === 'egoBan') {
+        const playerBans = draft.egoBans[currentPlayer];
         if (!playerBans.includes(selectedId)) {
             playerBans.push(selectedId);
             draft.history.push({ type: 'EGO_BAN', player: currentPlayer, targetId: selectedId });
