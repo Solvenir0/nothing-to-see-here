@@ -23,8 +23,7 @@ export function renderCompletedView() {
     renderChronologicalIdList(elements.finalP1Picks, state.draft.picks.p1);
     renderChronologicalIdList(elements.finalP2Picks, state.draft.picks.p2);
 
-    const isAllSections = state.draft.matchType === 'allSections';
-    const showS2Container = !isAllSections && (state.draft.picks_s2.p1.length > 0 || state.draft.picks_s2.p2.length > 0);
+    const showS2Container = (state.draft.picks_s2.p1.length > 0 || state.draft.picks_s2.p2.length > 0);
 
     elements.finalP1S2PicksContainer.classList.toggle('hidden', !showS2Container);
     elements.finalP2S2PicksContainer.classList.toggle('hidden', !showS2Container);

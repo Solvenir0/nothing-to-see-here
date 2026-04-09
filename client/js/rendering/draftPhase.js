@@ -51,9 +51,6 @@ export function updateDraftUI() {
     elements.p1S2PicksContainer.classList.toggle('hidden', !isAllSections);
     elements.p2S2PicksContainer.classList.toggle('hidden', !isAllSections);
     if (isAllSections) {
-        elements.p1S2Picks.innerHTML = '';
-        elements.p2S2Picks.innerHTML = '';
-    } else {
         renderCompactIdListChronological(elements.p1S2Picks, [...state.draft.picks_s2.p1].reverse());
         renderCompactIdListChronological(elements.p2S2Picks, [...state.draft.picks_s2.p2].reverse());
     }
