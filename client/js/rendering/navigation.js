@@ -119,7 +119,7 @@ export function refreshInterfaceBasedOnGameState() {
         filterAndRenderRosterSelection();
     } else if (phase === 'egoBan') {
         renderEgoBanPhase();
-    } else if (['ban', 'pick', 'midBan', 'pick2', 'pick_s2'].includes(phase)) {
+    } else if (['ban', 'pick', 'midBan', 'pick2', 'pick_s2', 'idBan', 'idPick'].includes(phase)) {
         updateDraftUI();
     }
 

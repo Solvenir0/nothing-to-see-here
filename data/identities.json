@@ -342,6 +342,19 @@
     "rarity": "000"
   },
   {
+    "name": "The House of Spiders: The Ring Apprentice Faust",
+    "keywords": [
+      "Bleed",
+      "Charge"
+    ],
+    "sinAffinities": [
+      "Gluttony",
+      "Envy",
+      "Lust"
+    ],
+    "rarity": "000"
+  },
+  {
     "name": "Shi Association South Section 5 Director Don Quixote",
     "keywords": [
       "Poise"
@@ -486,6 +499,19 @@
     "sinAffinities": [
       "Lust",
       "Pride",
+      "Gloom"
+    ],
+    "rarity": "000"
+  },
+  {
+    "name": "Heishou Pack - Wei Branch Don Quixote",
+    "keywords": [
+      "Rupture",
+      "Sinking"
+    ],
+    "sinAffinities": [
+      "Lust",
+      "Gluttony",
       "Gloom"
     ],
     "rarity": "000"
@@ -967,6 +993,19 @@
       "Gloom",
       "Gluttony",
       "Pride"
+    ],
+    "rarity": "000"
+  },
+  {
+    "name": "The House of Spiders: The Ring Nursefather Hong Lu",
+    "keywords": [
+      "Bleed",
+      "Charge"
+    ],
+    "sinAffinities": [
+      "Pride",
+      "Envy",
+      "Lust"
     ],
     "rarity": "000"
   },
