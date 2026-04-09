@@ -49,15 +49,15 @@ export function refreshInterfaceBasedOnGameState() {
 
     elements.rosterPhase.classList.toggle('hidden', phase !== 'roster');
     elements.egoBanPhase.classList.toggle('hidden', phase !== 'egoBan');
-    elements.idDraftPhase.classList.toggle('hidden', !['ban', 'pick', 'midBan', 'pick2', 'pick_s2'].includes(phase));
+    elements.idDraftPhase.classList.toggle('hidden', !['ban', 'pick', 'midBan', 'pick2', 'pick_s2', 'idBan', 'idPick'].includes(phase));
     elements.coinFlipModal.classList.toggle('hidden', phase !== 'coinFlip');
     elements.draftStatusPanel.classList.toggle('hidden', phase === 'roster' || phase === 'complete');
 
     document.body.classList.remove('draft-ban-phase', 'draft-pick-phase');
-    if (['ban', 'midBan', 'egoBan'].includes(phase)) {
+    if (['ban', 'midBan', 'egoBan', 'idBan'].includes(phase)) {
         document.body.classList.add('draft-ban-phase');
         console.log('Applied draft-ban-phase class for phase:', phase);
-    } else if (['pick', 'pick2', 'pick_s2'].includes(phase)) {
+    } else if (['pick', 'pick2', 'pick_s2', 'idPick'].includes(phase)) {
         document.body.classList.add('draft-pick-phase');
         console.log('Applied draft-pick-phase class for phase:', phase);
     }
