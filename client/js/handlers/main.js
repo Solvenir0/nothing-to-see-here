@@ -14,6 +14,8 @@ import { init as initDraftPhase } from '../rendering/draftPhase.js';
 import { init as initRosterBuilder } from '../rendering/rosterBuilder.js';
 import { connectWebSocket, sendMessage } from './stateHandlers.js';
 import { cacheDOMElements, setupFilterBar, setupEventListeners } from './eventHandlers.js';
+import { loadSavedName } from '../utils/storage.js';
+import { setupDraftMakerListeners } from './draftMakerEvents.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('DOM Content Loaded - Starting initialization');
@@ -38,6 +40,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         cacheDOMElements();
 
+        // Prefill player name inputs from localStorage
+        const _savedName = loadSavedName();
+        if (_savedName) {
+            if (elements.playerNameInput) elements.playerNameInput.value = _savedName;
+            if (elements.draftMakerName) elements.draftMakerName.value = _savedName;
+        }
+
         // Inject sendMessage into modules that need it
         initKeepAlive(sendMessage);
         initActions(sendMessage);
@@ -52,6 +61,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         setupFilterBar('global-filter-bar-roster', state.filters);
         setupFilterBar('global-filter-bar-builder', state.filters);
         setupFilterBar('global-filter-bar-draft', state.draftFilters);
+        setupDraftMakerListeners();
 
         // Parse and cache data
         state.masterIDList = parseIdentityData(identities);

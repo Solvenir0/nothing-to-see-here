@@ -22,6 +22,7 @@
     <link rel="stylesheet" href="client/css/completed-view.css">
     <link rel="stylesheet" href="client/css/modals.css">
     <link rel="stylesheet" href="client/css/responsive.css">
+    <link rel="stylesheet" href="client/css/draft-maker.css">
 </head>
 <body>
     <div class="connection-status" id="connection-status">
@@ -176,6 +177,12 @@
                     <p class="action-description">Import a completed draft using an export code to review the timeline, rosters, and all picks/bans.</p>
                     <button class="btn btn-secondary btn-large" id="go-to-analyzer"><i class="fas fa-search"></i> Open Analyzer</button>
                 </div>
+                <div class="action-card">
+                    <div class="action-icon"><i class="fas fa-tools"></i></div>
+                    <h3 class="action-title">Draft Maker</h3>
+                    <p class="action-description">Design a fully custom draft template — configure EGO bans, pick sequences, and roster size. Save and share it as a code.</p>
+                    <button class="btn btn-secondary btn-large" id="go-to-draft-maker"><i class="fas fa-tools"></i> Open Draft Maker</button>
+                </div>
             </div>
             
 
@@ -213,6 +220,7 @@
                     <div class="filter-bar" id="global-filter-bar-roster">
                         <!-- Filters are now globally defined and rendered by JS -->
                     </div>
+                    <div id="banned-ids-panel" class="hidden"></div>
                      <div class="player-area">
                         <div class="player-panel" id="p1-panel">
                             <div class="player-header">
@@ -375,7 +383,9 @@
                     <div class="builder-side-panel">
                         <div class="builder-roster-size-selector" id="builder-roster-size-selector">
                             <button class="btn btn-small active" data-size="42">42-ID Roster</button>
-                            <button class="btn btn-small" data-size="72">72-ID Roster</button>
+                            <label class="builder-custom-size-label">Custom:
+                                <input type="number" id="builder-roster-size-custom" class="builder-size-input" min="1" max="200" placeholder="e.g. 52">
+                            </label>
                         </div>
                         <h3>Your Roster (<span id="builder-counter">0</span>/<span id="builder-roster-size">42</span>)</h3>
                         <div class="sinner-grouped-roster" id="builder-selected-roster"></div>
@@ -481,7 +491,43 @@
             <button class="btn btn-large btn-primary" id="restart-draft"><i class="fas fa-redo"></i> Start New Draft</button>
             <button class="btn btn-large" id="export-draft-btn" style="margin-left: 15px;"><i class="fas fa-upload"></i> Export Draft</button>
         </div>
-        <!-- Add this new page structure right after the #completed-view div -->
+        <!-- Draft Maker Page -->
+        <div id="draft-maker-page" class="hidden">
+            <header>
+                <h1><i class="fas fa-tools"></i> Draft Maker</h1>
+                <p>Design a custom draft template and share it as a code.</p>
+            </header>
+            <div class="card draft-maker-card">
+                <div class="draft-maker-layout">
+                    <div class="draft-maker-builder" id="draft-maker-builder">
+                        <!-- Rendered by JS -->
+                    </div>
+                    <div class="draft-maker-sidebar">
+                        <div class="draft-maker-code-section">
+                            <h3>Template Code</h3>
+                            <p>Share this to reuse your draft template.</p>
+                            <div id="draft-maker-code-display" class="dm-code-display">Configure the template to generate a code.</div>
+                            <button class="btn btn-primary" id="draft-maker-copy-code" style="width:100%;margin-top:10px;" disabled><i class="fas fa-copy"></i> Copy Code</button>
+                            <h3 style="margin-top:20px;">Load Code</h3>
+                            <div class="roster-code-actions">
+                                <input type="text" id="draft-maker-load-input" placeholder="Paste code...">
+                                <button class="btn" id="draft-maker-load-btn"><i class="fas fa-upload"></i></button>
+                            </div>
+                        </div>
+                        <hr style="margin:20px 0;border-color:var(--border);">
+                        <div class="draft-maker-create-section">
+                            <h3>Create Lobby from Template</h3>
+                            <div class="form-group">
+                                <label for="draft-maker-name">Your Name</label>
+                                <input type="text" id="draft-maker-name" placeholder="Enter your name" maxlength="50">
+                            </div>
+                            <button class="btn btn-primary btn-large" id="draft-maker-create-lobby" style="width:100%;margin-top:10px;"><i class="fas fa-plus"></i> Create Lobby</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div id="analyzer-page" class="hidden">
             <header>
                 <h1><i class="fas fa-chart-bar"></i> Draft Analyzer</h1>

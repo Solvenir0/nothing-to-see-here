@@ -36,12 +36,6 @@ export function loadRosterFromCode(code) {
         }
 
         const uint16 = new Uint16Array(bytes.buffer);
-        const rosterSize = uint16.length;
-
-        if (rosterSize !== 42) {
-            showNotification(`Invalid roster code: unsupported size (${rosterSize}).`, true);
-            return null;
-        }
 
         const rosterSlugs = Array.from(uint16).map(value => {
             const slug = state.slotToId[value];
@@ -58,4 +52,14 @@ export function loadRosterFromCode(code) {
         showNotification('Invalid roster code format.', true);
         return null;
     }
+}
+
+const NAME_KEY = 'limbusDraftPlayerName';
+
+export function savePlayerName(name) {
+    try { if (name) localStorage.setItem(NAME_KEY, name); } catch (_) {}
+}
+
+export function loadSavedName() {
+    try { return localStorage.getItem(NAME_KEY) || ''; } catch (_) { return ''; }
 }

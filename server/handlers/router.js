@@ -13,6 +13,21 @@ const { handleTimer, setTimerForLobby, computeBanPools, handleDraftConfirm } = r
 
 const LOBBY_TTL = 2 * 60 * 60 * 1000; // 2 hours
 
+const VALID_STEP_TYPES = new Set(['egoBan', 'idBan', 'idPick']);
+function validateCustomTemplate(t) {
+    const VALID_P = new Set(['p1', 'p2']);
+    const isStep = s => s && VALID_P.has(s.p) && VALID_STEP_TYPES.has(s.type) &&
+        Number.isInteger(s.c) && s.c >= 1 && s.c <= 99;
+    if (!t) return false;
+    if (!Number.isInteger(t.rosterSize) || t.rosterSize < 1 || t.rosterSize > 200) return false;
+    if (!Array.isArray(t.steps) || t.steps.length < 1 || !t.steps.every(isStep)) return false;
+    if (t.bannedIds !== undefined) {
+        if (!Array.isArray(t.bannedIds) || t.bannedIds.length > 500) return false;
+        if (!t.bannedIds.every(b => typeof b === 'string' && b.length <= 120)) return false;
+    }
+    return true;
+}
+
 function fisherYatesShuffle(arr) {
     const copy = [...arr];
     for (let i = copy.length - 1; i > 0; i--) {
@@ -53,6 +68,10 @@ function init(wss, crypto) {
                         return sendError(ws, 'You are creating lobbies too quickly. Please wait.');
                     }
                     rateLimit[ip].push(now);
+
+                    if (options.customTemplate && !validateCustomTemplate(options.customTemplate)) {
+                        return sendError(ws, 'Invalid custom draft template.');
+                    }
 
                     const newLobbyCode = generateUniqueLobbyCode();
                     const newLobbyState = createNewLobbyState(options);
@@ -138,6 +157,8 @@ function init(wss, crypto) {
                     if (!validatePlayerAccess(ws, player, lobbyData)) return;
                     if (!validatePlayerNotReady(lobbyData, player)) return;
                     if (typeof id !== 'string' || !allIds.includes(id)) return;
+                    const bannedSet = new Set(lobbyData.draft.bannedIds || []);
+                    if (bannedSet.has(id)) return sendError(ws, 'That ID is banned from this draft.');
                     const currentRoster = lobbyData.roster[player];
                     const index = currentRoster.indexOf(id);
                     if (index === -1) { if (currentRoster.length < lobbyData.draft.rosterSize) currentRoster.push(id); }
@@ -150,18 +171,21 @@ function init(wss, crypto) {
                 case 'rosterSet': {
                     if (!validatePlayerAccess(ws, player, lobbyData)) return;
                     if (!validatePlayerNotReady(lobbyData, player)) return;
-                    if (validateRoster(roster, lobbyData.draft.rosterSize)) {
-                        lobbyData.roster[player] = roster;
-                        updateLobbyActivity(lobbyCode);
-                        broadcastState(lobbyCode);
-                    }
+                    if (!validateRoster(roster, lobbyData.draft.rosterSize)) return;
+                    const bannedInRoster = (lobbyData.draft.bannedIds || []).some(b => roster.includes(b));
+                    if (bannedInRoster) return sendError(ws, 'Roster contains a banned ID.');
+                    lobbyData.roster[player] = roster;
+                    updateLobbyActivity(lobbyCode);
+                    broadcastState(lobbyCode);
                     break;
                 }
 
                 case 'rosterRandomize': {
                     if (!validatePlayerAccess(ws, player, lobbyData)) return;
                     if (!validatePlayerNotReady(lobbyData, player)) return;
-                    const shuffled = fisherYatesShuffle(allIds);
+                    const bannedRandomSet = new Set(lobbyData.draft.bannedIds || []);
+                    const eligibleIds = allIds.filter(sid => !bannedRandomSet.has(sid));
+                    const shuffled = fisherYatesShuffle(eligibleIds);
                     lobbyData.roster[player] = shuffled.slice(0, lobbyData.draft.rosterSize);
                     updateLobbyActivity(lobbyCode);
                     broadcastState(lobbyCode);
@@ -181,6 +205,12 @@ function init(wss, crypto) {
                     if (!validatePlayerAccess(ws, player, lobbyData)) return;
                     const currentReadyState = lobbyData.participants[player].ready;
                     if (!currentReadyState && lobbyData.roster[player].length !== lobbyData.draft.rosterSize) return;
+                    if (!currentReadyState) {
+                        const bannedReadySet = new Set(lobbyData.draft.bannedIds || []);
+                        if (lobbyData.roster[player].some(id => bannedReadySet.has(id))) {
+                            return sendError(ws, 'Your roster contains a banned ID. Please replace it before readying up.');
+                        }
+                    }
                     lobbyData.participants[player].ready = !currentReadyState;
                     updateLobbyActivity(lobbyCode);
                     broadcastState(lobbyCode);
@@ -218,11 +248,26 @@ function init(wss, crypto) {
                         });
                     }
 
-                    draft.phase = 'egoBan';
-                    draft.action = 'egoBan';
-                    draft.currentPlayer = 'p1';
-                    draft.step = 0;
-                    draft.actionCount = 1;
+                    // Initialise available pool (locked after coin flip)
+                    draft.available.p1 = [...lobbyData.roster.p1];
+                    draft.available.p2 = [...lobbyData.roster.p2];
+
+                    const steps = draft.template && draft.template.steps;
+                    if (!steps || steps.length === 0) {
+                        draft.phase = 'complete';
+                        draft.action = 'complete';
+                        draft.currentPlayer = '';
+                    } else {
+                        const s = steps[0];
+                        draft.step = 0;
+                        draft.phase = s.type === 'idPickS2' ? 'pick_s2' : s.type;
+                        draft.action = draft.phase;
+                        draft.currentPlayer = s.p;
+                        draft.actionCount = s.c;
+                        if (s.type === 'idBan') {
+                            computeBanPools(lobbyData);
+                        }
+                    }
 
                     updateLobbyActivity(lobbyCode);
                     setTimerForLobby(lobbyCode, lobbyData);
@@ -238,8 +283,8 @@ function init(wss, crypto) {
                     const { currentPlayer } = draft;
                     if (!currentPlayer || (ws.userRole !== currentPlayer && ws.userRole !== 'ref')) return;
 
-                    if (['ban', 'pick', 'midBan', 'pick2', 'pick_s2'].includes(draft.phase)) {
-                        const isBanAction = (draft.phase === 'ban' || draft.phase === 'midBan');
+                    if (['idBan', 'idPick', 'pick_s2'].includes(draft.phase)) {
+                        const isBanAction = (draft.phase === 'idBan');
                         if (isBanAction) {
                             const bannableIds = draft.banPools[currentPlayer] || [];
                             if (!bannableIds.includes(hoveredId)) return;

@@ -65,6 +65,22 @@
     z-index: 2;
 }
 
+/* Banned ID — greyed out, unclickable */
+.id-item.banned {
+    opacity: 0.35;
+    cursor: not-allowed;
+    filter: grayscale(80%);
+    border-color: rgba(179, 27, 27, 0.5);
+}
+.id-item.banned::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 6px;
+    background: rgba(179, 27, 27, 0.15);
+    pointer-events: none;
+}
+
 /* Selected — red glow during ban phases */
 .draft-ban-phase .id-item.selected {
     border: 3px solid var(--primary);

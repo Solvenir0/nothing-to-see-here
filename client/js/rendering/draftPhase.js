@@ -80,7 +80,7 @@ export function updateDraftInstructions() {
         const { phase, currentPlayer, action, actionCount, egoBans, hovered, matchType } = state.draft;
 
         const isPlayerTurn = (state.userRole === currentPlayer);
-        const isActionPhase = ['egoBan', 'ban', 'pick', 'midBan', 'pick2', 'pick_s2'].includes(phase);
+        const isActionPhase = ['egoBan', 'idBan', 'idPick', 'ban', 'pick', 'midBan', 'pick2', 'pick_s2'].includes(phase);
         const isTurnChange = (phase !== previousPhase) || (currentPlayer !== previousCurrentPlayer);
 
         if (isPlayerTurn && isActionPhase && isTurnChange && previousPhase !== null) {
@@ -96,55 +96,45 @@ export function updateDraftInstructions() {
 
         elements.draftPoolContainer.innerHTML = '';
 
+        const _steps = state.draft.template?.steps;
+        const _stepInfo = _steps
+            ? ` · ${(state.draft.step ?? 0) + 1} / ${_steps.length}`
+            : '';
+        const _name = currentPlayer ? (state.participants[currentPlayer]?.name || currentPlayer) : '';
+
         switch (phase) {
             case 'roster':
                 phaseText = 'Roster Selection';
-                actionDesc = `Select ${state.draft.rosterSize} IDs for your roster, then ready up`;
+                actionDesc = `Select ${state.draft.rosterSize} IDs, then ready up`;
                 break;
             case 'coinFlip':
                 phaseText = 'Coin Flip';
-                actionDesc = 'Winner chooses turn order';
+                actionDesc = 'Winner picks turn order';
                 break;
             case 'egoBan': {
-                const totalEgoBansPerPlayer = (state.draft.egoBanSteps || 10) / 2;
-                const bansDoneByCurrentPlayer = egoBans[currentPlayer] ? egoBans[currentPlayer].length : 0;
-                phaseText = `EGO Ban Phase - ${state.participants[currentPlayer].name}'s Turn`;
-                actionDesc = `Ban 1 EGO (${bansDoneByCurrentPlayer}/${totalEgoBansPerPlayer} bans)`;
+                const egoBansDone = (egoBans.p1?.length ?? 0) + (egoBans.p2?.length ?? 0);
+                const egoBanTotal = state.draft.egoBanSteps ?? 0;
+                phaseText = `${_name}'s Turn`;
+                actionDesc = `Ban ${actionCount} EGO${actionCount !== 1 ? 's' : ''} · ${egoBansDone} / ${egoBanTotal} banned`;
                 break;
             }
-            case 'ban': {
-                phaseText = `ID Ban Phase - ${state.participants[currentPlayer].name}'s Turn`;
-                const totalBans = 6;
-                const currentBans = (state.draft.idBans[currentPlayer] || []).length;
-                actionDesc = `Ban ${actionCount} IDs (${currentBans}/${totalBans} bans)`;
-                break;
-            }
-            case 'pick': {
-                phaseText = `ID Pick Phase 1 - ${state.participants[currentPlayer].name}'s Turn`;
-                const totalPicks1 = 6;
-                const currentPicks1 = (state.draft.picks[currentPlayer] || []).length;
-                actionDesc = `Pick ${actionCount} IDs (${currentPicks1}/${totalPicks1} picks)`;
-                break;
-            }
+            case 'idBan':
+            case 'ban':
             case 'midBan': {
-                phaseText = `Mid-Draft Ban Phase - ${state.participants[currentPlayer].name}'s Turn`;
-                const midBanCount = matchType === 'allSections' ? 4 : 3;
-                const currentMidBans = (state.draft.idBans[currentPlayer] || []).length - 6;
-                actionDesc = `Ban ${actionCount} IDs (${Math.max(0, currentMidBans)}/${midBanCount} mid-bans)`;
+                phaseText = `${_name}'s Turn`;
+                actionDesc = `Ban ${actionCount} ID${actionCount !== 1 ? 's' : ''}${_stepInfo}`;
                 break;
             }
+            case 'idPick':
+            case 'pick':
             case 'pick2': {
-                phaseText = `ID Pick Phase 2 - ${state.participants[currentPlayer].name}'s Turn`;
-                const totalPicks2 = matchType === 'allSections' ? 12 : 6;
-                const currentPicks2 = (state.draft.picks[currentPlayer] || []).length - 6;
-                actionDesc = `Pick ${actionCount} IDs (${Math.max(0, currentPicks2)}/${totalPicks2} picks)`;
+                phaseText = `${_name}'s Turn`;
+                actionDesc = `Pick ${actionCount} ID${actionCount !== 1 ? 's' : ''}${_stepInfo}`;
                 break;
             }
             case 'pick_s2': {
-                phaseText = `Section 2/3 Pick Phase - ${state.participants[currentPlayer].name}'s Turn`;
-                const totalS2Picks = 6;
-                const currentS2Picks = (state.draft.picks_s2[currentPlayer] || []).length;
-                actionDesc = `Pick ${actionCount} Section 2/3 IDs (${currentS2Picks}/${totalS2Picks} picks)`;
+                phaseText = `${_name}'s Turn`;
+                actionDesc = `Pick ${actionCount} S2/S3 ID${actionCount !== 1 ? 's' : ''}${_stepInfo}`;
                 break;
             }
             case 'complete':
@@ -152,12 +142,12 @@ export function updateDraftInstructions() {
                 actionDesc = 'All selections finalized';
                 break;
             default:
-                phaseText = 'Waiting for Draft to Start';
-                actionDesc = 'Waiting for referee to start';
+                phaseText = 'Draft';
+                actionDesc = 'Waiting...';
         }
 
-        if (['ban', 'pick', 'midBan', 'pick2', 'pick_s2'].includes(phase)) {
-            const isBanAction = (phase === 'ban' || phase === 'midBan');
+        if (['idBan', 'idPick', 'ban', 'pick', 'midBan', 'pick2', 'pick_s2'].includes(phase)) {
+            const isBanAction = (phase === 'idBan' || phase === 'ban' || phase === 'midBan');
 
             let availableIdList;
             if (isBanAction) {

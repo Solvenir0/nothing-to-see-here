@@ -2,7 +2,7 @@
 // Draft-phase logic: timers, phase advancement, ban pool computation, confirm handler.
 
 const { lobbies, lobbyTimers } = require('../store');
-const { TIMERS, DRAFT_LOGIC } = require('../config/draftLogic');
+const { TIMERS } = require('../config/draftLogic');
 const { logInfo, logError } = require('../utils/logger');
 const { broadcastState, updateLobbyActivity } = require('../lobby/manager');
 
@@ -67,12 +67,15 @@ function setTimerForLobby(lobbyCode, lobbyData) {
     }
 
     let duration = 0;
+    const ts = draft.timerSettings || TIMERS;
     if (draft.phase === 'roster') {
         duration = TIMERS.roster;
     } else if (draft.phase === 'egoBan') {
-        duration = TIMERS.egoBan;
-    } else if (['pick', 'ban', 'midBan', 'pick2'].includes(draft.phase)) {
-        duration = TIMERS.pick * draft.actionCount;
+        duration = ts.egoBanTime ?? TIMERS.egoBan;
+    } else if (draft.phase === 'idBan') {
+        duration = (ts.idBanTime ?? TIMERS.pick) * draft.actionCount;
+    } else if (['idPick', 'pick_s2'].includes(draft.phase)) {
+        duration = (ts.idPickTime ?? TIMERS.pick) * draft.actionCount;
     }
 
     if (duration > 0) {
@@ -88,107 +91,37 @@ function setTimerForLobby(lobbyCode, lobbyData) {
 
 function advancePhase(lobbyData) {
     const { draft } = lobbyData;
+    const t = draft.template;
     draft.timer.isReserve = false;
 
-    const logicKey = draft.matchType === 'allSections' ? `${draft.draftLogic}-extended` : draft.draftLogic;
-    const logic = DRAFT_LOGIC[logicKey] || DRAFT_LOGIC[draft.draftLogic];
-
-    if (!logic) {
-        logError('DRAFT', 'No draft logic found for key', { draftLogic: draft.draftLogic, matchType: draft.matchType });
+    if (!t || !Array.isArray(t.steps)) {
+        logError('DRAFT', 'No steps found on draft template', { lobbyCode: lobbyData.lobbyCode });
         return lobbyData;
     }
 
-    switch (draft.phase) {
-        case "egoBan":
-            const totalEgoBans = draft.egoBanSteps || 10;
-            // Total bans, so steps are 0 to totalEgoBans - 1
-            if (draft.step < totalEgoBans - 1) {
-                draft.step++;
-                draft.currentPlayer = draft.currentPlayer === 'p1' ? 'p2' : 'p1';
-                draft.actionCount = 1; // Each player bans 1 at a time
-            } else {
-                // EGO ban phase is over, move to ID bans
-                draft.phase = "ban";
-                draft.action = "ban";
-                draft.step = 0;
-                draft.currentPlayer = 'p1'; // P1 always starts ID bans
-                draft.actionCount = 1;
-                draft.available.p1 = [...lobbyData.roster.p1];
-                draft.available.p2 = [...lobbyData.roster.p2];
-                computeBanPools(lobbyData); // initialize ban pools for initial ban phase
-            }
-            break;
-        case "ban":
-            if (draft.step < logic.ban1Steps - 1) {
-                draft.step++;
-                draft.currentPlayer = draft.currentPlayer === 'p1' ? 'p2' : 'p1';
-                draft.actionCount = 1;
-            } else {
-                draft.phase = "pick";
-                draft.action = "pick";
-                draft.step = 0;
-                const next = logic.pick1[0];
-                draft.currentPlayer = next.p;
-                draft.actionCount = next.c;
-            }
-            break;
-        case "pick":
-            if (draft.step < logic.pick1.length - 1) {
-                draft.step++;
-                const next = logic.pick1[draft.step];
-                draft.currentPlayer = next.p;
-                draft.actionCount = next.c;
-            } else {
-                draft.phase = "midBan";
-                draft.action = "midBan";
-                draft.step = 0;
-                draft.currentPlayer = 'p2';
-                draft.actionCount = 1;
-                computeBanPools(lobbyData); // refresh ban pools for mid-ban phase
-            }
-            break;
-        case "midBan":
-            if (draft.step < logic.midBanSteps - 1) {
-                draft.step++;
-                draft.currentPlayer = draft.currentPlayer === 'p1' ? 'p2' : 'p1';
-                draft.actionCount = 1;
-            } else {
-                draft.phase = "pick2";
-                draft.action = "pick2";
-                draft.step = 0;
-                const next = logic.pick2[0];
-                draft.currentPlayer = next.p;
-                draft.actionCount = next.c;
-            }
-            break;
-        case "pick2":
-            if (draft.step < logic.pick2.length - 1) {
-                draft.step++;
-                const next = logic.pick2[draft.step];
-                draft.currentPlayer = next.p;
-                draft.actionCount = next.c;
-            } else {
-                draft.phase = "complete";
-                draft.action = "complete";
-                draft.currentPlayer = "";
-            }
-            break;
-        case "pick_s2":
-            if (draft.step < logic.pick_s2.length - 1) {
-                draft.step++;
-                const next = logic.pick_s2[draft.step];
-                draft.currentPlayer = next.p;
-                draft.actionCount = next.c;
-            } else {
-                draft.phase = "complete";
-                draft.action = "complete";
-                draft.currentPlayer = "";
-            }
-            break;
+    const nextIdx = draft.step + 1;
+    if (nextIdx >= t.steps.length) {
+        draft.phase = 'complete';
+        draft.action = 'complete';
+        draft.currentPlayer = '';
+        return lobbyData;
     }
+
+    draft.step = nextIdx;
+    const s = t.steps[nextIdx];
+    draft.phase = s.type === 'idPickS2' ? 'pick_s2' : s.type;
+    draft.action = draft.phase;
+    draft.currentPlayer = s.p;
+    draft.actionCount = s.c;
+
+    if (s.type === 'idBan') {
+        draft.available.p1 = [...lobbyData.roster.p1];
+        draft.available.p2 = [...lobbyData.roster.p2];
+        computeBanPools(lobbyData);
+    }
+
     return lobbyData;
 }
-
 // Recompute the bannable pools for each player based on current rosters, bans, and ALL picks.
 function computeBanPools(lobbyData) {
     if (!lobbyData || !lobbyData.draft) return;
@@ -223,8 +156,8 @@ function handleDraftConfirm(lobbyCode, lobbyData, ws) {
     if (ws && ws.userRole !== currentPlayer && ws.userRole !== 'ref') return;
 
     // For ID phases, ensure the selection is currently available from the right pool
-    if (['ban', 'pick', 'midBan', 'pick2', 'pick_s2'].includes(phase)) {
-        const isBanAction = (phase === 'ban' || phase === 'midBan');
+    if (['idBan', 'idPick', 'pick_s2'].includes(phase)) {
+        const isBanAction = (phase === 'idBan');
         if (isBanAction) {
             // Validate against the authoritative ban pool
             const bannableIds = draft.banPools[currentPlayer] || [];
@@ -246,34 +179,35 @@ function handleDraftConfirm(lobbyCode, lobbyData, ws) {
     }
 
     if (phase === 'egoBan') {
-        const playerBans = draft.egoBans[currentPlayer];
         if (!playerBans.includes(selectedId)) {
             playerBans.push(selectedId);
             draft.history.push({ type: 'EGO_BAN', player: currentPlayer, targetId: selectedId });
         }
 
-        draft.hovered[currentPlayer] = null; // Clear hover after successful ban
+        draft.hovered[currentPlayer] = null;
+        draft.actionCount--;
 
-        // After one ban, advance the phase to the next player's turn
-        lobbyData = advancePhase(lobbyData);
+        if (draft.actionCount <= 0) {
+            lobbyData = advancePhase(lobbyData);
+        }
+
         setTimerForLobby(lobbyCode, lobbyData);
-
         updateLobbyActivity(lobbyCode);
         broadcastState(lobbyCode);
-        return; // Exit here.
+        return;
     }
 
-    if (['ban', 'pick', 'midBan', 'pick2', 'pick_s2'].includes(phase)) {
+    if (['idBan', 'idPick', 'pick_s2'].includes(phase)) {
         if (draft.actionCount <= 0) return;
 
         let listToUpdate;
-        const isBanAction = (phase === 'ban' || phase === 'midBan');
+        const isBanAction = (phase === 'idBan');
         let eventType = '';
 
         if (isBanAction) {
             listToUpdate = draft.idBans[currentPlayer];
             eventType = 'ID_BAN';
-        } else if (phase === 'pick' || phase === 'pick2' || phase === 'pick_s2') {
+        } else {
             listToUpdate = (phase === 'pick_s2') ? draft.picks_s2[currentPlayer] : draft.picks[currentPlayer];
             eventType = 'ID_PICK';
         }

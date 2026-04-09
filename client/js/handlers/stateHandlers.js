@@ -128,6 +128,7 @@ export function handleLobbyJoined(message) {
 }
 
 export function handleStateUpdate(message) {
+    const prevHistoryLen = (state.draft.history || []).length;
     const wasUserRole = state.userRole;
     const newUserRole = message.newRole || state.userRole;
     const rolesSwapped = message.state?.rolesSwapped || false;
@@ -150,6 +151,7 @@ export function handleStateUpdate(message) {
     if (rolesSwapped && wasUserRole && wasUserRole !== newUserRole) {
         showSideChangeNotification(wasUserRole, newUserRole);
     }
+
     elements.lobbyCodeDisplay.textContent = state.lobbyCode;
     refreshInterfaceBasedOnGameState();
 }

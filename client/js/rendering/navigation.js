@@ -11,7 +11,7 @@ export function switchView(view) {
     console.log('Switching to view:', view);
     state.currentView = view;
 
-    ['mainPage', 'lobbyView', 'completedView', 'rosterBuilderPage', 'analyzerPage', 'timelineWrapper'].forEach(pageId => {
+    ['mainPage', 'lobbyView', 'completedView', 'rosterBuilderPage', 'analyzerPage', 'draftMakerPage', 'timelineWrapper'].forEach(pageId => {
         const el = elements[pageId];
         if (el) {
             el.classList.add('hidden');

@@ -26,6 +26,65 @@
     background: var(--connected);
 }
 
+/* Music controls — fixed HUD widget shown during active draft */
+.music-controls {
+    position: fixed;
+    top: 62px;
+    right: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(0, 0, 0, 0.75);
+    border-radius: 20px;
+    padding: 5px 12px 5px 8px;
+    z-index: 99;
+    border: 1px solid var(--border);
+}
+
+.music-controls.hidden {
+    display: none;
+}
+
+.music-mute-btn {
+    background: none;
+    border: none;
+    color: var(--text);
+    cursor: pointer;
+    font-size: 0.9rem;
+    padding: 0 2px;
+    line-height: 1;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+}
+
+.music-mute-btn:hover {
+    opacity: 1;
+}
+
+.music-mute-btn.muted {
+    color: var(--text-muted);
+}
+
+.music-volume-slider {
+    width: 72px;
+    cursor: pointer;
+    accent-color: var(--accent);
+}
+
+.ctrl-divider {
+    width: 1px;
+    height: 18px;
+    background: var(--border);
+    margin: 0 4px;
+    flex-shrink: 0;
+}
+
+.ctrl-label-icon {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
 .notification {
     position: fixed;
     top: 20px;

@@ -23,17 +23,68 @@ function generateUniqueLobbyCode() {
     return code;
 }
 
+// Convert a DRAFT_LOGIC entry into a unified steps template.
+// Steps are [{p:'p1'|'p2', type:'egoBan'|'idBan'|'idPick'|'idPickS2', c:number}, ...]
+function buildTemplateFromLogic(logic, rosterSize) {
+    const steps = [];
+    for (let i = 0; i < (logic.egoBanSteps || 0); i++) {
+        steps.push({ p: i % 2 === 0 ? 'p1' : 'p2', type: 'egoBan', c: 1 });
+    }
+    for (let i = 0; i < (logic.ban1Steps || 0); i++) {
+        steps.push({ p: i % 2 === 0 ? 'p1' : 'p2', type: 'idBan', c: 1 });
+    }
+    for (const s of (logic.pick1 || [])) {
+        steps.push({ p: s.p, type: 'idPick', c: s.c });
+    }
+    for (let i = 0; i < (logic.midBanSteps || 0); i++) {
+        steps.push({ p: i % 2 === 0 ? 'p2' : 'p1', type: 'idBan', c: 1 });
+    }
+    for (const s of (logic.pick2 || [])) {
+        steps.push({ p: s.p, type: 'idPick', c: s.c });
+    }
+    for (const s of (logic.pick_s2 || [])) {
+        steps.push({ p: s.p, type: 'idPickS2', c: s.c });
+    }
+    return { rosterSize, steps };
+}
+
 function createNewLobbyState(options = {}) {
-    const { draftLogic = '2-3-2', timerEnabled = false, name = 'Referee', matchType = 'section1', rosterSize = 42 } = options;
-    const fullLogicKey = matchType === 'allSections' ? `${draftLogic}-extended` : draftLogic;
-    const currentLogic = DRAFT_LOGIC[fullLogicKey] || DRAFT_LOGIC[draftLogic];
+    const {
+        customTemplate,
+        draftLogic = '2-3-2',
+        timerEnabled = false,
+        timerSettings = null,
+        name = 'Referee',
+        matchType = 'section1',
+        rosterSize = 42
+    } = options;
+
+    const resolvedTimerSettings = {
+        egoBanTime:  20,
+        idBanTime:   30,
+        idPickTime:  30,
+        reserveTime: 120,
+        ...(timerSettings || {}),
+    };
+
+    let template;
+    if (customTemplate) {
+        template = customTemplate;
+    } else {
+        const fullLogicKey = matchType === 'allSections' ? `${draftLogic}-extended` : draftLogic;
+        const currentLogic = DRAFT_LOGIC[fullLogicKey] || DRAFT_LOGIC[draftLogic];
+        template = buildTemplateFromLogic(currentLogic, parseInt(rosterSize, 10));
+    }
+
+    const totalEgoBans = template.steps.filter(s => s.type === 'egoBan').reduce((sum, s) => sum + s.c, 0);
+
     return {
         hostName: sanitizePlayerName(name),
         createdAt: new Date().toISOString(),
         lastActivity: new Date().toISOString(),
         participants: {
-            p1: { name: "Player 1", status: "disconnected", ready: false, rejoinToken: null, reserveTime: 120 },
-            p2: { name: "Player 2", status: "disconnected", ready: false, rejoinToken: null, reserveTime: 120 },
+            p1: { name: "Player 1", status: "disconnected", ready: false, rejoinToken: null, reserveTime: resolvedTimerSettings.reserveTime },
+            p2: { name: "Player 2", status: "disconnected", ready: false, rejoinToken: null, reserveTime: resolvedTimerSettings.reserveTime },
             ref: { name: sanitizePlayerName(name), status: "disconnected", rejoinToken: null }
         },
         roster: { p1: [], p2: [] },
@@ -50,14 +101,16 @@ function createNewLobbyState(options = {}) {
             picks_s2: { p1: [], p2: [] },
             history: [],
             hovered: { p1: null, p2: null },
-            // banPools.p1: IDs p1 may ban (derived from roster.p2 minus bans & p2 picks)
-            // banPools.p2: IDs p2 may ban (derived from roster.p1 minus bans & p1 picks)
             banPools: { p1: [], p2: [] },
-            draftLogic,
-            matchType,
-            rosterSize: parseInt(rosterSize, 10),
-            egoBanSteps: currentLogic.egoBanSteps || 10,
+            draftLogic: customTemplate ? 'custom' : draftLogic,
+            matchType: customTemplate ? 'custom' : matchType,
+            rosterSize: template.rosterSize,
+            egoBanSteps: totalEgoBans,
+            bannedIds: template.bannedIds || [],
+            template,
             coinFlipWinner: null,
+            turnOrderDecided: false,
+            timerSettings: resolvedTimerSettings,
             timer: {
                 enabled: timerEnabled,
                 running: false,
@@ -70,6 +123,7 @@ function createNewLobbyState(options = {}) {
         }
     };
 }
+
 
 function broadcastState(lobbyCode, rolesSwapped = false) {
     const lobbyData = lobbies[lobbyCode];

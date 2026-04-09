@@ -68,6 +68,31 @@ export const state = {
     joinTarget: {
         lobbyCode: null,
         role: null,
+    },
+    draftMakerState: {
+        rosterSize: 42,
+        bannedIds: [],
+        timerEnabled: false,
+        timerSettings: {
+            egoBanTime: 20,
+            idBanTime: 30,
+            idPickTime: 30,
+            reserveTime: 120,
+        },
+        steps: [
+            // EGO bans (10 alternating, p1 starts)
+            {p:'p1',type:'egoBan',c:1},{p:'p2',type:'egoBan',c:1},{p:'p1',type:'egoBan',c:1},{p:'p2',type:'egoBan',c:1},{p:'p1',type:'egoBan',c:1},
+            {p:'p2',type:'egoBan',c:1},{p:'p1',type:'egoBan',c:1},{p:'p2',type:'egoBan',c:1},{p:'p1',type:'egoBan',c:1},{p:'p2',type:'egoBan',c:1},
+            // ID bans phase 1 (8 alternating, p1 starts)
+            {p:'p1',type:'idBan',c:1},{p:'p2',type:'idBan',c:1},{p:'p1',type:'idBan',c:1},{p:'p2',type:'idBan',c:1},
+            {p:'p1',type:'idBan',c:1},{p:'p2',type:'idBan',c:1},{p:'p1',type:'idBan',c:1},{p:'p2',type:'idBan',c:1},
+            // Pick phase 1 (2-3-2)
+            {p:'p1',type:'idPick',c:2},{p:'p2',type:'idPick',c:3},{p:'p1',type:'idPick',c:2},{p:'p2',type:'idPick',c:3},{p:'p1',type:'idPick',c:2},
+            // Mid bans (6 alternating, p2 starts)
+            {p:'p2',type:'idBan',c:1},{p:'p1',type:'idBan',c:1},{p:'p2',type:'idBan',c:1},{p:'p1',type:'idBan',c:1},{p:'p2',type:'idBan',c:1},{p:'p1',type:'idBan',c:1},
+            // Pick phase 2
+            {p:'p2',type:'idPick',c:2},{p:'p1',type:'idPick',c:3},{p:'p2',type:'idPick',c:2},{p:'p1',type:'idPick',c:3},{p:'p2',type:'idPick',c:2},
+        ],
     }
 };
 

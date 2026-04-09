@@ -6,7 +6,7 @@ import { state, elements } from '../state.js';
 import { validateAndTrimInput, validateRosterSize, validateRosterCodeSize, validateUserPermission } from '../utils/validation.js';
 import { createDebounceFunction } from '../utils/debounce.js';
 import { showNotification, getTooltipElement, fisherYatesShuffle } from '../utils/core.js';
-import { loadRosterFromCode } from '../utils/storage.js';
+import { loadRosterFromCode, savePlayerName } from '../utils/storage.js';
 import { stopKeepAlive } from '../utils/keepAlive.js';
 import { switchView } from '../rendering/navigation.js';
 import { filterAndRenderRosterSelection, renderEgoBanPhase, createFilterBarHTML } from '../rendering/rosterPhase.js';
@@ -128,6 +128,7 @@ export function cacheDOMElements() {
     elements.p1RosterLoad = document.getElementById('p1-roster-load');
     elements.p2RosterLoad = document.getElementById('p2-roster-load');
     elements.startCoinFlip = document.getElementById('start-coin-flip');
+    elements.bannedIdsPanel = document.getElementById('banned-ids-panel');
 
     // Roster Builder
     elements.builderSinnerNav = document.getElementById('builder-sinner-nav');
@@ -136,6 +137,7 @@ export function cacheDOMElements() {
     elements.builderCounter = document.getElementById('builder-counter');
     elements.builderRosterSize = document.getElementById('builder-roster-size');
     elements.builderRosterSizeSelector = document.getElementById('builder-roster-size-selector');
+    elements.builderRosterSizeCustom = document.getElementById('builder-roster-size-custom');
     elements.builderRandom = document.getElementById('builder-random');
     elements.builderClear = document.getElementById('builder-clear');
     elements.builderRosterCodeDisplay = document.getElementById('builder-roster-code-display');
@@ -233,6 +235,18 @@ export function cacheDOMElements() {
     elements.draftImportCode = document.getElementById('draft-import-code');
     elements.analyzeDraftBtn = document.getElementById('analyze-draft-btn');
     elements.exportDraftBtn = document.getElementById('export-draft-btn');
+
+    // Draft Maker
+    elements.draftMakerPage = document.getElementById('draft-maker-page');
+    elements.goToDraftMaker = document.getElementById('go-to-draft-maker');
+    elements.draftMakerBuilder = document.getElementById('draft-maker-builder');
+    elements.draftMakerCodeDisplay = document.getElementById('draft-maker-code-display');
+    elements.draftMakerCopyCode = document.getElementById('draft-maker-copy-code');
+    elements.draftMakerLoadInput = document.getElementById('draft-maker-load-input');
+    elements.draftMakerLoadBtn = document.getElementById('draft-maker-load-btn');
+    elements.draftMakerName = document.getElementById('draft-maker-name');
+    elements.draftMakerCreateLobby = document.getElementById('draft-maker-create-lobby');
+
     elements.createLobbyMainBtn = document.getElementById('create-lobby-main');
     elements.joinLobbyMainBtn = document.getElementById('join-lobby-main');
     elements.lobbyCodeInputMain = document.getElementById('lobby-code-input-main');
@@ -291,6 +305,7 @@ export function setupEventListeners() {
             elements.roleSelectionModal.classList.add('hidden');
             return;
         }
+        savePlayerName(playerName);
         if (state.joinTarget.lobbyCode && state.joinTarget.role) {
             sendMessage({
                 type: 'joinLobby',
@@ -353,8 +368,19 @@ export function setupEventListeners() {
                 const code = elements[`${player}RosterCodeInput`].value.trim();
                 const roster = validateRosterCodeSize(code, state.draft.rosterSize);
                 if (roster) {
-                    setPlayerRoster(player, roster);
-                    showNotification('Roster loaded successfully!');
+                    const bannedIds = state.draft.bannedIds || [];
+                    const bannedInRoster = roster.filter(id => bannedIds.includes(id));
+                    if (bannedInRoster.length > 0) {
+                        const cleanedRoster = roster.filter(id => !bannedIds.includes(id));
+                        const bannedNames = bannedInRoster
+                            .map(id => state.masterIDList.find(item => item.id === id)?.name || id)
+                            .join(', ');
+                        showNotification(`${bannedInRoster.length} banned ID(s) removed from roster: ${bannedNames}. Please select replacement(s).`, true);
+                        setPlayerRoster(player, cleanedRoster);
+                    } else {
+                        setPlayerRoster(player, roster);
+                        showNotification('Roster loaded successfully!');
+                    }
                 }
             }
         });
@@ -368,12 +394,25 @@ export function setupEventListeners() {
             if (newSize !== state.builderRosterSize) {
                 state.builderRosterSize = newSize;
                 state.builderRoster = [];
+                if (elements.builderRosterSizeCustom) elements.builderRosterSizeCustom.value = '';
                 elements.builderRosterSizeSelector.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
                 button.classList.add('active');
                 renderRosterBuilder();
                 setupAdvancedRandomUI();
             }
         }
+    });
+    elements.builderRosterSizeCustom?.addEventListener('change', () => {
+        const raw = parseInt(elements.builderRosterSizeCustom.value, 10);
+        if (!raw || raw < 1 || raw > 200) {
+            showNotification('Custom size must be between 1 and 200.', true);
+            return;
+        }
+        state.builderRosterSize = raw;
+        state.builderRoster = [];
+        elements.builderRosterSizeSelector.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
+        renderRosterBuilder();
+        setupAdvancedRandomUI();
     });
     elements.builderRandom.addEventListener('click', () => {
         const shuffled = fisherYatesShuffle([...state.builderMasterIDList]);
@@ -553,6 +592,7 @@ export function setupEventListeners() {
     elements.createLobbyMainBtn.addEventListener('click', () => {
         const playerName = validateAndTrimInput(elements.playerNameInput.value, 'your name');
         if (!playerName) return;
+        savePlayerName(playerName);
         const options = {
             name: playerName,
             draftLogic: elements.draftLogicSelect.value,
@@ -565,6 +605,7 @@ export function setupEventListeners() {
     elements.joinLobbyMainBtn.addEventListener('click', () => {
         const playerName = validateAndTrimInput(elements.playerNameInput.value, 'your name');
         if (!playerName) return;
+        savePlayerName(playerName);
         const lobbyCode = validateAndTrimInput(elements.lobbyCodeInputMain.value, 'lobby code');
         if (lobbyCode) {
             sendMessage({ type: 'getLobbyInfo', lobbyCode: lobbyCode.toUpperCase() });

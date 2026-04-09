@@ -1,0 +1,514 @@
+/* client/css/draft-maker.css */
+/* Styles for the Draft Maker page. Uses design system tokens from variables.css. */
+
+.draft-maker-card {
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
+.draft-maker-layout {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+}
+
+/* ---- Builder (left column) ---- */
+.draft-maker-builder {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+.dm-section {
+    background: var(--surface-2, var(--card-bg));
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-bottom: 16px;
+}
+
+.dm-section h3 {
+    margin: 0 0 10px;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.dm-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.dm-section-header h3 {
+    margin: 0;
+}
+
+.dm-hint {
+    font-size: 0.82rem;
+    color: var(--text-muted, #aaa);
+    margin: 0 0 8px;
+}
+
+.dm-inline {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.dm-label {
+    font-size: 0.9rem;
+    color: var(--text);
+}
+
+.dm-input {
+    background: var(--input-bg, var(--bg));
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text);
+    padding: 6px 8px;
+    font-size: 0.9rem;
+}
+
+.dm-input-short {
+    width: 70px;
+}
+
+.dm-input:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+/* ---- Sequence steps ---- */
+.dm-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+.dm-step {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 10px;
+}
+
+.dm-step-num {
+    font-size: 0.8rem;
+    color: var(--text-muted, #aaa);
+    min-width: 20px;
+}
+
+.dm-player-select {
+    background: var(--input-bg, var(--bg));
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text);
+    padding: 4px 6px;
+    font-size: 0.88rem;
+}
+
+.dm-step-label {
+    font-size: 0.85rem;
+    color: var(--text-muted, #aaa);
+    flex: 1;
+}
+
+.dm-remove-step {
+    padding: 3px 7px;
+    line-height: 1;
+    color: var(--text-muted, #aaa);
+}
+
+.dm-remove-step:hover {
+    color: var(--primary);
+}
+
+.dm-move-up,
+.dm-move-down {
+    padding: 3px 6px;
+    line-height: 1;
+    color: var(--text-muted, #aaa);
+    font-size: 0.78rem;
+}
+
+.dm-move-up:hover:not(:disabled),
+.dm-move-down:hover:not(:disabled) {
+    color: var(--text);
+}
+
+.dm-move-up:disabled,
+.dm-move-down:disabled {
+    opacity: 0.3;
+    cursor: default;
+}
+
+.dm-type-select {
+    background: var(--input-bg, var(--bg));
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text);
+    padding: 4px 6px;
+    font-size: 0.88rem;
+}
+
+.dm-stats {
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+    display: block;
+}
+
+.dm-add-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+}
+
+.dm-empty-msg {
+    font-size: 0.85rem;
+    color: var(--text-muted, #aaa);
+    margin: 4px 0 10px;
+    font-style: italic;
+}
+
+.dm-toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.9rem;
+    color: var(--text);
+    cursor: pointer;
+}
+
+.dm-timer-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+    margin-top: 10px;
+}
+
+.dm-timer-field label {
+    display: block;
+    font-size: 0.82rem;
+    color: var(--text-muted, #aaa);
+    margin-bottom: 4px;
+}
+
+.dm-timer-fields--hidden {
+    display: none;
+}
+
+/* ---- Sidebar (right column) ---- */
+.draft-maker-sidebar {
+    width: 280px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 20px;
+}
+
+.dm-code-display {
+    overflow-wrap: break-word;
+    word-break: break-all;
+    background: #111;
+    padding: 10px;
+    border-radius: 5px;
+    font-family: monospace;
+    font-size: 0.78rem;
+    min-height: 50px;
+    max-height: 200px;
+    overflow-y: auto;
+    line-height: 1.5;
+    color: var(--text);
+}
+
+.draft-maker-code-section,
+.draft-maker-create-section {
+    padding: 4px 0;
+}
+
+.draft-maker-code-section h3,
+.draft-maker-create-section h3 {
+    margin: 0 0 8px;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 800px) {
+    .draft-maker-layout {
+        flex-direction: column;
+    }
+
+    .draft-maker-sidebar {
+        width: 100%;
+        position: static;
+    }
+}
+
+/* ---- Preview ---- */
+.dm-preview {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    overflow-x: auto;
+    padding-bottom: 6px;
+}
+
+.dm-preview-lane {
+    display: flex;
+    align-items: center;
+    gap: 0;
+}
+
+.dm-preview-lane-label {
+    width: 32px;
+    flex-shrink: 0;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-align: center;
+    padding: 4px 0;
+    border-radius: 4px;
+    margin-right: 6px;
+}
+
+.p1-label {
+    background: rgba(33, 150, 243, 0.2);
+    color: #64b5f6;
+}
+
+.p2-label {
+    background: rgba(179, 27, 27, 0.2);
+    color: #ef9a9a;
+}
+
+.dm-preview-chips {
+    display: flex;
+    gap: 3px;
+    align-items: center;
+    flex-wrap: nowrap;
+}
+
+.dm-preview-connector-row {
+    display: flex;
+    gap: 3px;
+    align-items: center;
+    padding: 2px 0;
+    margin-left: 38px; /* align with chips (label width + gap) */
+}
+
+.dm-preview-num {
+    width: 32px;
+    text-align: center;
+    font-size: 0.62rem;
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+.dm-preview-chip {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.72rem;
+    flex-shrink: 0;
+    cursor: default;
+    transition: transform 0.1s;
+}
+
+.dm-preview-chip:hover {
+    transform: scale(1.15);
+    z-index: 1;
+    position: relative;
+}
+
+.dm-preview-chip.type-egoBan {
+    background: rgba(128, 0, 128, 0.35);
+    border: 1px solid rgba(180, 60, 180, 0.6);
+    color: #ce93d8;
+}
+
+.dm-preview-chip.type-idBan {
+    background: rgba(179, 27, 27, 0.35);
+    border: 1px solid rgba(220, 50, 50, 0.6);
+    color: #ef9a9a;
+}
+
+/* ============================================
+   BANNED IDS SECTION (Draft Maker builder)
+   ============================================ */
+.dm-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(179, 27, 27, 0.7);
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 700;
+    border-radius: 10px;
+    padding: 1px 7px;
+    margin-left: 6px;
+    vertical-align: middle;
+}
+
+.dm-ban-search {
+    width: 100%;
+    margin-bottom: 8px;
+}
+
+.dm-banned-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 10px;
+    min-height: 24px;
+}
+
+.dm-no-bans {
+    margin: 0;
+    color: var(--text-muted, #888);
+}
+
+.dm-ban-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(179, 27, 27, 0.2);
+    border: 1px solid rgba(179, 27, 27, 0.5);
+    border-radius: 14px;
+    padding: 3px 4px 3px 10px;
+    font-size: 0.8rem;
+    color: var(--text);
+}
+
+.dm-ban-chip-name {
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.dm-ban-remove {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: rgba(220, 80, 80, 0.8);
+    padding: 0 4px;
+    font-size: 0.75rem;
+    line-height: 1;
+    border-radius: 50%;
+    transition: color 0.2s;
+}
+
+.dm-ban-remove:hover {
+    color: #ef5350;
+}
+
+.dm-ban-results {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.dm-ban-result-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--secondary, #1e1e1e);
+    border: 1px solid var(--border, #333);
+    border-radius: 6px;
+    padding: 6px 10px;
+    cursor: pointer;
+    font-size: 0.82rem;
+    color: var(--text);
+    text-align: left;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.dm-ban-result-item img {
+    width: 28px;
+    height: 28px;
+    border-radius: 4px;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.dm-ban-result-item span {
+    flex: 1;
+}
+
+.dm-ban-result-item i {
+    color: rgba(220, 80, 80, 0.7);
+    font-size: 0.75rem;
+}
+
+.dm-ban-result-item:hover {
+    background: rgba(179, 27, 27, 0.15);
+    border-color: rgba(179, 27, 27, 0.5);
+}
+
+.dm-preview-chip.type-idPick {
+    background: rgba(33, 150, 243, 0.25);
+    border: 1px solid rgba(33, 150, 243, 0.5);
+    color: #90caf9;
+}
+
+.dm-preview-gap {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+}
+
+.dm-chip-sub {
+    font-size: 0.55rem;
+    line-height: 1;
+    margin-top: 1px;
+}
+
+.dm-preview-legend {
+    display: flex;
+    gap: 16px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+}
+
+.dm-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+}
+
+.dm-chip-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    display: inline-block;
+    flex-shrink: 0;
+}
+
+.dm-chip-dot.type-egoBan {
+    background: rgba(128, 0, 128, 0.6);
+    border: 1px solid rgba(180, 60, 180, 0.8);
+}
+
+.dm-chip-dot.type-idBan {
+    background: rgba(179, 27, 27, 0.6);
+    border: 1px solid rgba(220, 50, 50, 0.8);
+}
+
+.dm-chip-dot.type-idPick {
+    background: rgba(33, 150, 243, 0.5);
+    border: 1px solid rgba(33, 150, 243, 0.8);
+}

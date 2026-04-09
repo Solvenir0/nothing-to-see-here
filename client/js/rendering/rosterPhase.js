@@ -14,6 +14,8 @@ export function init(sendMessage) {
 }
 
 export function filterAndRenderRosterSelection() {
+    const bannedIds = state.draft.bannedIds || [];
+    const bannedSet = new Set(bannedIds);
     const filteredList = filterIDs(state.masterIDList, state.filters);
 
     ['p1', 'p2'].forEach(player => {
@@ -21,10 +23,40 @@ export function filterAndRenderRosterSelection() {
         const scrollTop = container.scrollTop;
         renderIDList(container, filteredList, {
             selectionSet: state.roster[player],
-            clickHandler: (id) => _sendMessage({ type: 'rosterSelect', lobbyCode: state.lobbyCode, player, id })
+            clickHandler: (id) => _sendMessage({ type: 'rosterSelect', lobbyCode: state.lobbyCode, player, id }),
+            bannedSet,
         });
         container.scrollTop = scrollTop;
     });
+
+    renderBannedIdsPanel(bannedIds);
+}
+
+function renderBannedIdsPanel(bannedIds) {
+    const panel = elements.bannedIdsPanel;
+    if (!panel) return;
+    if (!bannedIds || bannedIds.length === 0) {
+        panel.classList.add('hidden');
+        return;
+    }
+    panel.classList.remove('hidden');
+
+    const bannedObjects = bannedIds
+        .map(id => state.masterIDList.find(item => item.id === id))
+        .filter(Boolean);
+
+    const header = document.createElement('div');
+    header.className = 'banned-ids-header';
+    header.innerHTML = `<i class="fas fa-ban"></i> Banned IDs (${bannedIds.length})`;
+
+    const listEl = document.createElement('div');
+    listEl.className = 'banned-ids-list';
+    const allBannedSet = new Set(bannedObjects.map(o => o.id));
+    renderIDList(listEl, bannedObjects, { bannedSet: allBannedSet });
+
+    panel.innerHTML = '';
+    panel.appendChild(header);
+    panel.appendChild(listEl);
 }
 
 export function renderEgoBanPhase() {
@@ -74,8 +106,18 @@ export function renderEgoBanPhase() {
     bannedEgoObjects.forEach(ego => {
         const item = document.createElement('div');
         item.className = 'banned-ego-item';
-        item.style.borderLeft = `3px solid ${ego.cssColor}`;
+        item.style.borderColor = ego.cssColor;
+        if (ego.imageFile) {
+            const img = document.createElement('img');
+            img.className = 'banned-ego-thumb';
+            img.src = `/uploads/ego/${ego.imageFile}`;
+            img.alt = ego.name;
+            img.onerror = function() { this.style.display = 'none'; };
+            item.appendChild(img);
+        }
         const displayName = getEgoDisplayName(ego);
+        const textDiv = document.createElement('div');
+        textDiv.className = 'banned-ego-text';
         const raritySpan = document.createElement('span');
         raritySpan.className = 'rarity';
         raritySpan.textContent = `[${ego.rarity}]`;
@@ -83,9 +125,10 @@ export function renderEgoBanPhase() {
         nameSpan.className = 'name';
         nameSpan.style.textDecoration = 'none';
         nameSpan.textContent = displayName;
-        item.appendChild(raritySpan);
-        item.appendChild(document.createTextNode(' '));
-        item.appendChild(nameSpan);
+        textDiv.appendChild(raritySpan);
+        textDiv.appendChild(document.createTextNode(' '));
+        textDiv.appendChild(nameSpan);
+        item.appendChild(textDiv);
         bansContainer.appendChild(item);
     });
 
@@ -111,9 +154,20 @@ export function renderEgoBanPhase() {
         allBannedObjects.forEach(ego => {
             const item = document.createElement('div');
             item.className = 'banned-ego-item';
-            item.style.backgroundColor = ego.cssColor;
+            item.style.borderColor = ego.cssColor;
+            if (ego.imageFile) {
+                const img = document.createElement('img');
+                img.className = 'banned-ego-thumb';
+                img.src = `/uploads/ego/${ego.imageFile}`;
+                img.alt = ego.name;
+                img.onerror = function() { this.style.display = 'none'; };
+                item.appendChild(img);
+            }
             const displayName = getEgoDisplayName(ego);
-            item.innerHTML = `<span class="rarity">[${ego.rarity}]</span> <span class="name">${displayName}</span>`;
+            const textDiv = document.createElement('div');
+            textDiv.className = 'banned-ego-text';
+            textDiv.innerHTML = `<span class="rarity">[${ego.rarity}]</span> <span class="name">${displayName}</span>`;
+            item.appendChild(textDiv);
             listEl.appendChild(item);
         });
     } else {

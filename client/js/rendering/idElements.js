@@ -55,11 +55,12 @@ export function sortIdsByMasterList(idList) {
 }
 
 export function createIdElement(idData, options = {}) {
-    const { isSelected, isHovered, clickHandler, isNotInRoster, isShared } = options;
+    const { isSelected, isHovered, clickHandler, isNotInRoster, isShared, isBanned } = options;
     const idElement = document.createElement('div');
     idElement.className = `id-item rarity-${idData.rarity}`;
     if (isSelected) idElement.classList.add('selected');
     if (isHovered) idElement.classList.add('hovered');
+    if (isBanned)  idElement.classList.add('banned');
 
     idElement.dataset.id = idData.id;
 
@@ -81,14 +82,14 @@ export function createIdElement(idData, options = {}) {
         idElement.appendChild(sharedDiv);
     }
 
-    if (clickHandler) {
+    if (clickHandler && !isBanned) {
         idElement.addEventListener('click', () => clickHandler(idData.id));
     }
     return idElement;
 }
 
 export function renderIDList(container, idObjectList, options = {}) {
-    const { selectionSet, clickHandler, hoverId, notInRosterSet, sharedIdSet } = options;
+    const { selectionSet, clickHandler, hoverId, notInRosterSet, sharedIdSet, bannedSet } = options;
     container.innerHTML = '';
     if (!container.classList.contains('compact-id-list')) {
         container.className = 'roster-selection';
@@ -107,11 +108,13 @@ export function renderIDList(container, idObjectList, options = {}) {
         const isHovered = hoverId ? hoverId === idData.id : false;
         const isNotInRoster = notInRosterSet ? !notInRosterSet.includes(idData.id) : false;
         const isShared = sharedIdSet ? sharedIdSet.includes(idData.id) : false;
+        const isBanned = bannedSet ? bannedSet.has(idData.id) : false;
         const element = createIdElement(idData, {
             isSelected,
             isHovered,
             isNotInRoster,
             isShared,
+            isBanned,
             clickHandler: clickHandler ? () => clickHandler(idData.id) : null
         });
         fragment.appendChild(element);

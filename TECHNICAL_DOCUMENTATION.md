@@ -1,4 +1,4 @@
-# Limbus Company Draft Hub — Agent Reference
+﻿# Limbus Company Draft Hub — Agent Reference
 
 ---
 
@@ -309,7 +309,3 @@ Expanded EGO data model with images and full metadata. **Data to be provided by 
 1. **CSS design system** — no data dependency, unblocks all future UI work
 2. **Slug audit script** — quick win, fixes existing broken images
 4. **EGO database** — parallel to #3, same pattern
-
-
-
-
