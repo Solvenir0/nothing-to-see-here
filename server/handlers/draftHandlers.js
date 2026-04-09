@@ -115,8 +115,13 @@ function advancePhase(lobbyData) {
     draft.actionCount = s.c;
 
     if (s.type === 'idBan') {
-        draft.available.p1 = [...lobbyData.roster.p1];
-        draft.available.p2 = [...lobbyData.roster.p2];
+        const removedIds = new Set([
+            ...draft.idBans.p1, ...draft.idBans.p2,
+            ...draft.picks.p1, ...draft.picks.p2,
+            ...draft.picks_s2.p1, ...draft.picks_s2.p2
+        ]);
+        draft.available.p1 = (lobbyData.roster.p1 || []).filter(id => !removedIds.has(id));
+        draft.available.p2 = (lobbyData.roster.p2 || []).filter(id => !removedIds.has(id));
         computeBanPools(lobbyData);
     }
 
