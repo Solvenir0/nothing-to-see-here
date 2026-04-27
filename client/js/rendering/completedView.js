@@ -128,7 +128,7 @@ export function renderTimelineView() {
                 eventBody.appendChild(icon);
             } else {
                 const img = document.createElement('img');
-                img.src = `/uploads/${targetData.imageFile}`;
+                img.src = `/uploads/identity/${targetData.imageFile}`;
                 img.alt = targetData.name;
                 eventBody.appendChild(img);
             }

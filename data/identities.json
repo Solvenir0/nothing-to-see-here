@@ -847,6 +847,19 @@
     "rarity": "000"
   },
   {
+    "name": "The Ring Fauvist Student Meursault",
+    "keywords": [
+      "Bleed",
+      "Sinking"
+    ],
+    "sinAffinities": [
+      "Wrath",
+      "Pride",
+      "Lust"
+    ],
+    "rarity": "000"
+  },
+  {
     "name": "Kurokumo Clan Wakashu Hong Lu",
     "keywords": [
       "Bleed"
@@ -1171,6 +1184,19 @@
       "Envy",
       "Gluttony",
       "Wrath"
+    ],
+    "rarity": "000"
+  },
+  {
+    "name": "The Middle Big Brother Heathcliff",
+    "keywords": [
+      "Bleed",
+      "Burn"
+    ],
+    "sinAffinities": [
+      "Wrath",
+      "Envy",
+      "Envy"
     ],
     "rarity": "000"
   },
@@ -1505,6 +1531,19 @@
       "Gloom",
       "Envy",
       "Wrath"
+    ],
+    "rarity": "000"
+  },
+  {
+    "name": "The Ring Fauvist Docent Rodion",
+    "keywords": [
+      "Bleed",
+      "Sinking"
+    ],
+    "sinAffinities": [
+      "Gloom",
+      "Envy",
+      "Lust"
     ],
     "rarity": "000"
   },

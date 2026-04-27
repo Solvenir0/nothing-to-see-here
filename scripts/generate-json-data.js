@@ -304,7 +304,7 @@ const koreanEgoNames = {
     "Ya Śūnyatā Tad Rūpam": "공즉시색", "Asymmetrical Inertia": "쏠린 관성", "Binds": "구속",
     "Snagharpoon": "작살박이", "Hundred-Footed Death Maggot [蝍蛆殺]": "즉저살 [蝍蛆殺]",
     "Ardor Blossom Star": "홍염살", "Wingbeat": "날갯짓", "Christmas Nightmare": "크리스마스 악몽",
-    "What is Cast": "던져지는 것", "Rime Shank": "얼음다리", "Sanguine Desire": "핏빛욕망",
+    "What is Cast": "던져지는 것", "Into the Sunset": "", "Rime Shank": "얼음다리", "Sanguine Desire": "핏빛욕망",
     "Indicant's Trial": "지정 재판", "Branch of Knowledge": "지식나무의 가지",
     "Impending Day": "다가올날", "Lantern": "초롱", "To Páthos Máthos": "토 파토스 마토스",
     "Ebony Stem": "검은줄기", "Magic Bullet": "마탄", "Suddenly, One Day": "어느날 갑자기",
