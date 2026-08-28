@@ -174,6 +174,19 @@ const idCsvData = `Name,Keywords,SinAffinities,Rarity
 "Heishou Pack - Si Branch Gregor","Poise,Rupture","Pride,Gluttony,Envy","000"
 "Night Awls Capitano Gregor","Bleed,Tremor","Sloth,Lust,Pride","000"
 "Lobotomy E.G.O::Lamp Gregor","Burn,Sinking","Wrath,Gloom,Pride","000"
+"Dawn Office Fixer Faust","Burn,Tremor","Gluttony,Pride,Sloth","000"
+"Blade of the House of Spiders Ryōshū","Bleed,Burn,Poise","Lust,Pride,Wrath","000"
+"The House of Spiders: The Ring Nursefather Hong Lu","Bleed,Charge","Envy,Lust,Pride","000"
+"S Corp. Ch'unokkun Hong Lu","Bleed,Poise","Gluttony,Lust,Pride","000"
+"The Middle Big Brother Heathcliff","Bleed,Burn","Envy,Envy,Wrath","000"
+"The House of Spiders: The Thumb Apprentice Heathcliff","Burn,Tremor","Lust,Sloth,Wrath","000"
+"LCD OSIR Team Ishmael","Bleed,Poise","Gloom,Pride,Wrath","000"
+"The Ring Fauvist Docent Rodion","Bleed,Sinking","Envy,Gloom,Lust","000"
+"The House of Spiders: The Thumb Nursefather Rodion","Ammo,Burn,Poise,Tremor","Pride,Sloth,Wrath","000"
+"The House of Spiders: The Middle Nursefather Outis","Bleed,Burn","Envy,Envy,Lust","000"
+"Dawn Office Rep Gregor","Burn,Tremor","Pride,Sloth,Wrath","000"
+"LCE E.G.O::Dimension Shredder Yi Sang","Charge,Rupture","Envy,Gluttony,Pride","000"
+"Cinq Assoc. East Section 3 Hong Lu","Burn,Poise","Gloom,Pride,Wrath","000"
 "LCE E.G.O::AEDD Gregor","Charge,Rupture","Gluttony,Gloom,Envy","000"
 `;
 
@@ -283,6 +296,11 @@ Solemn Lament Gregor - HE - Gloom - Blue
 Christmas Nightmare Gregor - HE - Sloth - Yellow
 Garden of Thorns Gregor - WAW - Lust - Orange
 Unbrilliant Glory Gregor - WAW - Sloth - Yellow
+Solemn Lament Yi Sang - HE - Gloom - Blue
+I'll Go fer Scissors. How 'Bout You? Don Quixote - ZAYIN - Envy - Purple
+Shadow-vested Bladesinger [着影揮刀] Meursault - HE - Pride - Indigo
+Into the Sunset Rodion - ZAYIN - Lust - Orange
+I'll Go fer Scissors. How 'Bout You? Outis - ZAYIN - Envy - Purple
 `;
 
 // Korean EGO name map

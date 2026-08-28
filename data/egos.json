@@ -646,5 +646,23 @@
     "sinner": "Gregor",
     "rarity": "WAW",
     "sin": "Sloth"
+  },
+  {
+    "name": "Solemn Lament",
+    "sinner": "Yi Sang",
+    "rarity": "HE",
+    "sin": "Gloom"
+  },
+  {
+    "name": "I'll Go fer Scissors. How 'Bout You?",
+    "sinner": "Don Quixote",
+    "rarity": "ZAYIN",
+    "sin": "Envy"
+  },
+  {
+    "name": "Shadow-vested Bladesinger [着影揮刀]",
+    "sinner": "Meursault",
+    "rarity": "HE",
+    "sin": "Pride"
   }
 ]
