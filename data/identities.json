@@ -2062,5 +2062,138 @@
       "Envy"
     ],
     "rarity": "000"
+  },
+  {
+    "name": "Dawn Office Fixer Faust",
+    "keywords": [
+      "Burn",
+      "Tremor"
+    ],
+    "sinAffinities": [
+      "Gluttony",
+      "Pride",
+      "Sloth"
+    ],
+    "rarity": "000"
+  },
+  {
+    "name": "Blade of the House of Spiders Ryōshū",
+    "keywords": [
+      "Bleed",
+      "Burn",
+      "Poise"
+    ],
+    "sinAffinities": [
+      "Lust",
+      "Pride",
+      "Wrath"
+    ],
+    "rarity": "000"
+  },
+  {
+    "name": "S Corp. Ch'unokkun Hong Lu",
+    "keywords": [
+      "Bleed",
+      "Poise"
+    ],
+    "sinAffinities": [
+      "Gluttony",
+      "Lust",
+      "Pride"
+    ],
+    "rarity": "000"
+  },
+  {
+    "name": "The House of Spiders: The Thumb Apprentice Heathcliff",
+    "keywords": [
+      "Burn",
+      "Tremor"
+    ],
+    "sinAffinities": [
+      "Lust",
+      "Sloth",
+      "Wrath"
+    ],
+    "rarity": "000"
+  },
+  {
+    "name": "LCD OSIR Team Ishmael",
+    "keywords": [
+      "Bleed",
+      "Poise"
+    ],
+    "sinAffinities": [
+      "Gloom",
+      "Pride",
+      "Wrath"
+    ],
+    "rarity": "000"
+  },
+  {
+    "name": "The House of Spiders: The Thumb Nursefather Rodion",
+    "keywords": [
+      "Ammo",
+      "Burn",
+      "Poise",
+      "Tremor"
+    ],
+    "sinAffinities": [
+      "Pride",
+      "Sloth",
+      "Wrath"
+    ],
+    "rarity": "000"
+  },
+  {
+    "name": "The House of Spiders: The Middle Nursefather Outis",
+    "keywords": [
+      "Bleed",
+      "Burn"
+    ],
+    "sinAffinities": [
+      "Envy",
+      "Envy",
+      "Lust"
+    ],
+    "rarity": "000"
+  },
+  {
+    "name": "Dawn Office Rep Gregor",
+    "keywords": [
+      "Burn",
+      "Tremor"
+    ],
+    "sinAffinities": [
+      "Pride",
+      "Sloth",
+      "Wrath"
+    ],
+    "rarity": "000"
+  },
+  {
+    "name": "LCE E.G.O::Dimension Shredder Yi Sang",
+    "keywords": [
+      "Charge",
+      "Rupture"
+    ],
+    "sinAffinities": [
+      "Envy",
+      "Gluttony",
+      "Pride"
+    ],
+    "rarity": "000"
+  },
+  {
+    "name": "Cinq Assoc. East Section 3 Hong Lu",
+    "keywords": [
+      "Burn",
+      "Poise"
+    ],
+    "sinAffinities": [
+      "Gloom",
+      "Pride",
+      "Wrath"
+    ],
+    "rarity": "000"
   }
 ]

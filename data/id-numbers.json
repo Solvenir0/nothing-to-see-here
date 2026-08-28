@@ -13,7 +13,8 @@
     "liu-association-south-section-3-yi-sang",
     "n-corp-ego-fell-bullet-yi-sang",
     "heishou-pack-wu-branch-adept-yi-sang",
-    "the-house-of-spiders-the-index-nursefather-yi-sang"
+    "the-house-of-spiders-the-index-nursefather-yi-sang",
+    "lce-ego-dimension-shredder-yi-sang"
   ],
   "Faust": [
     "w-corp-l2-cleanup-agent-faust",
@@ -29,7 +30,8 @@
     "heishou-pack-mao-branch-adept-faust",
     "shi-assoc-east-section-3-faust",
     "the-index-proselytepaper-slipfaust",
-    "the-house-of-spiders-the-ring-apprentice-faust"
+    "the-house-of-spiders-the-ring-apprentice-faust",
+    "dawn-office-fixer-faust"
   ],
   "Don Quixote": [
     "shi-association-south-section-5-director-don-quixote",
@@ -59,7 +61,8 @@
     "heishou-pack-mao-branch-ryshu",
     "n-corp-ego-contempt-awe-ryshu",
     "drifting-blade-of-hongyuan-ryshu",
-    "lobotomy-ego-faint-aroma-solitude-ryshu"
+    "lobotomy-ego-faint-aroma-solitude-ryshu",
+    "blade-of-the-house-of-spiders-ryshu"
   ],
   "Meursault": [
     "liu-association-south-section-6-meursault",
@@ -90,7 +93,9 @@
     "full-stop-office-rep-hong-lu",
     "r-corp-4th-pack-reindeer-hong-lu",
     "the-lord-of-hongyuan-hong-lu",
-    "the-house-of-spiders-the-ring-nursefather-hong-lu"
+    "the-house-of-spiders-the-ring-nursefather-hong-lu",
+    "s-corp-chunokkun-hong-lu",
+    "cinq-assoc-east-section-3-hong-lu"
   ],
   "Heathcliff": [
     "shi-association-south-section-5-heathcliff",
@@ -106,7 +111,8 @@
     "kurokumo-clan-wakashu-heathcliff",
     "w-corp-l4-cleanup-agent-cca-heathcliff",
     "heishou-pack-you-branch-adept-heathcliff",
-    "the-middle-big-brother-heathcliff"
+    "the-middle-big-brother-heathcliff",
+    "the-house-of-spiders-the-thumb-apprentice-heathcliff"
   ],
   "Ishmael": [
     "shi-association-south-section-5-ishmael",
@@ -121,7 +127,8 @@
     "kurokumo-clan-captain-ishmael",
     "family-hierarch-candidate-ishmael",
     "jeongs-office-rep-ishmael",
-    "the-house-of-spiders-the-middle-apprentice-ishmael"
+    "the-house-of-spiders-the-middle-apprentice-ishmael",
+    "lcd-osir-team-ishmael"
   ],
   "Rodion": [
     "lccb-assistant-manager-rodion",
@@ -137,7 +144,8 @@
     "heishou-pack-si-branch-rodion",
     "lobotomy-ego-the-sword-sharpened-with-tears-rodion",
     "r-corp-4th-pack-reindeer-rodion",
-    "the-ring-fauvist-docent-rodion"
+    "the-ring-fauvist-docent-rodion",
+    "the-house-of-spiders-the-thumb-nursefather-rodion"
   ],
   "Sinclair": [
     "zwei-association-south-section-6-sinclair",
@@ -168,7 +176,8 @@
     "the-barber-of-la-manchaland-outis",
     "heishou-pack-mao-branch-outis",
     "t-corp-class-3-vdcu-staff-outis",
-    "lca-udjat-vanguard-team-3-leader-outis"
+    "lca-udjat-vanguard-team-3-leader-outis",
+    "the-house-of-spiders-the-middle-nursefather-outis"
   ],
   "Gregor": [
     "liu-association-south-section-6-gregor",
@@ -184,6 +193,7 @@
     "heishou-pack-si-branch-gregor",
     "night-awls-capitano-gregor",
     "lobotomy-ego-lamp-gregor",
-    "lce-ego-aedd-gregor"
+    "lce-ego-aedd-gregor",
+    "dawn-office-rep-gregor"
   ]
 }
